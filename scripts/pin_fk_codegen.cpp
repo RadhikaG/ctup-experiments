@@ -1,7 +1,9 @@
 #include "pinocchio/codegen/cppadcg.hpp"
+#include "cppad/cg.hpp"
 #include "pinocchio/parsers/urdf.hpp"
-#include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
+#include "pinocchio/algorithm/joint-configuration.hpp"
+#include <cppad/cg/model/llvm/llvm.hpp>
 #include <iostream>
 // PINOCCHIO_MODEL_DIR is defined by the CMake but you can define your own directory here.
 #ifndef PINOCCHIO_MODEL_DIR
@@ -35,25 +37,42 @@ int main(int argc, char ** argv)
   ADModel ad_model = model.cast<ADCG>();
   ADData ad_data(ad_model);
   ADVectorXs ad_X = ADVectorXs(ad_model.nq);
-  ADVectorXs ad_Y = ADVectorXs(ad_model.nq);
+  ADVectorXs ad_Y = ADVectorXs(3);//ad_model.nq);
   Independent(ad_X);
 
   forwardKinematics(ad_model, ad_data, ad_X);
   ad_Y = ad_data.oMi[(ad_model.njoints)-1].translation();
   ADFun<CGD> fun(ad_X, ad_Y);
 
-  // codegen
-  CodeHandler<double> handler;
-  CppAD::vector<CGD> indVars((size_t)ad_X.size());
-  handler.makeVariables(indVars);
+  // for JIT
+  ModelCSourceGen<double> cgen(fun, "model");
+  cgen.setCreateForwardZero(true);
+  ModelLibraryCSourceGen<double> libcgen(cgen);
 
-  CppAD::vector<CGD> fwd_zero = fun.Forward(0, indVars);
+  LlvmModelLibraryProcessor<double> p(libcgen);
 
-  LanguageC<double> langC("double");
-  LangCDefaultVariableNameGenerator<double> nameGen;
+  std::unique_ptr<LlvmModelLibrary<double>> llvmModelLib = p.create();
+  SaveFilesModelLibraryProcessor<double> p2(libcgen);
+  p2.saveSources();
 
-  std::ostringstream code;
-  handler.generateCode(code, langC, fwd_zero, nameGen);
-  std::cout << code.str();
+  std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
+  Eigen::VectorXd q = randomConfiguration(model);
+  Eigen::VectorXd y = g_model->ForwardZero(q);
+
+  std::cout << y << "\n";
+
+  // for C++ stdout
+  //CodeHandler<double> handler;
+  //CppAD::vector<CGD> indVars((size_t)ad_X.size());
+  //handler.makeVariables(indVars);
+
+  //CppAD::vector<CGD> fwd_zero = fun.Forward(0, indVars);
+
+  //LanguageC<double> langC("double");
+  //LangCDefaultVariableNameGenerator<double> nameGen;
+
+  //std::ostringstream code;
+  //handler.generateCode(code, langC, fwd_zero, nameGen);
+  //std::cout << code.str();
 }
 

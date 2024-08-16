@@ -10,6 +10,10 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+find_package(LLVM ${LLVM_VERSION})
+find_package(Clang ${LLVM_VERSION})
+
 # ExternalProject is used to build and manage the dependencies
 include(ExternalProject)
 
@@ -34,7 +38,6 @@ ExternalProject_Add(CppADCodeGen
 )
 
 include_directories(${CMAKE_BINARY_DIR}/install/CppADCodeGen/include)
-#link_directories(${CMAKE_BINARY_DIR}/install/CppADCodeGen/lib)
 
 # Build hpp-fcl
 ExternalProject_Add(hpp-fcl
@@ -79,9 +82,21 @@ find_package(pinocchio
 set(PINOCCHIO_MODEL_DIR ${CMAKE_SOURCE_DIR}/deps/pinocchio/models)
 add_compile_definitions(PINOCCHIO_MODEL_DIR="${PINOCCHIO_MODEL_DIR}")
 
+# for CppADCodeGen JIT
+if (LLVM_FOUND)
+    add_compile_definitions(LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}
+                            LLVM_VERSION_MINOR=${LLVM_VERSION_MINOR})
+    include_directories(${LLVM_INCLUDE_DIRS})
+    include_directories(${Clang_INCLUDE_DIRS})
+    link_directories(${LLVM_LIBRARY_DIRS})
+    link_directories(${Clang_LIBRARY_DIRS})
+endif()
+
 # If you have a main project, you can link against these libraries
 add_executable(pin_fk scripts/pin_fk.cpp)
 target_link_libraries(pin_fk PUBLIC pinocchio::pinocchio)
 
 add_executable(pin_fk_codegen scripts/pin_fk_codegen.cpp)
 target_link_libraries(pin_fk_codegen PUBLIC pinocchio::pinocchio)
+target_link_libraries(pin_fk_codegen PUBLIC ${LLVM_MODULE_LIBS})
+target_link_libraries(pin_fk_codegen PUBLIC ${Clang_LIBS})
