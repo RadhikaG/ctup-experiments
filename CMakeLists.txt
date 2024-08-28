@@ -92,11 +92,19 @@ if (LLVM_FOUND)
     link_directories(${Clang_LIBRARY_DIRS})
 endif()
 
-# If you have a main project, you can link against these libraries
-add_executable(pin_fk scripts/pin_fk.cpp)
-target_link_libraries(pin_fk PUBLIC pinocchio::pinocchio)
+# for individual script executables
 
-add_executable(pin_fk_codegen scripts/pin_fk_codegen.cpp)
-target_link_libraries(pin_fk_codegen PUBLIC pinocchio::pinocchio)
-target_link_libraries(pin_fk_codegen PUBLIC ${LLVM_MODULE_LIBS})
-target_link_libraries(pin_fk_codegen PUBLIC ${Clang_LIBS})
+set(SCRIPT_SOURCES
+    scripts/pin_fk.cpp
+    scripts/pin_fk_codegen.cpp
+    scripts/pin_rnea_codegen.cpp
+)
+
+foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
+    # get filename without extension
+    get_filename_component(SCRIPT_NAME ${SCRIPT_SOURCE} NAME_WE)
+    add_executable(${SCRIPT_NAME} ${SCRIPT_SOURCE})
+    target_link_libraries(${SCRIPT_NAME} PUBLIC pinocchio::pinocchio)
+    target_link_libraries(${SCRIPT_NAME} PUBLIC ${LLVM_MODULE_LIBS})
+    target_link_libraries(${SCRIPT_NAME} PUBLIC ${Clang_LIBS})
+endforeach()
