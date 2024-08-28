@@ -7,6 +7,6 @@ Setup instructions:
 4. `$ git submodule update --init --recursive`
 5. `$ mkdir -p build && cd build`
 6. `$ cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1`
-7. `$ make -j($nproc)`
+7. `$ make -j$(nproc)`
 8. This initializes env vars related to the project, run this whenever you open a new terminal to work on the project: `$ source ../init_path_vars.sh`
 9. See if basic example works: `$ ./pin_fk ../deps/pinocchio/models/baxter_simple.urdf`
