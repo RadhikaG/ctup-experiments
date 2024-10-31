@@ -45,34 +45,45 @@ int main(int argc, char ** argv)
   ADFun<CGD> fun(ad_X, ad_Y);
 
   // for JIT
-  ModelCSourceGen<double> cgen(fun, "model");
-  cgen.setCreateForwardZero(true);
-  ModelLibraryCSourceGen<double> libcgen(cgen);
+  //ModelCSourceGen<double> cgen(fun, "model");
+  //cgen.setCreateForwardZero(true);
+  //ModelLibraryCSourceGen<double> libcgen(cgen);
 
-  LlvmModelLibraryProcessor<double> p(libcgen);
+  //LlvmModelLibraryProcessor<double> p(libcgen);
 
-  std::unique_ptr<LlvmModelLibrary<double>> llvmModelLib = p.create();
-  SaveFilesModelLibraryProcessor<double> p2(libcgen);
-  p2.saveSources();
+  //std::unique_ptr<LlvmModelLibrary<double>> llvmModelLib = p.create();
+  //SaveFilesModelLibraryProcessor<double> p2(libcgen);
+  //p2.saveSources();
 
-  std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
-  Eigen::VectorXd q = randomConfiguration(model);
-  Eigen::VectorXd y = g_model->ForwardZero(q);
+  //std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
+  //Eigen::VectorXd q = randomConfiguration(model);
+  //Eigen::VectorXd y = g_model->ForwardZero(q);
 
-  std::cout << y << "\n";
+  ////std::cout << y << "\n";
+  //auto start = std::chrono::system_clock::now();
+  //for (int i = 0; i < 10000; i++) {
+  //  y = g_model->ForwardZero(q);
+  //}
+  //auto end = std::chrono::system_clock::now();
+  //auto elapsed =
+  //    std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+  //std::cout << y << std::endl;
+  //std::cout << "pin cg: avg time taken (ns): " << elapsed.count() / 10000 << "\n";
+  // JIT done
 
   // for C++ stdout
-  //CodeHandler<double> handler;
-  //CppAD::vector<CGD> indVars((size_t)ad_X.size());
-  //handler.makeVariables(indVars);
+  CodeHandler<double> handler;
+  CppAD::vector<CGD> indVars((size_t)ad_X.size());
+  handler.makeVariables(indVars);
 
-  //CppAD::vector<CGD> fwd_zero = fun.Forward(0, indVars);
+  CppAD::vector<CGD> fwd_zero = fun.Forward(0, indVars);
 
-  //LanguageC<double> langC("double");
-  //LangCDefaultVariableNameGenerator<double> nameGen;
+  LanguageC<double> langC("double");
+  LangCDefaultVariableNameGenerator<double> nameGen;
 
-  //std::ostringstream code;
-  //handler.generateCode(code, langC, fwd_zero, nameGen);
-  //std::cout << code.str();
+  std::ostringstream code;
+  handler.generateCode(code, langC, fwd_zero, nameGen);
+  std::cout << code.str();
+  // C++ stdout done
 }
 

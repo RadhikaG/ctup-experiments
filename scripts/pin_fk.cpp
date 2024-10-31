@@ -34,4 +34,15 @@ int main(int argc, char ** argv)
               << std::fixed << std::setprecision(2)
               << data.oMi[joint_id].translation().transpose()
               << std::endl;
+
+  for(JointIndex joint_id = 0; joint_id < (JointIndex)model.njoints; ++joint_id) {
+    std::cout << model.names[joint_id] << "\n";
+    Eigen::Matrix<double, 6, 6> X_T = model.jointPlacements[joint_id];
+    Eigen::Matrix<double, 6, 6> X_pi = data.liMi[joint_id];
+    Eigen::Matrix<double, 6, 6> X_Oi = data.oMi[joint_id];
+    std::cout << "X_T:\n" << X_T << "\n";
+    std::cout << "X_pi:\n" << X_pi << "\n";
+    std::cout << "X_Oi:\n" << X_Oi << "\n";
+    std::cout << "-------\n";
+  }
 }

@@ -41,6 +41,7 @@ include_directories(${CMAKE_BINARY_DIR}/install/CppADCodeGen/include)
 
 # Build hpp-fcl
 ExternalProject_Add(hpp-fcl
+    DEPENDS CppAD
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/hpp-fcl
     BINARY_DIR ${CMAKE_BINARY_DIR}/hpp-fcl
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/install/hpp-fcl -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DBUILD_PYTHON_INTERFACE=OFF
@@ -92,9 +93,12 @@ if (LLVM_FOUND)
     link_directories(${Clang_LIBRARY_DIRS})
 endif()
 
+include_directories(${CMAKE_SOURCE_DIR}/gen)
+
 # for individual script executables
 
 set(SCRIPT_SOURCES
+    scripts/gen_fk.cpp
     scripts/pin_fk.cpp
     scripts/pin_fk_codegen.cpp
     scripts/pin_rnea_codegen.cpp
