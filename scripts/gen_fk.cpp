@@ -2,7 +2,8 @@
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
 #include "pinocchio/utils/timer.hpp"
-#include "fk_gen.h"
+//#include "fk_gen_dense.h"
+#include "fk_gen_unrolled.h"
 #include <iostream>
 
 int main(int argc, char ** argv)
@@ -10,7 +11,7 @@ int main(int argc, char ** argv)
   using namespace pinocchio;
 
   PinocchioTicToc timer(PinocchioTicToc::US);
-  //const int NBT = 1000 * 100;
+  //const int NBT = 100 * 100;
   const int NBT = 1;
   
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
@@ -34,8 +35,6 @@ int main(int argc, char ** argv)
 
   Data data(model);
 
-  ctup_gen::set_X_T();
-
   timer.tic();
   SMOOTH(NBT)
   {
@@ -52,11 +51,27 @@ int main(int argc, char ** argv)
   std::cout << "pin avg time taken (us): \t\t\t\t";
   timer.toc(std::cout, NBT);
 
-  //model.joints[1].calc(data.joints[1].derived(), qs[0]);
-  //pin_res = data.joints[1].M();
+  //for (size_t i = 1; i < model.njoints; ++i) {
+  //  if (i <= 4) {
+  //    pin_res = model.jointPlacements[i];
+  //    std::cout << "pin XT " << i << ":\n" << pin_res << "\n";
+
+  //    pin_res = data.joints[i].M();
+  //    std::cout << "pin XJ " << i << ":\n" << pin_res << "\n";
+
+  //    pin_res = data.liMi[i];
+  //    std::cout << "pin Xpi " << i << ":\n" << pin_res << "\n";
+
+  //    pin_res = data.oMi[model.parents[i]];
+  //    std::cout << "pin Xpar " << i << ":\n" << pin_res << "\n";
+  //  }
+
+  //  pin_res = data.oMi[i];
+  //  std::cout << "pin X" << i << " (" << model.names[i] << "):\n";
+  //  std::cout << pin_res << "\n";
+  //}
 
   pin_res = data.oMi[model.njoints-1];
-
   std::cout << "ctup_res: \n" << ctup_res << std::endl;
   std::cout << "pin_res: \n" << pin_res << std::endl;
   std::cout << "diff: \n" << ctup_res - pin_res << std::endl;
