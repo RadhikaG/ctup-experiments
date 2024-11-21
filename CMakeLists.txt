@@ -11,91 +11,32 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-find_package(LLVM ${LLVM_VERSION})
-find_package(Clang ${LLVM_VERSION})
+find_package(LLVM ${LLVM_VERSION} REQUIRED)
+find_package(Clang ${LLVM_VERSION} REQUIRED)
 
-# ExternalProject is used to build and manage the dependencies
-include(ExternalProject)
+find_package(Eigen3 REQUIRED CONFIG)
+add_definitions(-DOPENCV_DISABLE_EIGEN_TENSOR_SUPPORT)
 
-# Build CppAD
-ExternalProject_Add(CppAD
-    SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/CppAD
-    BINARY_DIR ${CMAKE_BINARY_DIR}/CppAD
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/install/CppAD -DCMAKE_EXPORT_COMPILE_COMMANDS=1
-    INSTALL_DIR ${CMAKE_BINARY_DIR}/install/CppAD
-)
+# Configure the helper CMakeLists with the dependencies
+configure_file(CMakeLists.txt.in ${CMAKE_BINARY_DIR}/deps-build/CMakeLists.txt)
 
-include_directories(${CMAKE_BINARY_DIR}/install/CppAD/include)
-link_directories(${CMAKE_BINARY_DIR}/install/CppAD/lib)
+# Build it
+execute_process(COMMAND ${CMAKE_COMMAND} .
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/deps-build)
 
-# Build CppADCodeGen, depends on CppAD
-ExternalProject_Add(CppADCodeGen
-    DEPENDS CppAD
-    SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/CppADCodeGen
-    BINARY_DIR ${CMAKE_BINARY_DIR}/CppADCodeGen
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/install/CppADCodeGen -DCMAKE_EXPORT_COMPILE_COMMANDS=1
-    INSTALL_DIR ${CMAKE_BINARY_DIR}/install/CppADCodeGen
-)
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/deps-build)  
 
-include_directories(${CMAKE_BINARY_DIR}/install/CppADCodeGen/include)
-
-# Build hpp-fcl
-ExternalProject_Add(hpp-fcl
-    DEPENDS CppAD
-    SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/hpp-fcl
-    BINARY_DIR ${CMAKE_BINARY_DIR}/hpp-fcl
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/install/hpp-fcl -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DBUILD_PYTHON_INTERFACE=OFF
-    INSTALL_DIR ${CMAKE_BINARY_DIR}/install/hpp-fcl
-)
-
-include_directories(${CMAKE_BINARY_DIR}/install/hpp-fcl/include)
-link_directories(${CMAKE_BINARY_DIR}/install/hpp-fcl/lib)
-
-set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH}
-    ${CMAKE_BINARY_DIR}/install/CppAD
-    ${CMAKE_BINARY_DIR}/install/CppADCodeGen
-    ${CMAKE_BINARY_DIR}/install/hpp-fcl
-)
-# this is a bad hack for passing multiple non-standard install dirs to ExternalProject_Add
-# https://stackoverflow.com/questions/45414507/pass-a-list-of-prefix-paths-to-externalproject-add-in-cmake-args
-string(REPLACE ";" "|" CMAKE_PREFIX_PATH_ALT_SEP "${CMAKE_PREFIX_PATH}")
-
-# Build pinocchio, depends on CppAD, CppADCodeGen
-ExternalProject_Add(pinocchio
-    DEPENDS CppAD CppADCodeGen hpp-fcl
-    SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/pinocchio
-    BINARY_DIR ${CMAKE_BINARY_DIR}/pinocchio
-    # bad hack continued
-    LIST_SEPARATOR |
-    # no python interface, support HPP FCL and codegen
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/install/pinocchio -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH_ALT_SEP} -DBUILD_PYTHON_INTERFACE=OFF -DBUILD_WITH_COLLISION_SUPPORT=ON -DBUILD_WITH_CODEGEN_SUPPORT=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=1
-    INSTALL_DIR ${CMAKE_BINARY_DIR}/install/pinocchio
-)
-
-include_directories(${CMAKE_BINARY_DIR}/install/pinocchio/include)
 link_directories(${CMAKE_BINARY_DIR}/install/pinocchio/lib)
-
 find_package(pinocchio
-    PATHS ${CMAKE_BINARY_DIR}/install/pinocchio
-    NO_DEFAULT_PATH
+        PATHS ${CMAKE_BINARY_DIR}/install/pinocchio
+        REQUIRED CONFIG
 )
+
+find_library(cppad_lib cppad_lib HINTS ${CMAKE_BINARY_DIR}/install/CppAD/lib)
 
 set(PINOCCHIO_MODEL_DIR ${CMAKE_SOURCE_DIR}/deps/pinocchio/models)
 add_compile_definitions(PINOCCHIO_MODEL_DIR="${PINOCCHIO_MODEL_DIR}")
-
-# for CppADCodeGen JIT
-if (LLVM_FOUND)
-    add_compile_definitions(LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}
-                            LLVM_VERSION_MINOR=${LLVM_VERSION_MINOR})
-    include_directories(${LLVM_INCLUDE_DIRS})
-    include_directories(${Clang_INCLUDE_DIRS})
-    link_directories(${LLVM_LIBRARY_DIRS})
-    link_directories(${Clang_LIBRARY_DIRS})
-endif()
-
-include_directories(${CMAKE_SOURCE_DIR}/gen)
-
-# for individual script executables
 
 set(SCRIPT_SOURCES
     scripts/gen_fk.cpp
@@ -104,11 +45,31 @@ set(SCRIPT_SOURCES
     scripts/pin_rnea_codegen.cpp
 )
 
+add_compile_definitions(LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}
+                            LLVM_VERSION_MINOR=${LLVM_VERSION_MINOR})
+
+include_directories(${LLVM_INCLUDE_DIRS})
+include_directories(${Clang_INCLUDE_DIRS})
+link_directories(${LLVM_LIBRARY_DIRS})
+link_directories(${Clang_LIBRARY_DIRS})
+
 foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
     # get filename without extension
     get_filename_component(SCRIPT_NAME ${SCRIPT_SOURCE} NAME_WE)
     add_executable(${SCRIPT_NAME} ${SCRIPT_SOURCE})
-    target_link_libraries(${SCRIPT_NAME} PUBLIC pinocchio::pinocchio)
     target_link_libraries(${SCRIPT_NAME} PUBLIC ${LLVM_MODULE_LIBS})
     target_link_libraries(${SCRIPT_NAME} PUBLIC ${Clang_LIBS})
+
+    target_link_libraries(${SCRIPT_NAME} PUBLIC pinocchio::pinocchio)
+    target_link_libraries(${SCRIPT_NAME} PUBLIC ${cppad_lib})
+    target_link_libraries(${SCRIPT_NAME} PUBLIC Eigen3::Eigen)
+
+    target_include_directories(${SCRIPT_NAME} PUBLIC 
+        ${CMAKE_BINARY_DIR}/install/CppAD/include
+        ${CMAKE_BINARY_DIR}/install/CppADCodeGen/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/gen
+        ${CMAKE_BINARY_DIR}/install/CppAD/lib
+        ${CMAKE_BINARY_DIR}/install/pinocchio/include
+     )
 endforeach()
+  

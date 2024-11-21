@@ -1,0 +1,51 @@
+cmake_minimum_required(VERSION 3.15)
+project(deps-download NONE)
+
+# Set the C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#set(CMAKE_CXX_COMPILER "usr/bin/g++" )
+# ExternalProject is used to build and manage the dependencies
+include(ExternalProject)
+
+# Build CppAD
+ExternalProject_Add(CppAD
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/CppAD
+    BINARY_DIR ${CMAKE_BINARY_DIR}/CppAD
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/install/CppAD -DCMAKE_EXPORT_COMPILE_COMMANDS=1
+    INSTALL_DIR ${CMAKE_BINARY_DIR}/install/CppAD
+)
+
+include_directories(${CMAKE_BINARY_DIR}/install/CppAD/include)
+link_directories(${CMAKE_BINARY_DIR}/install/CppAD/lib)
+
+# Build CppADCodeGen, depends on CppAD
+ExternalProject_Add(CppADCodeGen
+    DEPENDS CppAD
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/CppADCodeGen
+    BINARY_DIR ${CMAKE_BINARY_DIR}/CppADCodeGen
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/install/CppADCodeGen -DCMAKE_EXPORT_COMPILE_COMMANDS=1
+    INSTALL_DIR ${CMAKE_BINARY_DIR}/install/CppADCodeGen
+)
+
+# Build hpp-fcl
+ExternalProject_Add(hpp-fcl
+    DEPENDS CppAD
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/hpp-fcl
+    BINARY_DIR ${CMAKE_BINARY_DIR}/hpp-fcl
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+    CMAKE_ARGS -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DBUILD_PYTHON_INTERFACE=OFF
+    CMAKE_CACHE_ARGS -DCPPAD_HOME:STRING=${CMAKE_BINARY_DIR}/install/CppAD/include -DGOOGLETEST_GIT:BOOL=ON -DCMAKE_INSTALL_PREFIX:STRING=${CMAKE_BINARY_DIR}/install/hpp-fcl
+    INSTALL_DIR ${CMAKE_BINARY_DIR}/install/hpp-fcl
+)
+
+# Build pinocchio, depends on CppAD, CppADCodeGen
+ExternalProject_Add(pinocchio
+    DEPENDS hpp-fcl
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/pinocchio
+    BINARY_DIR ${CMAKE_BINARY_DIR}/pinocchio
+    CMAKE_ARGS -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DBUILD_PYTHON_INTERFACE=OFF
+    CMAKE_CACHE_ARGS -DHPP-FCL_HOME:STRING=${CMAKE_BINARY_DIR}/install/hpp-fcl/include -DGOOGLETEST_GIT:BOOL=ON -DCMAKE_INSTALL_PREFIX:STRING=${CMAKE_BINARY_DIR}/install/pinocchio
+    INSTALL_DIR ${CMAKE_BINARY_DIR}/install/pinocchio
+)
