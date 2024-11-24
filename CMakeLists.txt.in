@@ -8,6 +8,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # ExternalProject is used to build and manage the dependencies
 include(ExternalProject)
 
+# Build ctup
+ExternalProject_Add(ctup
+  SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND make
+  BUILD_IN_SOURCE true
+  INSTALL_COMMAND make
+)
+
 # Build CppAD
 ExternalProject_Add(CppAD
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/CppAD

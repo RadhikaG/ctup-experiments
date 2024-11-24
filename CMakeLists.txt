@@ -38,12 +38,21 @@ find_library(cppad_lib cppad_lib HINTS ${CMAKE_BINARY_DIR}/install/CppAD/lib)
 set(PINOCCHIO_MODEL_DIR ${CMAKE_SOURCE_DIR}/deps/pinocchio/models)
 add_compile_definitions(PINOCCHIO_MODEL_DIR="${PINOCCHIO_MODEL_DIR}")
 
+#SAMPLES
+set(SAMPLES_SOURCES
+    samples/sample8.cpp
+    samples/sample9.cpp
+    samples/sample10.cpp
+)
+
+#SCRIPTS
 set(SCRIPT_SOURCES
     scripts/gen_fk.cpp
     scripts/pin_fk.cpp
     scripts/pin_fk_codegen.cpp
     scripts/pin_rnea_codegen.cpp
 )
+
 
 add_compile_definitions(LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}
                             LLVM_VERSION_MINOR=${LLVM_VERSION_MINOR})
@@ -53,6 +62,36 @@ include_directories(${Clang_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 link_directories(${Clang_LIBRARY_DIRS})
 
+#Compile SAMPLES
+foreach(SAMPLE_SOURCE ${SAMPLES_SOURCES})
+    get_filename_component(SAMPLE_NAME ${SAMPLE_SOURCE} NAME_WE)
+    add_executable(${SAMPLE_NAME} ${SAMPLE_SOURCE})
+    target_link_libraries(${SAMPLE_NAME} PUBLIC Eigen3::Eigen)
+    target_link_libraries(${SAMPLE_NAME} PUBLIC ${LLVM_MODULE_LIBS})
+    target_link_libraries(${SAMPLE_NAME} PUBLIC ${Clang_LIBS})
+    target_link_libraries(${SAMPLE_NAME} PUBLIC pinocchio::pinocchio)
+    target_link_libraries(${SAMPLE_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build/libbuildit.a)
+    target_include_directories(${SAMPLE_NAME} PUBLIC
+        ${CMAKE_BINARY_DIR}/install/pinocchio/include
+        ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/include
+        ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/include
+        ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build/gen_headers
+    )
+endforeach()
+
+add_custom_command(
+  OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
+  COMMAND ${CMAKE_BINARY_DIR}/sample8 ${CMAKE_SOURCE_DIR}/deps/pinocchio/models/baxter_simple.urdf ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
+  DEPENDS ${CMAKE_BINARY_DIR}/sample8
+  COMMENT "Executing sample8"
+  VERBATIM
+)
+
+add_custom_target(
+  FK_GEN_DENSE ALL
+  DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
+)
+#Compile SCRIPTS
 foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
     # get filename without extension
     get_filename_component(SCRIPT_NAME ${SCRIPT_SOURCE} NAME_WE)
