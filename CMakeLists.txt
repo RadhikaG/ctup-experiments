@@ -49,6 +49,7 @@ set(SAMPLES_SOURCES
 
 #SCRIPTS
 set(SCRIPT_SOURCES
+    scripts/eval_fk.cpp
     scripts/gen_fk.cpp
     scripts/pin_fk.cpp
     scripts/pin_fk_codegen.cpp
@@ -79,7 +80,6 @@ foreach(SAMPLE_SOURCE ${SAMPLES_SOURCES})
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build/gen_headers
     )
     set_property(TARGET ${SAMPLE_NAME} PROPERTY CXX_STANDARD 11)
-    #set_property(TARGET ${SAMPLE_NAME} PROPERTY COMPILE_OPTIONS "$<$<CONFIG:Debug>:-O0>")
 endforeach()
 
 add_custom_command(

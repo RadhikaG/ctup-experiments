@@ -23,6 +23,8 @@ int main(int argc, char ** argv)
   typedef ModelTpl<ADCG> ADModel;
   typedef DataTpl<ADCG> ADData;
   typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 1> ADVectorXs;
+  //typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 36> ADMatrixDyn6x6; // spatial Xform
+  typedef Eigen::Matrix<ADCG, 6, 6> ADMatrixDyn6x6; // spatial Xform
   
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
   const std::string urdf_filename = (argc<=1) ? PINOCCHIO_MODEL_DIR + std::string("/others/robots/ur_description/urdf/ur5_robot.urdf") : argv[1];
@@ -37,12 +39,26 @@ int main(int argc, char ** argv)
   ADModel ad_model = model.cast<ADCG>();
   ADData ad_data(ad_model);
   ADVectorXs ad_X = ADVectorXs(ad_model.nq);
-  ADVectorXs ad_Y = ADVectorXs(3);//ad_model.nq);
+  ADMatrixDyn6x6 ad_Ys[model.njoints];
+
   Independent(ad_X);
 
   forwardKinematics(ad_model, ad_data, ad_X);
-  ad_Y = ad_data.oMi[(ad_model.njoints)-1].translation();
-  ADFun<CGD> fun(ad_X, ad_Y);
+
+  for (int i = 0; i < model.njoints; i++) {
+    ad_Ys[i] = ad_data.oMi[i];
+  }
+
+  ADVectorXs ad_Y_flat(model.njoints * 36);
+
+  for (int jid = 0; jid < model.njoints; jid++) {
+    int joint_xform_start = jid * 36;
+    for (int i = 0; i < 36; i++)
+      ad_Y_flat(joint_xform_start + i) = ad_Ys[jid](i);
+  }
+      
+
+  ADFun<CGD> fun(ad_X, ad_Y_flat);
 
   // for JIT
   ModelCSourceGen<double> cgen(fun, "model");
@@ -67,7 +83,9 @@ int main(int argc, char ** argv)
   auto end = std::chrono::system_clock::now();
   auto elapsed =
       std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
-  std::cout << y << std::endl;
+  Eigen::Matrix<double, 6, 6> final_fk_res;
+  final_fk_res = Eigen::Map<const Eigen::MatrixXd>(y.data() + y.size() - 36, 6, 6);
+  std::cout << final_fk_res << "\n";
   std::cout << "pin cg: avg time taken (ns): " << elapsed.count() / 10000 << "\n";
   // JIT done
 
