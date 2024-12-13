@@ -46,8 +46,9 @@ void set_X_T(Xform<double> X_T[], const Model &model) {
         double entry = pin_X_T.coeffRef(c, r);
         if (std::abs(entry) < 1e-5)
           X_T[i].rot.set_entry_to_constant(r, c, 0);
-        else
+        else {
           X_T[i].rot.set_entry_to_constant(r, c, entry);
+        }
       }
     }
 
@@ -117,7 +118,6 @@ int main(int argc, char* argv[]) {
   builder::builder_context context;
 
   auto ast = context.extract_function_ast(fk, "fk", model);
-  ast->dump(std::cout, 0);
   block::c_code_generator::generate_code(ast, of, 0);
 
   of << "}\n";

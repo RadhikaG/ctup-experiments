@@ -258,7 +258,6 @@ int main(int argc, char* argv[]) {
   block::c_code_generator::generate_code(ast, of, 0);
 
   ast = context.extract_function_ast(fk, "fk", model);
-  ast->dump(std::cout, 0);
   block::c_code_generator::generate_code(ast, of, 0);
 
   of << "}\n";

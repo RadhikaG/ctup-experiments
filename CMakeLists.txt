@@ -34,6 +34,8 @@ find_package(pinocchio
 )
 
 find_library(cppad_lib cppad_lib HINTS ${CMAKE_BINARY_DIR}/install/CppAD/lib)
+find_library(urdf-compiler urdf-compiler PATHS ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/build)
+find_library(buildit buildit PATHS ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build)
 
 set(PINOCCHIO_MODEL_DIR ${CMAKE_SOURCE_DIR}/deps/pinocchio/models)
 add_compile_definitions(PINOCCHIO_MODEL_DIR="${PINOCCHIO_MODEL_DIR}")
@@ -67,16 +69,17 @@ foreach(SAMPLE_SOURCE ${SAMPLES_SOURCES})
     get_filename_component(SAMPLE_NAME ${SAMPLE_SOURCE} NAME_WE)
     add_executable(${SAMPLE_NAME} ${SAMPLE_SOURCE})
     target_link_libraries(${SAMPLE_NAME} PUBLIC Eigen3::Eigen)
-    target_link_libraries(${SAMPLE_NAME} PUBLIC ${LLVM_MODULE_LIBS})
-    target_link_libraries(${SAMPLE_NAME} PUBLIC ${Clang_LIBS})
     target_link_libraries(${SAMPLE_NAME} PUBLIC pinocchio::pinocchio)
-    target_link_libraries(${SAMPLE_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build/libbuildit.a)
+    target_link_libraries(${SAMPLE_NAME} PUBLIC ${buildit})
+    target_link_libraries(${SAMPLE_NAME} PUBLIC ${urdf-compiler})
     target_include_directories(${SAMPLE_NAME} PUBLIC
         ${CMAKE_BINARY_DIR}/install/pinocchio/include
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/include
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/include
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build/gen_headers
     )
+    set_property(TARGET ${SAMPLE_NAME} PROPERTY CXX_STANDARD 11)
+    #set_property(TARGET ${SAMPLE_NAME} PROPERTY COMPILE_OPTIONS "$<$<CONFIG:Debug>:-O0>")
 endforeach()
 
 add_custom_command(

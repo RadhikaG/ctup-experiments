@@ -12,5 +12,5 @@
 	url = https://github.com/humanoid-path-planner/hpp-fcl.git
 [submodule "ctup"]
 	path = deps/compile-time-urdf-parser
-	url = https://github.com/RadhikaG/compile-time-urdf-parser.git
-	branch = marc-attempt1
+	url = git@github.com:RadhikaG/compile-time-urdf-parser.git
+	branch = master
