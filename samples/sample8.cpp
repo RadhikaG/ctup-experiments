@@ -74,7 +74,7 @@ public:
 
 dyn_var<eigen_Xmat_t[]> X_T = builder::as_global("X_T");
 
-void set_X_T(const Model &model) {
+static void set_X_T(const Model &model) {
   typedef typename Model::JointIndex JointIndex;
   static_var<JointIndex> i = 1;
 
@@ -120,7 +120,7 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
   }
 }
 
-dyn_var<eigen_Xmat_t> fk(const Model &model, dyn_var<eigen_vectorXd_t &> q) {
+static dyn_var<eigen_Xmat_t> fk(const Model &model, dyn_var<eigen_vectorXd_t &> q) {
   dyn_var<eigen_Xmat_t[]> X_J, X_0;
   resize_arr(X_J, model.njoints);
   resize_arr(X_0, model.njoints);

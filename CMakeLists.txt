@@ -5,10 +5,10 @@ project(ctup-experiments)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Optionally, you can specify the build type (Release, Debug, etc.)
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif()
+################################################
+# Compiling dependencies from source
+# These are pulled into the deps/ directory
+################################################
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 find_package(LLVM ${LLVM_VERSION} REQUIRED)
@@ -40,21 +40,6 @@ find_library(buildit buildit PATHS ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-pa
 set(PINOCCHIO_MODEL_DIR ${CMAKE_SOURCE_DIR}/deps/pinocchio/models)
 add_compile_definitions(PINOCCHIO_MODEL_DIR="${PINOCCHIO_MODEL_DIR}")
 
-#SAMPLES
-set(SAMPLES_SOURCES
-    samples/sample8.cpp
-    samples/sample9.cpp
-    samples/sample10.cpp
-)
-
-#SCRIPTS
-set(SCRIPT_SOURCES
-    scripts/eval_fk.cpp
-    scripts/gen_fk.cpp
-    scripts/pin_fk.cpp
-    scripts/pin_fk_codegen.cpp
-    scripts/pin_rnea_codegen.cpp
-)
 
 
 add_compile_definitions(LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}
@@ -64,6 +49,22 @@ include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${Clang_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 link_directories(${Clang_LIBRARY_DIRS})
+
+################################################
+# Compiling code generators
+# Code generators are located in samples/ 
+################################################
+
+# Default: compile code generators in Debug mode with no optimizations
+set(CMAKE_BUILD_TYPE Debug)
+
+#SAMPLES
+set(SAMPLES_SOURCES
+    samples/sample8.cpp
+    samples/sample9.cpp
+    samples/sample10.cpp
+)
+
 
 #Compile SAMPLES
 foreach(SAMPLE_SOURCE ${SAMPLES_SOURCES})
@@ -79,8 +80,25 @@ foreach(SAMPLE_SOURCE ${SAMPLES_SOURCES})
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/include
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build/gen_headers
     )
-    set_property(TARGET ${SAMPLE_NAME} PROPERTY CXX_STANDARD 11)
+    target_compile_options(${SAMPLE_NAME} PRIVATE
+        -Wall
+        -Wextra
+        -Wno-unused-parameter
+        -Wno-missing-field-initializers
+        -Wmissing-declarations
+        -Woverloaded-virtual
+        -Wno-deprecated
+        -Wdelete-non-virtual-dtor
+        -Werror
+        -Wno-vla
+        -pedantic-errors
+    )
 endforeach()
+
+################################################
+# Generating code from code generators using robot as input
+# Generated code dumped in gen/ directory.
+################################################
 
 add_custom_command(
   OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
@@ -94,6 +112,24 @@ add_custom_target(
   FK_GEN_DENSE ALL
   DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
 )
+
+################################################
+# Compiling experiment scripts for comparing baselines with generated code.
+# Experiment scripts are located in the scripts/ dir.
+################################################
+
+# Default: compile evaluation of generated code with optimizations on
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
+
+#SCRIPTS
+set(SCRIPT_SOURCES
+    scripts/eval_fk.cpp
+    scripts/gen_fk.cpp
+    scripts/pin_fk.cpp
+    scripts/pin_fk_codegen.cpp
+    scripts/pin_rnea_codegen.cpp
+)
+
 #Compile SCRIPTS
 foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
     # get filename without extension
@@ -114,4 +150,3 @@ foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
         ${CMAKE_BINARY_DIR}/install/pinocchio/include
      )
 endforeach()
-  

@@ -5,8 +5,8 @@
 #include "pinocchio/algorithm/kinematics.hpp"
 #include "pinocchio/utils/timer.hpp"
 #include <cppad/cg/model/llvm/llvm.hpp>
-#include "fk_gen_dense.h"
-//#include "fk_gen_unrolled.h"
+//#include "fk_gen_dense.h"
+#include "fk_gen_unrolled_cpy.h"
 #include <iostream>
 
 int main(int argc, char ** argv)
@@ -87,7 +87,7 @@ int main(int argc, char ** argv)
 
   Data data(model);
 
-  ctup_gen::set_X_T();
+  //ctup_gen::set_X_T();
 
   timer.tic();
   SMOOTH(NBT)

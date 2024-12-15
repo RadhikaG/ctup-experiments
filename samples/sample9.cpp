@@ -54,7 +54,7 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
   }
 }
 
-void set_X_T(Xform<double> X_T[], const Model &model) {
+static void set_X_T(Xform<double> X_T[], const Model &model) {
   typedef typename Model::JointIndex JointIndex;
   static_var<JointIndex> i;
 
@@ -86,7 +86,7 @@ void set_X_T(Xform<double> X_T[], const Model &model) {
   }
 }
 
-dyn_var<builder::eigen_Xmat_t> fk(const Model &model, dyn_var<builder::eigen_vectorXd_t &> q) {
+static dyn_var<builder::eigen_Xmat_t> fk(const Model &model, dyn_var<builder::eigen_vectorXd_t &> q) {
   Xform<double> X_T[model.njoints];
   Xform<double> X_J[model.njoints];
   Xform<double> X_0[model.njoints];
