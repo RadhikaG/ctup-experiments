@@ -1,7 +1,7 @@
 ### Scripts and experiments related to compile-time-urdf-parser
 
 Dependencies:
-1. `$ sudo apt install cmake libassimp-dev liburdfdom-dev libeigen3-dev liboctomap-dev`
+1. `$ sudo apt install cmake libassimp-dev liburdfdom-dev libeigen3-dev liboctomap-dev bear`
 2. `$ sudo apt install llvm clang clang-tools libclang-dev`
 
 Setup instructions:
