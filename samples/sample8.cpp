@@ -116,7 +116,7 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
     case 'X': return 'X';
     case 'Y': return 'Y';
     case 'Z': return 'Z';
-    default: assert(false && "should never happen");
+    default: assert(false && "should never happen"); return -1;
   }
 }
 

@@ -4,16 +4,16 @@
 
 namespace ctup_gen {
 
-void print_string(const char* str) {
+static void print_string(const char* str) {
   std::cout << str << "\n";
 }
 
 template<typename Derived>
-void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {
+static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {
   std::cout << matrix << "\n";
 }
 
-Eigen::Matrix<double, 6, 6> fk (Eigen::VectorXd& arg1) {
+static Eigen::Matrix<double, 6, 6> fk (Eigen::VectorXd& arg1) {
   Eigen::VectorXd& var0 = arg1;
   double var1;
   double var2;

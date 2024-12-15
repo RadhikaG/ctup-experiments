@@ -6,7 +6,7 @@
 #include "pinocchio/utils/timer.hpp"
 #include <cppad/cg/model/llvm/llvm.hpp>
 //#include "fk_gen_dense.h"
-#include "fk_gen_unrolled_cpy.h"
+#include "fk_gen_unrolled.h"
 #include <iostream>
 
 int main(int argc, char ** argv)

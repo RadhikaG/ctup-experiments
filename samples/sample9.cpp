@@ -50,7 +50,7 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
     case 'X': return 'X';
     case 'Y': return 'Y';
     case 'Z': return 'Z';
-    default: assert(false && "should never happen");
+    default: assert(false && "should never happen"); return -1;
   }
 }
 
@@ -163,12 +163,12 @@ int main(int argc, char* argv[]) {
   of << "#include <iostream>\n\n";
   of << "namespace ctup_gen {\n\n";
 
-  of << "void print_string(const char* str) {\n";
+  of << "static void print_string(const char* str) {\n";
   of << "  std::cout << str << \"\\n\";\n";
   of << "}\n\n";
 
   of << "template<typename Derived>\n";
-  of << "void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {\n";
+  of << "static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {\n";
   of << "  std::cout << matrix << \"\\n\";\n";
   of << "}\n\n";
 

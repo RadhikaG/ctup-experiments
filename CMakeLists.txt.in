@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(deps-download NONE)
 
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
-set(NPROC 4)
+set(NPROC 2)
 
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -62,6 +62,6 @@ ExternalProject_Add(pinocchio
     BINARY_DIR ${CMAKE_BINARY_DIR}/pinocchio
     CMAKE_ARGS -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DBUILD_PYTHON_INTERFACE=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     CMAKE_CACHE_ARGS -DHPP-FCL_HOME:STRING=${CMAKE_BINARY_DIR}/install/hpp-fcl/include -DGOOGLETEST_GIT:BOOL=ON -DCMAKE_INSTALL_PREFIX:STRING=${CMAKE_BINARY_DIR}/install/pinocchio
-    BUILD_COMMAND make -j${NPROC}
+    BUILD_COMMAND make
     INSTALL_DIR ${CMAKE_BINARY_DIR}/install/pinocchio
 )

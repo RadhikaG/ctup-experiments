@@ -1,0 +1,24 @@
+diff --git a/include/blocks/stmt.h b/include/blocks/stmt.h
+index c1f9794..cd5ab11 100644
+--- a/include/blocks/stmt.h
++++ b/include/blocks/stmt.h
+@@ -163,6 +163,7 @@ public:
+ 		if (!cond->is_same(other->cond))
+ 			return true;
+ 		assert(false && "Statement unreachable");
++        return false;
+ 	}
+ 	virtual block::Ptr clone_impl(void) override {
+ 		auto np = clone_stmt(this);
+diff --git a/include/builder/dyn_var.h b/include/builder/dyn_var.h
+index ca9c101..6d561f0 100644
+--- a/include/builder/dyn_var.h
++++ b/include/builder/dyn_var.h
+@@ -41,6 +41,7 @@ public:
+ 	static block::type::Ptr create_block_type(void) {
+ 		// Cannot create block type for abstract class
+ 		assert(false);
++        return nullptr;
+ 	}
+ 
+ 	var() = default;

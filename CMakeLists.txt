@@ -50,13 +50,28 @@ include_directories(${Clang_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 link_directories(${Clang_LIBRARY_DIRS})
 
+set(CFLAGS_PEDANTIC
+    -Wall
+    -Wextra
+    -Wno-unused-variable
+    -Wno-unused-parameter
+    -Wno-unused-but-set-variable
+    -Wno-unused-function
+    -Wno-missing-field-initializers
+    -Wmissing-declarations
+    -Woverloaded-virtual
+    -Wno-deprecated
+    -Wdelete-non-virtual-dtor
+    -Werror
+    -Wno-vla
+    -pedantic-errors
+)
+
+
 ################################################
 # Compiling code generators
 # Code generators are located in samples/ 
 ################################################
-
-# Default: compile code generators in Debug mode with no optimizations
-set(CMAKE_BUILD_TYPE Debug)
 
 #SAMPLES
 set(SAMPLES_SOURCES
@@ -80,18 +95,9 @@ foreach(SAMPLE_SOURCE ${SAMPLES_SOURCES})
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/include
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build/gen_headers
     )
-    target_compile_options(${SAMPLE_NAME} PRIVATE
-        -Wall
-        -Wextra
-        -Wno-unused-parameter
-        -Wno-missing-field-initializers
-        -Wmissing-declarations
-        -Woverloaded-virtual
-        -Wno-deprecated
-        -Wdelete-non-virtual-dtor
-        -Werror
-        -Wno-vla
-        -pedantic-errors
+    target_compile_options(${SAMPLE_NAME} PRIVATE 
+        -O1 -g # Debug
+        ${CFLAGS_PEDANTIC}
     )
 endforeach()
 
@@ -117,9 +123,6 @@ add_custom_target(
 # Compiling experiment scripts for comparing baselines with generated code.
 # Experiment scripts are located in the scripts/ dir.
 ################################################
-
-# Default: compile evaluation of generated code with optimizations on
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 #SCRIPTS
 set(SCRIPT_SOURCES
@@ -148,5 +151,10 @@ foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
         ${CMAKE_CURRENT_SOURCE_DIR}/gen
         ${CMAKE_BINARY_DIR}/install/CppAD/lib
         ${CMAKE_BINARY_DIR}/install/pinocchio/include
-     )
+    )
+    target_compile_options(${SCRIPT_NAME} PRIVATE 
+        -O3 -g -DNDEBUG
+        -ffast-math
+        ${CFLAGS_PEDANTIC}
+    )
 endforeach()
