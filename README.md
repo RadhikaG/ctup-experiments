@@ -14,7 +14,7 @@ Part 1: building dependencies from source
 5. BuildIt needs a fix to compile with stricter cflags: `$ git apply --directory='deps/compile-time-urdf-parser/deps/buildit' helper_scripts/cpp17-warning-fix.patch`
 6. `$ mkdir -p build && cd build`
 7. `$ cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1`
-8. Build will die once while building CppADCodeGen, then run: `$ export PKG_CONFIG_PATH=$(pwd)/install/CppAD/lib/pkgconfig:$(PKG_CONFIG_PATH)`
+8. Build will die once while building CppADCodeGen, then run: `$ export PKG_CONFIG_PATH=$(pwd)/install/CppAD/lib/pkgconfig:$PKG_CONFIG_PATH`
 9. Run again: `$ cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1`
 
 Part 2: building code generators in samples/ and experiments in scripts/
