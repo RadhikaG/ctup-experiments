@@ -27,6 +27,7 @@ using builder::static_var;
 using pinocchio::Model;
 
 using ctup::Xform;
+using ctup::EigenMatrix;
 
 static int get_jtype(const Model &model, Model::JointIndex i) {
   std::string joint_name = model.joints[i].shortname();
@@ -58,8 +59,8 @@ static void set_X_T(Xform<double> X_T[], const Model &model) {
   typedef typename Model::JointIndex JointIndex;
   static_var<JointIndex> i;
 
-  static_var<int> r;
-  static_var<int> c;
+  static_var<size_t> r;
+  static_var<size_t> c;
 
   for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
     Eigen::Matrix<double, 6, 6> pin_X_T = model.jointPlacements[i];
@@ -86,7 +87,7 @@ static void set_X_T(Xform<double> X_T[], const Model &model) {
   }
 }
 
-static dyn_var<builder::eigen_Xmat_t> fk(const Model &model, dyn_var<builder::eigen_vectorXd_t &> q) {
+static dyn_var<EigenMatrix<double>> fk(const Model &model, dyn_var<builder::eigen_vectorXd_t &> q) {
   Xform<double> X_T[model.njoints];
   Xform<double> X_J[model.njoints];
   Xform<double> X_0[model.njoints];
@@ -140,7 +141,7 @@ static dyn_var<builder::eigen_Xmat_t> fk(const Model &model, dyn_var<builder::ei
   //  ctup::print_Xmat_pin_order(prefix + std::to_string(i), X_0[i]);
   //}
 
-  dyn_var<builder::eigen_Xmat_t> final_ans;
+  dyn_var<EigenMatrix<double>> final_ans(6, 6);
   toPinEigen(final_ans, X_0[model.njoints-1]);
 
   return final_ans;
@@ -175,7 +176,6 @@ int main(int argc, char* argv[]) {
   builder::builder_context context;
 
   auto ast = context.extract_function_ast(fk, "fk", model);
-  //ast->dump(std::cout, 0);
   block::c_code_generator::generate_code(ast, of, 0);
 
   of << "}\n";
