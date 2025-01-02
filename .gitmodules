@@ -10,7 +10,7 @@
 [submodule "deps/hpp-fcl"]
 	path = deps/hpp-fcl
 	url = https://github.com/humanoid-path-planner/hpp-fcl.git
-[submodule "ctup"]
+[submodule "deps/compile-time-urdf-parser"]
 	path = deps/compile-time-urdf-parser
 	url = git@github.com:RadhikaG/compile-time-urdf-parser.git
-	branch = master
+	branch = simd_marc_attempt1
