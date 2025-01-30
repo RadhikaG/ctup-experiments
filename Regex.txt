@@ -1,0 +1,17 @@
+1.-
+    Eigen::Array<blaze::StaticVector<double, 16>, Eigen::Dynamic, Eigen::Dynamic> arg3
+
+    blaze::StaticVector<blaze::StaticVector<double, 16>, NUM JOINTS> arg3
+
+3.-
+
+    (int ([a-zA-Z0-9]*) =\s*Sphere_Environment_Collision\([^;]+\);)
+    
+    $1
+    if($2) return 1;
+
+
+2.-
+    Eigen::Array<double, 16, 1>
+
+    blaze::StaticVector<double, 16>

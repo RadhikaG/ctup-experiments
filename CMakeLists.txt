@@ -4,6 +4,7 @@ project(ctup-experiments)
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+message("Using C++ compiler: $ENV{CXX}")
 
 ################################################
 # Compiling dependencies from source
@@ -14,7 +15,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 find_package(LLVM ${LLVM_VERSION} REQUIRED)
 find_package(Clang ${LLVM_VERSION} REQUIRED)
 
-find_package(Eigen3 REQUIRED CONFIG)
+set(EIGEN3_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/eigen")
+find_package(Eigen3 3.3 REQUIRED HINTS ${EIGEN3_INCLUDE_DIR})
 add_definitions(-DOPENCV_DISABLE_EIGEN_TENSOR_SUPPORT)
 
 # Configure the helper CMakeLists with the dependencies
@@ -77,6 +79,8 @@ set(CFLAGS_PEDANTIC
 set(SAMPLES_SOURCES
     samples/sample8.cpp
     samples/sample9.cpp
+    samples/sample15.cpp
+    samples/sample17.cpp
 )
 
 
@@ -88,16 +92,20 @@ foreach(SAMPLE_SOURCE ${SAMPLES_SOURCES})
     target_link_libraries(${SAMPLE_NAME} PUBLIC pinocchio::pinocchio)
     target_link_libraries(${SAMPLE_NAME} PUBLIC ${buildit})
     target_link_libraries(${SAMPLE_NAME} PUBLIC ${urdf-compiler})
+    target_link_libraries(${SAMPLE_NAME} PUBLIC -ltinyxml2)
+    target_link_libraries(${SAMPLE_NAME} PUBLIC -lyaml-cpp)
     target_include_directories(${SAMPLE_NAME} PUBLIC
         ${CMAKE_BINARY_DIR}/install/pinocchio/include
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/include
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/include
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build/gen_headers
+        ${EIGEN3_INCLUDE_DIR}
     )
     target_compile_options(${SAMPLE_NAME} PRIVATE 
         -O1 -g # Debug
         ${CFLAGS_PEDANTIC}
     )
+    
 endforeach()
 
 ################################################
@@ -118,6 +126,46 @@ add_custom_target(
   DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
 )
 
+add_custom_command(
+  OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled.h
+  COMMAND ${CMAKE_BINARY_DIR}/sample9 ${CMAKE_SOURCE_DIR}/models/iiwa_rbd_accel.urdf ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled.h
+  DEPENDS ${CMAKE_BINARY_DIR}/sample9
+  COMMENT "Executing sample9"
+  VERBATIM
+)
+
+add_custom_target(
+  FK_GEN_UNROLLED ALL
+  DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled.h
+)
+
+add_custom_command(
+  OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled_simd.h
+  COMMAND ${CMAKE_BINARY_DIR}/sample15 ${CMAKE_SOURCE_DIR}/models/iiwa_rbd_accel.urdf ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled_simd.h
+  DEPENDS ${CMAKE_BINARY_DIR}/sample15
+  COMMENT "Executing sample15"
+  VERBATIM
+)
+
+add_custom_target(
+  FK_GEN_UNROLLED_SIMD ALL
+  DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled_simd.h
+)
+
+add_custom_command(
+  OUTPUT ${CMAKE_SOURCE_DIR}/gen/cc_simd.h
+  COMMAND ${CMAKE_BINARY_DIR}/sample17 ${CMAKE_SOURCE_DIR}/models/baxter_spherized_1.urdf ${CMAKE_SOURCE_DIR}/models/baxter_spherized.urdf  ${CMAKE_SOURCE_DIR}/environment/scene0561.yaml ${CMAKE_SOURCE_DIR}/gen/cc_simd.h
+  DEPENDS ${CMAKE_BINARY_DIR}/sample17
+  COMMENT "Executing sample17"
+  VERBATIM
+)
+
+add_custom_target(
+  CC_SIMD ALL
+  DEPENDS ${CMAKE_SOURCE_DIR}/gen/cc_simd.h
+)
+
+
 ################################################
 # Compiling experiment scripts for comparing baselines with generated code.
 # Experiment scripts are located in the scripts/ dir.
@@ -125,11 +173,13 @@ add_custom_target(
 
 #SCRIPTS
 set(SCRIPT_SOURCES
-    scripts/eval_fk.cpp
-    scripts/gen_fk.cpp
-    scripts/pin_fk.cpp
-    scripts/pin_fk_codegen.cpp
-    scripts/pin_rnea_codegen.cpp
+    #scripts/eval_fk.cpp
+    #scripts/gen_fk.cpp
+    #scripts/pin_fk.cpp
+    #scripts/pin_fk_codegen.cpp
+    #scripts/pin_rnea_codegen.cpp
+    #scripts/eval_simd.cpp
+    scripts/eval_fkcc.cpp
 )
 
 #Compile SCRIPTS
@@ -150,10 +200,13 @@ foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
         ${CMAKE_CURRENT_SOURCE_DIR}/gen
         ${CMAKE_BINARY_DIR}/install/CppAD/lib
         ${CMAKE_BINARY_DIR}/install/pinocchio/include
+        /usr/local/include 
+        ${EIGEN3_INCLUDE_DIR}
     )
     target_compile_options(${SCRIPT_NAME} PRIVATE 
-        -O3 -g -DNDEBUG
+        -O1 -g -DNDEBUG
         -ffast-math
+        -march=skylake-avx512
         ${CFLAGS_PEDANTIC}
     )
 endforeach()
