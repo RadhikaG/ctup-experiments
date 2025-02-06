@@ -186,16 +186,16 @@ static dyn_var<eigen_Xmat_t> fk(const Model &model, dyn_var<eigen_vectorXd_t &> 
     else if (jtype == 'P') {
       // negative r-cross, opp signs of featherstone 2.23
       if (axis == 'X') {
-        X_J[i].coeffRef(1, 2) = -q(i-1);
-        X_J[i].coeffRef(2, 1) = q(i-1);
+        X_J[i].coeffRef(3+1, 2) = -q(i-1);
+        X_J[i].coeffRef(3+2, 1) = q(i-1);
       }
       else if (axis == 'Y') {
-        X_J[i].coeffRef(0, 2) = q(i-1);
-        X_J[i].coeffRef(2, 0) = -q(i-1);
+        X_J[i].coeffRef(3+0, 2) = q(i-1);
+        X_J[i].coeffRef(3+2, 0) = -q(i-1);
       }
       else if (axis == 'Z') {
-        X_J[i].coeffRef(0, 1) = -q(i-1);
-        X_J[i].coeffRef(1, 0) = q(i-1);
+        X_J[i].coeffRef(3+0, 1) = -q(i-1);
+        X_J[i].coeffRef(3+1, 0) = q(i-1);
       }
       // E = Identity 
       X_J[i].coeffRef(0, 0) = 1;
@@ -255,9 +255,11 @@ int main(int argc, char* argv[]) {
 
   builder::builder_context context;
   auto ast = context.extract_function_ast(set_X_T, "set_X_T", model);
+  of << "static ";
   block::c_code_generator::generate_code(ast, of, 0);
 
   ast = context.extract_function_ast(fk, "fk", model);
+  of << "static ";
   block::c_code_generator::generate_code(ast, of, 0);
 
   of << "}\n";

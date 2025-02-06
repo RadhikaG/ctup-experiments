@@ -1,4 +1,5 @@
 // ./build/sample9 ./deps/pinocchio/models/baxter_simple.urdf ../ctup-experiments/gen/fk_gen_unrolled.h
+#include "xform_layouts.h"
 #include "backend.h"
 #include "matrix_layout_composite.h"
 #include "spatial_algebra.h"
@@ -25,134 +26,11 @@ using builder::static_var;
 
 using pinocchio::Model;
 
-namespace ctup {
-
-template <typename Scalar>
-struct Translation : public matrix_layout<Scalar> {
-  typedef std::shared_ptr<Translation<Scalar>> Ptr;
-
-  using matrix_layout<Scalar>::set_entry_to_constant;
-  using matrix_layout<Scalar>::set_entry_to_nonconstant;
-
-  Translation() : matrix_layout<Scalar>(3, 3, SPARSE, FLATTENED, COMPRESSED) {
-    matrix_layout<Scalar>::set_zero();
-  }
-
-  dyn_var<Scalar> x;
-  dyn_var<Scalar> y;
-  dyn_var<Scalar> z;
-
-  static_var<int> joint_xform_axis;
-
-  void jcalc(const dyn_var<Scalar> &q_i) {
-    if (joint_xform_axis == 'X') {
-      set_entry_to_nonconstant(1, 2, q_i);
-      set_entry_to_nonconstant(2, 1, -q_i);
-    }
-    else if (joint_xform_axis == 'Y') {
-      set_entry_to_nonconstant(2, 0, q_i);
-      set_entry_to_nonconstant(0, 2, -q_i);
-    }
-    else if (joint_xform_axis == 'Z') {
-      set_entry_to_nonconstant(0, 1, q_i);
-      set_entry_to_nonconstant(1, 0, -q_i);
-    }
-  }
-};
-
-template <typename Scalar>
-struct Rotation : public matrix_layout<Scalar> {
-  typedef std::shared_ptr<Rotation<Scalar>> Ptr;
-
-  using matrix_layout<Scalar>::set_entry_to_constant;
-  using matrix_layout<Scalar>::set_entry_to_nonconstant;
-  dyn_var<Scalar> sinq;
-  dyn_var<Scalar> cosq;
-
-  static_var<int> joint_xform_axis;
-
-  Rotation() : matrix_layout<Scalar>(3, 3, SPARSE, FLATTENED, COMPRESSED) {
-    matrix_layout<Scalar>::set_identity();
-  }
-
-  void jcalc(const dyn_var<Scalar> &q_i) {
-    sinq = backend::sin(q_i);
-    cosq = backend::cos(q_i);
-
-    if (joint_xform_axis == 'X') {
-      set_entry_to_nonconstant(1, 1, cosq);
-      set_entry_to_nonconstant(1, 2, sinq);
-      set_entry_to_nonconstant(2, 1, -sinq);
-      set_entry_to_nonconstant(2, 2, cosq);
-    }
-    else if (joint_xform_axis == 'Y') {
-      set_entry_to_nonconstant(0, 0, cosq);
-      set_entry_to_nonconstant(0, 2, -sinq);
-      set_entry_to_nonconstant(2, 0, sinq);
-      set_entry_to_nonconstant(2, 2, cosq);
-    }
-    else if (joint_xform_axis == 'Z') {
-      set_entry_to_nonconstant(0, 0, cosq);
-      set_entry_to_nonconstant(0, 1, sinq);
-      set_entry_to_nonconstant(1, 0, -sinq);
-      set_entry_to_nonconstant(1, 1, cosq);
-    }
-    else {
-      assert(false && "jcalc called on non joint xform or joint unset");
-    }
-  }
-};
-
-template <typename Scalar>
-struct Xform : public blocked_layout<Scalar> {
-  using blocked_layout<Scalar>::set_partitions;
-  using blocked_layout<Scalar>::set_new_block;
-  using blocked_layout<Scalar>::operator=;
-
-  typename Rotation<Scalar>::Ptr rot;
-  typename Translation<Scalar>::Ptr trans;
-  typename matrix_layout<Scalar>::Ptr minus_E_rcross;
-
-  static_var<int> joint_type;
-
-  Xform() : blocked_layout<Scalar>(6, 6), 
-    rot(new Rotation<Scalar>()), trans(new Translation<Scalar>()), 
-    minus_E_rcross(new matrix_layout<Scalar>(3, 3, SPARSE, FLATTENED, COMPRESSED)) {
-
-    minus_E_rcross->set_zero();
-    set_partitions({0, 3}, {0, 3});
-    set_new_block(0, 0, rot);
-    set_new_block(1, 1, rot);
-    set_new_block(1, 0, minus_E_rcross);
-  }
-
-  void set_revolute_axis(char axis) {
-    assert((axis == 'X' || axis == 'Y' || axis == 'Z') && "axis must be X,Y,Z");
-    rot->joint_xform_axis = axis;
-    joint_type = 'R';
-  }
-
-  void set_prismatic_axis(char axis) {
-    assert((axis == 'X' || axis == 'Y' || axis == 'Z') && "axis must be X,Y,Z");
-    trans->joint_xform_axis = axis;
-    joint_type = 'P';
-  }
-
-  void jcalc(const dyn_var<Scalar> &q_i) {
-    if (joint_type == 'R')
-      rot->jcalc(q_i);
-    else
-      trans->jcalc(q_i);
-
-    *minus_E_rcross = -(*rot) * (*trans);
-  }
-};
-
-}
-
 /** helpers **/
 
-using ctup::Xform;
+template <typename Scalar>
+using Xform = ctup::XformNonBlocked<Scalar>;
+
 using ctup::EigenMatrix;
 
 builder::dyn_var<void(EigenMatrix<double> &)> print_matrix = builder::as_global("print_matrix");
@@ -255,9 +133,10 @@ static dyn_var<EigenMatrix<double, 6, 6>> fk(const Model &model, dyn_var<builder
     }
   }
 
+  Xform<double> X_pi;
+
   static_var<JointIndex> parent;
   for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
-    Xform<double> X_pi;
     X_J[i].jcalc(q(i-1));
 
     X_pi = X_J[i] * X_T[i];
@@ -266,13 +145,14 @@ static dyn_var<EigenMatrix<double, 6, 6>> fk(const Model &model, dyn_var<builder
       X_0[i] = X_pi * X_0[parent];
     }
     else {
-      X_0[i] = ctup::blocked_layout_expr_leaf<double>(X_pi);
+      //X_0[i] = ctup::blocked_layout_expr_leaf<double>(X_pi);
+      X_0[i] = ctup::matrix_layout_expr_leaf<double>(X_pi);
     }
   }
 
+  // CTUP debug
   //for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
   //  if (i <= 4) {
-  //    Xform<double> X_pi;
   //    print_Xmat_pin_order("XT ", X_T[i]);
   //    print_Xmat_pin_order("XJ ", X_J[i]);
   //    X_pi = X_J[i] * X_T[i];

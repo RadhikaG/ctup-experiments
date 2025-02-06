@@ -127,6 +127,7 @@ add_custom_target(
 set(SCRIPT_SOURCES
     scripts/eval_fk.cpp
     scripts/gen_fk.cpp
+    scripts/debug_fk.cpp
     scripts/pin_fk.cpp
     scripts/pin_fk_codegen.cpp
     scripts/pin_rnea_codegen.cpp

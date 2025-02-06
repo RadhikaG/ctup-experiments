@@ -38,8 +38,8 @@ int main(int argc, char ** argv)
       std::cout << "XJ\n" << (EigenSpatialXform)(data.joints[i].M()) << "\n";
       std::cout << "Xpi\n" << (EigenSpatialXform)(data.liMi[i])  << "\n";
       std::cout << "Xpar\n" << (EigenSpatialXform)(data.oMi[model.parents[i]])  << "\n";
-      std::cout << "X " << i << "\n" << (EigenSpatialXform)(data.oMi[i]) << "\n";
     }
+    std::cout << "X " << i << "\n" << (EigenSpatialXform)(data.oMi[i]) << "\n";
   }
 
   std::cout << "-------------------\n";
