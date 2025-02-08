@@ -1,0 +1,219 @@
+// ./build/sample10 ./deps/pinocchio/models/baxter_simple.urdf ../ctup-experiments/gen/rnea_gen_unrolled.h
+#include "matrix_layout.h"
+#include "rnea_layouts.h"
+#include "backend.h"
+#include "matrix_layout_composite.h"
+#include "spatial_algebra.h"
+
+#include "blocks/block_visitor.h"
+#include "blocks/c_code_generator.h"
+#include "builder/builder_base.h"
+#include "builder/builder_context.h"
+#include "builder/dyn_var.h"
+#include "builder/forward_declarations.h"
+#include "Eigen/Dense"
+#include "builder/static_var.h"
+
+// ignore unused header warning in IDE, this is needed
+#include "pinocchio/multibody/joint/joint-collection.hpp"
+#include "pinocchio/multibody/model.hpp"
+#include "pinocchio/parsers/urdf.hpp"
+#include "assert.h"
+#include <string>
+
+using builder::dyn_var;
+using builder::static_var;
+
+using pinocchio::Model;
+using ctup::EigenMatrix;
+using ctup::matrix_layout;
+
+/** helpers **/
+
+builder::dyn_var<void(EigenMatrix<double> &)> print_matrix = builder::as_global("print_matrix");
+builder::dyn_var<void(char *)> print_string = builder::as_global("print_string");
+
+template <typename Scalar, int Rows_, int Cols_>
+static void toPinEigen(dyn_var<EigenMatrix<Scalar, Rows_, Cols_>> &mat, matrix_layout<Scalar> &mat_layout) {
+  static_var<int> r, c;
+
+  for (r = 0; r < Rows_; r = r + 1)
+    for (c = 0; c < Cols_; c = c + 1)
+      mat.coeffRef(r, c) = mat_layout.get_entry(c, r);
+}
+
+template <typename Scalar>
+static void print_matrix_layout(std::string prefix, matrix_layout<Scalar> &mat_layout) {
+  print_string(prefix.c_str());
+  print_matrix(mat_layout.denseify());
+}
+
+template <typename Scalar>
+static void print_matrix_layout_pin(std::string prefix, matrix_layout<Scalar> &mat_layout) {
+  print_string(prefix.c_str());
+  dyn_var<EigenMatrix<Scalar>> mat;
+  mat.set_matrix_fixed_size(mat_layout.shape[0], mat_layout.shape[1]);
+  toPinEigen(mat, mat_layout);
+  print_matrix(mat);
+}
+
+static int get_jtype(const Model &model, Model::JointIndex i) {
+  std::string joint_name = model.joints[i].shortname();
+
+  bool is_revolute = joint_name.find("JointModelR") != std::string::npos;
+  bool is_prismatic = joint_name.find("JointModelP") != std::string::npos;
+
+  if (is_revolute)
+    return 'R';
+  if (is_prismatic)
+    return 'P';
+  else
+    return 'N';
+}
+
+static int get_joint_axis(const Model &model, Model::JointIndex i) {
+  std::string joint_name = model.joints[i].shortname();
+  char axis = joint_name.back();
+
+  switch(axis) {
+    case 'X': return 'X';
+    case 'Y': return 'Y';
+    case 'Z': return 'Z';
+    default: assert(false && "should never happen"); return -1;
+  }
+}
+
+struct robot_data {
+  static constexpr const char* type_name = "robot_data";
+
+  //SpatialVector<double> v[model.njoints];
+  //SpatialVector<double> a[model.njoints];
+  //SpatialVector<double> f[model.njoints];
+  //SpatialVector<double> tau[model.njoints];
+
+  dyn_var<builder::eigen_vectorXd_t[]> v;
+  dyn_var<builder::eigen_vectorXd_t[]> a;
+  dyn_var<builder::eigen_vectorXd_t[]> f;
+  dyn_var<builder::eigen_vectorXd_t[]> tau;
+
+  robot_data(size_t N) {
+    resize_arr(v, N);
+    resize_arr(a, N);
+    resize_arr(f, N);
+    resize_arr(tau, N);
+  }
+};
+
+dyn_var<robot_data> rd = builder::as_global("rd");
+
+using ctup::Xform;
+using ctup::SpatialInertia;
+using ctup::SpatialVector;
+using ctup::SingletonSpatialVector;
+
+/** helpers end **/
+
+template <typename Scalar>
+static void set_fixed_transforms_inertias(Xform<Scalar> X_T[], SpatialInertia<Scalar> I[], const Model &model) {
+  typedef typename Model::JointIndex JointIndex;
+
+  static_var<int> r;
+  static_var<int> c;
+
+  double entry;
+
+  for (static_var<size_t> i = 1; i < (JointIndex)model.njoints; i = i+1) {
+    Eigen::Matrix<double, 6, 6> pin_X_T = model.jointPlacements[i];
+
+    Eigen::Matrix<double, 6, 6> pin_I = model.inertias[i];
+
+    for (r = 0; r < 6; r = r + 1) {
+      for (c = 0; c < 6; c = c + 1) {
+        entry = pin_X_T.coeffRef(c, r);
+        X_T[i].set_entry_to_constant(r, c, entry);
+
+        entry = pin_I.coeffRef(c, r);
+        I[i].set_entry_to_constant(r, c, entry);
+      }
+    }
+  }
+}
+
+static void rnea(const Model &model, 
+        dyn_var<builder::eigen_vectorXd_t &> q, 
+        dyn_var<builder::eigen_vectorXd_t &> qd, 
+        const double GRAVITY = -9.81) {
+  typedef typename Model::JointIndex JointIndex;
+
+  SingletonSpatialVector<double> gravity_vec;
+  gravity_vec.set_entry_to_constant(5, 0, -GRAVITY);
+
+  SingletonSpatialVector<double> S[model.njoints];
+
+  Xform<double> X_T[model.njoints];
+  Xform<double> X_J[model.njoints];
+  Xform<double> X_pi[model.njoints];
+
+  SpatialInertia<double> I[model.njoints];
+
+  static_var<JointIndex> i;
+
+  set_fixed_transforms_inertias(X_T, I, model);
+
+  static_var<int> jtype;
+  static_var<int> axis;
+
+  for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
+    jtype = get_jtype(model, i);
+    axis = get_joint_axis(model, i);
+
+    if (jtype == 'R') {
+      X_J[i].set_revolute_axis(axis);
+      S[i].set_entry_to_constant(2, 0, 1);
+    }
+    if (jtype == 'P') {
+      X_J[i].set_prismatic_axis(axis);
+      S[i].set_entry_to_constant(5, 0, 1);
+    }
+  }
+
+  SpatialVector<double> vecXIvec;
+
+  static_var<JointIndex> parent;
+
+  // forward pass
+  for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
+    X_J[i].jcalc(q(i-1));
+
+    X_pi[i] = X_J[i] * X_T[i];
+    parent = model.parents[i];
+    if (parent > 0) {
+      rd.v[i] = X_pi[i] * rd.v[parent];
+      rd.a[i] = X_pi[i] * rd.a[parent];
+    }
+    else {
+      // parent is base, v[i] remains zero
+      rd.a[i] = X_pi[i] * gravity_vec;
+    }
+
+    rd.v[i] += S[i] * qd(i);
+
+    mxS(S[i], rd.v[i], qd(i));
+    rd.a[i] += S[i];
+
+    // compute f
+    vxIv(vecXIvec, rd.v[i], I[i]);
+    rd.f[i] = I[i] * rd.a[i] + vecXIvec;
+  }
+
+  // backward pass
+
+  for (i = (JointIndex)model.njoints-1; i > 0; i = i-1) {
+    rd.tau[i] = S[i].transpose() * rd.f[i];
+
+    parent = model.parents[i];
+    if (parent > 0) {
+      rd.f[parent] += X_pi[i].transpose() * rd.f[i];   
+    }
+  }
+}

@@ -1,5 +1,5 @@
-#ifndef XFORM_LAYOUTS_H
-#define XFORM_LAYOUTS_H
+#ifndef RNEA_LAYOUTS_H
+#define RNEA_LAYOUTS_H
 
 #include "backend.h"
 #include "matrix_layout_composite.h"
@@ -43,7 +43,7 @@ struct Translation : public matrix_layout<Scalar> {
   using matrix_layout<Scalar>::set_entry_to_constant;
   using matrix_layout<Scalar>::set_entry_to_nonconstant;
 
-  Translation() : matrix_layout<Scalar>(3, 3, TILE, EIGENMATRIX, UNCOMPRESSED) {
+  Translation() : matrix_layout<Scalar>(3, 3, SPARSE, FLATTENED, COMPRESSED) {
     matrix_layout<Scalar>::set_zero();
   }
 
@@ -80,7 +80,7 @@ struct Rotation : public matrix_layout<Scalar> {
 
   static_var<int> joint_xform_axis;
 
-  Rotation() : matrix_layout<Scalar>(3, 3, TILE, EIGENMATRIX, UNCOMPRESSED) {
+  Rotation() : matrix_layout<Scalar>(3, 3, SPARSE, FLATTENED, COMPRESSED) {
     matrix_layout<Scalar>::set_identity();
   }
 
@@ -113,7 +113,7 @@ struct Rotation : public matrix_layout<Scalar> {
 };
 
 template <typename Scalar>
-struct XformBlocked : public blocked_layout<Scalar> {
+struct Xform : public blocked_layout<Scalar> {
   using blocked_layout<Scalar>::set_partitions;
   using blocked_layout<Scalar>::set_new_block;
   using blocked_layout<Scalar>::operator=;
@@ -124,9 +124,9 @@ struct XformBlocked : public blocked_layout<Scalar> {
 
   static_var<int> joint_type;
 
-  XformBlocked() : blocked_layout<Scalar>(6, 6), 
+  Xform() : blocked_layout<Scalar>(6, 6), 
     rot(new Rotation<Scalar>()), trans(new Translation<Scalar>()), 
-    minus_E_rcross(new matrix_layout<Scalar>(3, 3, TILE, EIGENMATRIX, UNCOMPRESSED)) {
+    minus_E_rcross(new matrix_layout<Scalar>(3, 3, SPARSE, FLATTENED, COMPRESSED)) {
 
     minus_E_rcross->set_zero();
     set_partitions({0, 3}, {0, 3});
@@ -157,101 +157,40 @@ struct XformBlocked : public blocked_layout<Scalar> {
   }
 };
 
-////// NON-BLOCKED //////
-/// Combos tested:
-/// * SPARSE, UNROLLED, UNCOMPRESSED
-/// * SPARSE, FLATTENED, UNCOMPRESSED
-/// * SPARSE, FLATTENED, COMPRESSED
-/// * TILE, EIGENMATRIX, UNCOMPRESSED
-
 template <typename Scalar>
-struct XformNonBlocked : public matrix_layout<Scalar> {
+struct SpatialVector : public matrix_layout<Scalar> {
   using matrix_layout<Scalar>::set_entry_to_constant;
   using matrix_layout<Scalar>::set_entry_to_nonconstant;
-  dyn_var<Scalar> sinq;
-  dyn_var<Scalar> cosq;
-
-  static_var<int> joint_type;
-  static_var<int> joint_xform_axis;
-
-  XformNonBlocked() : matrix_layout<Scalar>(6, 6, SPARSE, FLATTENED, COMPRESSED) {
-    matrix_layout<Scalar>::set_identity();
-  }
-
-  void set_revolute_axis(char axis) {
-    assert((axis == 'X' || axis == 'Y' || axis == 'Z') && "axis must be X,Y,Z");
-    joint_xform_axis = axis;
-    joint_type = 'R';
-  }
-
-  void set_prismatic_axis(char axis) {
-    assert((axis == 'X' || axis == 'Y' || axis == 'Z') && "axis must be X,Y,Z");
-    joint_xform_axis = axis;
-    joint_type = 'P';
-  }
-
-  void jcalc(const dyn_var<Scalar> &q_i) {
-    sinq = backend::sin(q_i);
-    cosq = backend::cos(q_i);
-
-    if (joint_type == 'R') {
-      if (joint_xform_axis == 'X') {
-        set_entry_to_nonconstant(1, 1, cosq);
-        set_entry_to_nonconstant(1, 2, sinq);
-        set_entry_to_nonconstant(2, 1, -sinq);
-        set_entry_to_nonconstant(2, 2, cosq);
-        // symm E
-        set_entry_to_nonconstant(3+1, 3+1, cosq);
-        set_entry_to_nonconstant(3+1, 3+2, sinq);
-        set_entry_to_nonconstant(3+2, 3+1, -sinq);
-        set_entry_to_nonconstant(3+2, 3+2, cosq);
-      }
-      else if (joint_xform_axis == 'Y') {
-        set_entry_to_nonconstant(0, 0, cosq);
-        set_entry_to_nonconstant(0, 2, -sinq);
-        set_entry_to_nonconstant(2, 0, sinq);
-        set_entry_to_nonconstant(2, 2, cosq);
-        // symm E
-        set_entry_to_nonconstant(3+0, 3+0, cosq);
-        set_entry_to_nonconstant(3+0, 3+2, -sinq);
-        set_entry_to_nonconstant(3+2, 3+0, sinq);
-        set_entry_to_nonconstant(3+2, 3+2, cosq);
-      }
-      else if (joint_xform_axis == 'Z') {
-        set_entry_to_nonconstant(0, 0, cosq);
-        set_entry_to_nonconstant(0, 1, sinq);
-        set_entry_to_nonconstant(1, 0, -sinq);
-        set_entry_to_nonconstant(1, 1, cosq);
-        // symm E
-        set_entry_to_nonconstant(3+0, 3+0, cosq);
-        set_entry_to_nonconstant(3+0, 3+1, sinq);
-        set_entry_to_nonconstant(3+1, 3+0, -sinq);
-        set_entry_to_nonconstant(3+1, 3+1, cosq);
-      }
-    }
-    else if (joint_type == 'P') {
-      // negative r-cross, opp signs of featherstone 2.23
-      if (joint_xform_axis == 'X') {
-        set_entry_to_nonconstant(3+1, 2, q_i);
-        set_entry_to_nonconstant(3+2, 1, -q_i);
-      }
-      else if (joint_xform_axis == 'Y') {
-        set_entry_to_nonconstant(3+2, 0, q_i);
-        set_entry_to_nonconstant(3+0, 2, -q_i);
-      }
-      else if (joint_xform_axis == 'Z') {
-        set_entry_to_nonconstant(3+0, 1, q_i);
-        set_entry_to_nonconstant(3+1, 0, -q_i);
-      }
-    }
-    else {
-      assert(false && "jcalc called on non joint xform or joint unset");
-    }
-  }
-
   using matrix_layout<Scalar>::operator=;
+
+  SpatialVector() : matrix_layout<Scalar>(6, 1, DENSE, EIGENMATRIX, UNCOMPRESSED) {
+    matrix_layout<Scalar>::set_zero();
+  }
+};
+
+template <typename Scalar>
+struct SpatialInertia : public matrix_layout<Scalar> {
+  using matrix_layout<Scalar>::set_entry_to_constant;
+  using matrix_layout<Scalar>::set_entry_to_nonconstant;
+  using matrix_layout<Scalar>::operator=;
+
+  SpatialInertia() : matrix_layout<Scalar>(6, 1, DENSE, EIGENMATRIX, UNCOMPRESSED) {
+    matrix_layout<Scalar>::set_zero();
+  }
+};
+
+template <typename Scalar>
+struct SingletonSpatialVector : public matrix_layout<Scalar> {
+  using matrix_layout<Scalar>::set_entry_to_constant;
+  using matrix_layout<Scalar>::set_entry_to_nonconstant;
+  using matrix_layout<Scalar>::operator=;
+
+  SingletonSpatialVector() : matrix_layout<Scalar>(6, 1, SPARSE, EIGENMATRIX, SINGLETON) {
+    matrix_layout<Scalar>::set_zero();
+  }
 };
 
 }
 
 #endif
+
