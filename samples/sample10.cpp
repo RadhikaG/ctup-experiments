@@ -96,7 +96,9 @@ struct robot_data {
   dyn_var<builder::eigen_vectorXd_t[]> f;
   dyn_var<builder::eigen_vectorXd_t[]> tau;
 
-  robot_data(size_t N) {
+  robot_data() {}
+
+  void resize(size_t N) {
     resize_arr(v, N);
     resize_arr(a, N);
     resize_arr(f, N);
@@ -106,7 +108,10 @@ struct robot_data {
 
 dyn_var<robot_data> rd = builder::as_global("rd");
 
-using ctup::Xform;
+//using ctup::Xform;
+template <typename Scalar>
+using Xform = ctup::XformNonBlocked<Scalar>;
+
 using ctup::SpatialInertia;
 using ctup::SpatialVector;
 using ctup::SingletonSpatialVector;
@@ -138,6 +143,8 @@ static void set_fixed_transforms_inertias(Xform<Scalar> X_T[], SpatialInertia<Sc
     }
   }
 }
+
+#define EIGEN_MAT_CAST (dyn_var<EigenMatrix<double>>)(builder::cast)
 
 static void rnea(const Model &model, 
         dyn_var<builder::eigen_vectorXd_t &> q, 
@@ -188,32 +195,84 @@ static void rnea(const Model &model,
     X_pi[i] = X_J[i] * X_T[i];
     parent = model.parents[i];
     if (parent > 0) {
-      rd.v[i] = X_pi[i] * rd.v[parent];
-      rd.a[i] = X_pi[i] * rd.a[parent];
+      // todo Xform * builder is invalid
+      matrix_layout<double>(EIGEN_MAT_CAST rd.v[i]) = X_pi[i] * matrix_layout<double>(EIGEN_MAT_CAST rd.v[parent]);
+      matrix_layout<double>(EIGEN_MAT_CAST rd.a[i]) = X_pi[i] * matrix_layout<double>(EIGEN_MAT_CAST rd.a[parent]);
     }
     else {
       // parent is base, v[i] remains zero
-      rd.a[i] = X_pi[i] * gravity_vec;
+      // todo no known conversion from matrix_expr to builder::builder
+      matrix_layout<double>(EIGEN_MAT_CAST rd.a[i]) = X_pi[i] * gravity_vec;
     }
 
-    rd.v[i] += S[i] * qd(i);
+    // todo SingletonSpatialVec * builder is invalid
+    //matrix_layout<double>(EIGEN_MAT_CAST rd.v[i]) += S[i] * qd(i);
 
-    mxS(S[i], rd.v[i], qd(i));
-    rd.a[i] += S[i];
+    // todo implement utility func
+    //mxS(S[i], rd.v[i], qd(i));
+    // todo builder += Singleton invalid
+    //matrix_layout<double>(EIGEN_MAT_CAST rd.a[i]) += S[i];
 
     // compute f
-    vxIv(vecXIvec, rd.v[i], I[i]);
-    rd.f[i] = I[i] * rd.a[i] + vecXIvec;
+    // todo implement runtime func
+    //vxIv(vecXIvec, rd.v[i], I[i]);
+    // todo SpatialInertia * builder is invalid
+    matrix_layout<double>(EIGEN_MAT_CAST rd.f[i]) = I[i] * matrix_layout<double>(EIGEN_MAT_CAST rd.a[i]) + vecXIvec;
   }
 
   // backward pass
 
-  for (i = (JointIndex)model.njoints-1; i > 0; i = i-1) {
-    rd.tau[i] = S[i].transpose() * rd.f[i];
+  //for (i = (JointIndex)model.njoints-1; i > 0; i = i-1) {
+  //  // todo transpose
+  //  matrix_layout<double>(EIGEN_MAT_CAST rd.tau[i]) = S[i].transpose() * matrix_layout<double>(EIGEN_MAT_CAST rd.f[i]);
 
-    parent = model.parents[i];
-    if (parent > 0) {
-      rd.f[parent] += X_pi[i].transpose() * rd.f[i];   
-    }
-  }
+  //  parent = model.parents[i];
+  //  if (parent > 0) {
+  //    // todo transpose
+  //    matrix_layout<double>(EIGEN_MAT_CAST rd.f[parent]) += X_pi[i].transpose() * matrix_layout<double>(EIGEN_MAT_CAST rd.f[i]);
+  //  }
+  //}
+}
+
+int main(int argc, char* argv[]) {
+  const std::string urdf_filename = argv[1];
+  std::cout << urdf_filename << "\n";
+
+  const std::string header_filename = (argc <= 2) ? "./rnea_gen.h" : argv[2];
+  std::cout << header_filename << "\n";
+
+  Model model;
+  pinocchio::urdf::buildModel(urdf_filename, model);
+
+  std::ofstream of(header_filename);
+  block::c_code_generator codegen(of);
+
+  of << "#include \"Eigen/Dense\"\n\n";
+  of << "#include <iostream>\n\n";
+  of << "namespace ctup_gen {\n\n";
+
+  of << "static void print_string(const char* str) {\n";
+  of << "  std::cout << str << \"\\n\";\n";
+  of << "}\n\n";
+
+  of << "template<typename Derived>\n";
+  of << "static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {\n";
+  of << "  std::cout << matrix << \"\\n\";\n";
+  of << "}\n\n";
+
+  block::c_code_generator::generate_struct_decl<dyn_var<robot_data>>(of);
+
+  auto rd_decl = std::make_shared<block::decl_stmt>();
+  rd_decl->decl_var = rd.block_var;
+  rd.resize(model.njoints);
+  rd_decl->accept(&codegen);
+  of << "\n\n";
+
+  builder::builder_context context;
+
+  auto ast = context.extract_function_ast(rnea, "rnea", model, -9.81);
+  of << "static ";
+  block::c_code_generator::generate_code(ast, of, 0);
+
+  of << "}\n";
 }

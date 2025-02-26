@@ -77,6 +77,7 @@ set(CFLAGS_PEDANTIC
 set(SAMPLES_SOURCES
     samples/sample8.cpp
     samples/sample9.cpp
+    samples/sample10.cpp
 )
 
 
