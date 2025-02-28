@@ -13,6 +13,7 @@
 #include "builder/forward_declarations.h"
 #include "Eigen/Dense"
 #include "builder/static_var.h"
+#include "builder/array.h"
 
 // ignore unused header warning in IDE, this is needed
 #include "pinocchio/multibody/joint/joint-collection.hpp"
@@ -83,31 +84,6 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
   }
 }
 
-struct robot_data {
-  static constexpr const char* type_name = "robot_data";
-
-  //SpatialVector<double> v[model.njoints];
-  //SpatialVector<double> a[model.njoints];
-  //SpatialVector<double> f[model.njoints];
-  //SpatialVector<double> tau[model.njoints];
-
-  dyn_var<builder::eigen_vectorXd_t[]> v;
-  dyn_var<builder::eigen_vectorXd_t[]> a;
-  dyn_var<builder::eigen_vectorXd_t[]> f;
-  dyn_var<builder::eigen_vectorXd_t[]> tau;
-
-  robot_data() {}
-
-  void resize(size_t N) {
-    resize_arr(v, N);
-    resize_arr(a, N);
-    resize_arr(f, N);
-    resize_arr(tau, N);
-  }
-};
-
-dyn_var<robot_data> rd = builder::as_global("rd");
-
 //using ctup::Xform;
 template <typename Scalar>
 using Xform = ctup::XformNonBlocked<Scalar>;
@@ -116,10 +92,35 @@ using ctup::SpatialInertia;
 using ctup::SpatialVector;
 using ctup::SingletonSpatialVector;
 
+
+struct robot_data {
+  static constexpr const char* type_name = "robot_data";
+
+  //SpatialVector<double> v[model.njoints];
+  //SpatialVector<double> a[model.njoints];
+  //SpatialVector<double> f[model.njoints];
+  //SpatialVector<double> tau[model.njoints];
+
+  builder::array<SpatialVector<double>> v;
+  builder::array<SpatialVector<double>> a;
+  builder::array<SpatialVector<double>> f;
+  builder::array<SpatialVector<double>> tau;
+
+  robot_data(size_t N) {
+    v.set_size(N);
+    a.set_size(N);
+    f.set_size(N);
+    tau.set_size(N);
+  }
+};
+
+//dyn_var<robot_data> rd = builder::as_global("rd");
+
 /** helpers end **/
 
 template <typename Scalar>
-static void set_fixed_transforms_inertias(Xform<Scalar> X_T[], SpatialInertia<Scalar> I[], const Model &model) {
+static void set_fixed_transforms_inertias(builder::array<Xform<Scalar>> &X_T, 
+        builder::array<SpatialInertia<Scalar>> &I, const Model &model) {
   typedef typename Model::JointIndex JointIndex;
 
   static_var<int> r;
@@ -150,18 +151,27 @@ static void rnea(const Model &model,
         dyn_var<builder::eigen_vectorXd_t &> q, 
         dyn_var<builder::eigen_vectorXd_t &> qd, 
         const double GRAVITY = -9.81) {
+
+  robot_data rd(model.njoints);
+
   typedef typename Model::JointIndex JointIndex;
 
   SingletonSpatialVector<double> gravity_vec;
   gravity_vec.set_entry_to_constant(5, 0, -GRAVITY);
 
-  SingletonSpatialVector<double> S[model.njoints];
+  builder::array<SingletonSpatialVector<double>> S;
+  S.set_size(model.njoints);
 
-  Xform<double> X_T[model.njoints];
-  Xform<double> X_J[model.njoints];
-  Xform<double> X_pi[model.njoints];
+  builder::array<Xform<double>> X_T;
+  builder::array<Xform<double>> X_J;
+  builder::array<Xform<double>> X_pi;
 
-  SpatialInertia<double> I[model.njoints];
+  X_T.set_size(model.njoints);
+  X_J.set_size(model.njoints);
+  X_pi.set_size(model.njoints);
+
+  builder::array<SpatialInertia<double>> I;
+  I.set_size(model.njoints);
 
   static_var<JointIndex> i;
 
@@ -196,40 +206,40 @@ static void rnea(const Model &model,
     parent = model.parents[i];
     if (parent > 0) {
       // todo Xform * builder is invalid
-      matrix_layout<double>(EIGEN_MAT_CAST rd.v[i]) = X_pi[i] * matrix_layout<double>(EIGEN_MAT_CAST rd.v[parent]);
-      matrix_layout<double>(EIGEN_MAT_CAST rd.a[i]) = X_pi[i] * matrix_layout<double>(EIGEN_MAT_CAST rd.a[parent]);
+      rd.v[i] = X_pi[i] * rd.v[parent];
+      rd.a[i] = X_pi[i] * rd.a[parent];
     }
     else {
       // parent is base, v[i] remains zero
       // todo no known conversion from matrix_expr to builder::builder
-      matrix_layout<double>(EIGEN_MAT_CAST rd.a[i]) = X_pi[i] * gravity_vec;
+      rd.a[i] = X_pi[i] * gravity_vec;
     }
 
     // todo SingletonSpatialVec * builder is invalid
-    //matrix_layout<double>(EIGEN_MAT_CAST rd.v[i]) += S[i] * qd(i);
+    rd.v[i] += S[i] * (dyn_var<double>)(builder::cast)qd(i);
 
     // todo implement utility func
     //mxS(S[i], rd.v[i], qd(i));
     // todo builder += Singleton invalid
-    //matrix_layout<double>(EIGEN_MAT_CAST rd.a[i]) += S[i];
+    rd.a[i] += S[i];
 
     // compute f
     // todo implement runtime func
     //vxIv(vecXIvec, rd.v[i], I[i]);
     // todo SpatialInertia * builder is invalid
-    matrix_layout<double>(EIGEN_MAT_CAST rd.f[i]) = I[i] * matrix_layout<double>(EIGEN_MAT_CAST rd.a[i]) + vecXIvec;
+    rd.f[i] = I[i] * rd.a[i] + vecXIvec;
   }
 
   // backward pass
 
   //for (i = (JointIndex)model.njoints-1; i > 0; i = i-1) {
   //  // todo transpose
-  //  matrix_layout<double>(EIGEN_MAT_CAST rd.tau[i]) = S[i].transpose() * matrix_layout<double>(EIGEN_MAT_CAST rd.f[i]);
+  //  rd.tau[i]) = S[i].transpose() * rd.f[i]);
 
   //  parent = model.parents[i];
   //  if (parent > 0) {
   //    // todo transpose
-  //    matrix_layout<double>(EIGEN_MAT_CAST rd.f[parent]) += X_pi[i].transpose() * matrix_layout<double>(EIGEN_MAT_CAST rd.f[i]);
+  //    rd.f[parent]) += X_pi[i].transpose() * rd.f[i]);
   //  }
   //}
 }
@@ -260,13 +270,13 @@ int main(int argc, char* argv[]) {
   of << "  std::cout << matrix << \"\\n\";\n";
   of << "}\n\n";
 
-  block::c_code_generator::generate_struct_decl<dyn_var<robot_data>>(of);
+  //block::c_code_generator::generate_struct_decl<dyn_var<robot_data>>(of);
 
-  auto rd_decl = std::make_shared<block::decl_stmt>();
-  rd_decl->decl_var = rd.block_var;
-  rd.resize(model.njoints);
-  rd_decl->accept(&codegen);
-  of << "\n\n";
+  //auto rd_decl = std::make_shared<block::decl_stmt>();
+  //rd_decl->decl_var = rd.block_var;
+  ////rd.resize(model.njoints);
+  //rd_decl->accept(&codegen);
+  //of << "\n\n";
 
   builder::builder_context context;
 

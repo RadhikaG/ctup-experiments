@@ -262,7 +262,7 @@ struct SpatialInertia : public matrix_layout<Scalar> {
   using matrix_layout<Scalar>::set_entry_to_nonconstant;
   using matrix_layout<Scalar>::operator=;
 
-  SpatialInertia() : matrix_layout<Scalar>(6, 1, DENSE, EIGENMATRIX, UNCOMPRESSED) {
+  SpatialInertia() : matrix_layout<Scalar>(6, 6, DENSE, EIGENMATRIX, UNCOMPRESSED) {
     matrix_layout<Scalar>::set_zero();
   }
 };
