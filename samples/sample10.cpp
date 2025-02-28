@@ -145,6 +145,63 @@ static void set_fixed_transforms_inertias(builder::array<Xform<Scalar>> &X_T,
   }
 }
 
+static void mxS(SpatialVector<double> &mxSvec, const SingletonSpatialVector<double> &S, 
+        const SpatialVector<double> &vec, const dyn_var<double> &alpha) {
+  mxSvec.set_zero();
+  if (S.get_constant_entry(0, 0) == 1) {
+    mxSvec.set_entry_to_nonconstant(1, 0, vec.get_entry(2,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(2, 0, -vec.get_entry(1,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(4, 0, vec.get_entry(5,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(5, 0, -vec.get_entry(4,0) * alpha);
+  }
+  else if (S.get_constant_entry(1, 0) == 1) {
+    mxSvec.set_entry_to_nonconstant(0, 0, -vec.get_entry(2,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(2, 0, vec.get_entry(0,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(3, 0, -vec.get_entry(5,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(5, 0, vec.get_entry(3,0) * alpha);
+  }
+  else if (S.get_constant_entry(2, 0) == 1) {
+    mxSvec.set_entry_to_nonconstant(0, 0, vec.get_entry(1,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(1, 0, -vec.get_entry(0,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(3, 0, vec.get_entry(4,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(4, 0, -vec.get_entry(3,0) * alpha);
+  }
+  else if (S.get_constant_entry(3, 0) == 1) {
+    mxSvec.set_entry_to_nonconstant(4, 0, vec.get_entry(2,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(5, 0, -vec.get_entry(1,0) * alpha);
+  }
+  else if (S.get_constant_entry(4, 0) == 1) {
+    mxSvec.set_entry_to_nonconstant(3, 0, -vec.get_entry(2,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(5, 0, vec.get_entry(0,0) * alpha);
+  }
+  else if (S.get_constant_entry(5, 0) == 1) {
+    mxSvec.set_entry_to_nonconstant(3, 0, vec.get_entry(1,0) * alpha);
+    mxSvec.set_entry_to_nonconstant(4, 0, -vec.get_entry(0,0) * alpha);
+  }
+}
+
+static void vxIv(SpatialVector<double> &vecXIvec, const SpatialVector<double> &vec, const SpatialInertia<double> &I) {
+  matrix_layout<double> temp(6, 1, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED);
+  temp.set_zero();
+  temp = I * vec;
+  
+  dyn_var<double> vxiv_0, vxiv_1, vxiv_2, vxiv_3, vxiv_4, vxiv_5;
+
+  vxiv_0 = -vec.get_entry(2,0)*temp.get_entry(1,0) + vec.get_entry(1,0)*temp.get_entry(2,0) + -vec.get_entry(2+3,0)*temp.get_entry(1+3,0) + vec.get_entry(1+3,0)*temp.get_entry(2+3,0);
+  vxiv_1 = vec.get_entry(2,0)*temp.get_entry(0,0) + -vec.get_entry(0,0)*temp.get_entry(2,0) + vec.get_entry(2+3,0)*temp.get_entry(0+3,0) + -vec.get_entry(0+3,0)*temp.get_entry(2+3,0);
+  vxiv_2 = -vec.get_entry(1,0)*temp.get_entry(0,0) + vec.get_entry(0,0)*temp.get_entry(1,0) + -vec.get_entry(1+3,0)*temp.get_entry(0+3,0) + vec.get_entry(0+3,0)*temp.get_entry(1+3,0);
+  vxiv_3 = -vec.get_entry(2,0)*temp.get_entry(1+3,0) + vec.get_entry(1,0)*temp.get_entry(2+3,0);
+  vxiv_4 = vec.get_entry(2,0)*temp.get_entry(0+3,0) + -vec.get_entry(0,0)*temp.get_entry(2+3,0);
+  vxiv_5 = -vec.get_entry(1,0)*temp.get_entry(0+3,0) + vec.get_entry(0,0)*temp.get_entry(1+3,0);
+
+  vecXIvec.set_entry_to_nonconstant(0, 0, vxiv_0);
+  vecXIvec.set_entry_to_nonconstant(1, 0, vxiv_1);
+  vecXIvec.set_entry_to_nonconstant(2, 0, vxiv_2);
+  vecXIvec.set_entry_to_nonconstant(3, 0, vxiv_3);
+  vecXIvec.set_entry_to_nonconstant(4, 0, vxiv_4);
+  vecXIvec.set_entry_to_nonconstant(5, 0, vxiv_5);
+}
+
 #define EIGEN_MAT_CAST (dyn_var<EigenMatrix<double>>)(builder::cast)
 
 static void rnea(const Model &model, 
@@ -194,7 +251,7 @@ static void rnea(const Model &model,
     }
   }
 
-  SpatialVector<double> vecXIvec;
+  SpatialVector<double> mxSvec, vecXIvec;
 
   static_var<JointIndex> parent;
 
@@ -205,28 +262,23 @@ static void rnea(const Model &model,
     X_pi[i] = X_J[i] * X_T[i];
     parent = model.parents[i];
     if (parent > 0) {
-      // todo Xform * builder is invalid
       rd.v[i] = X_pi[i] * rd.v[parent];
       rd.a[i] = X_pi[i] * rd.a[parent];
     }
     else {
       // parent is base, v[i] remains zero
-      // todo no known conversion from matrix_expr to builder::builder
       rd.a[i] = X_pi[i] * gravity_vec;
     }
 
-    // todo SingletonSpatialVec * builder is invalid
     rd.v[i] += S[i] * (dyn_var<double>)(builder::cast)qd(i);
 
     // todo implement utility func
-    //mxS(S[i], rd.v[i], qd(i));
-    // todo builder += Singleton invalid
-    rd.a[i] += S[i];
+    mxS(mxSvec, S[i], rd.v[i], (dyn_var<double>)(builder::cast)qd(i));
+    rd.a[i] += mxSvec;
 
     // compute f
     // todo implement runtime func
-    //vxIv(vecXIvec, rd.v[i], I[i]);
-    // todo SpatialInertia * builder is invalid
+    vxIv(vecXIvec, rd.v[i], I[i]);
     rd.f[i] = I[i] * rd.a[i] + vecXIvec;
   }
 

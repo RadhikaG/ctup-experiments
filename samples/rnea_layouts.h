@@ -273,7 +273,7 @@ struct SingletonSpatialVector : public matrix_layout<Scalar> {
   using matrix_layout<Scalar>::set_entry_to_nonconstant;
   using matrix_layout<Scalar>::operator=;
 
-  SingletonSpatialVector() : matrix_layout<Scalar>(6, 1, SPARSE, EIGENMATRIX, SINGLETON) {
+  SingletonSpatialVector() : matrix_layout<Scalar>(6, 1, SPARSE, FLATTENED, SINGLETON) {
     matrix_layout<Scalar>::set_zero();
   }
 };
