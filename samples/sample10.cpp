@@ -272,7 +272,6 @@ static void rnea(const Model &model,
 
     rd.v[i] += S[i] * (dyn_var<double>)(builder::cast)qd(i);
 
-    // todo implement utility func
     mxS(mxSvec, S[i], rd.v[i], (dyn_var<double>)(builder::cast)qd(i));
     rd.a[i] += mxSvec;
 
@@ -284,16 +283,14 @@ static void rnea(const Model &model,
 
   // backward pass
 
-  //for (i = (JointIndex)model.njoints-1; i > 0; i = i-1) {
-  //  // todo transpose
-  //  rd.tau[i]) = S[i].transpose() * rd.f[i]);
+  for (i = (JointIndex)model.njoints-1; i > 0; i = i-1) {
+    rd.tau[i] = transpose(S[i]) * rd.f[i];
 
-  //  parent = model.parents[i];
-  //  if (parent > 0) {
-  //    // todo transpose
-  //    rd.f[parent]) += X_pi[i].transpose() * rd.f[i]);
-  //  }
-  //}
+    parent = model.parents[i];
+    if (parent > 0) {
+      rd.f[parent] += transpose(X_pi[i]) * rd.f[i];
+    }
+  }
 }
 
 int main(int argc, char* argv[]) {
