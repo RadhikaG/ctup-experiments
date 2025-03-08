@@ -1,0 +1,59 @@
+diff --git a/examples/autodiff/CMakeLists.txt b/examples/autodiff/CMakeLists.txt
+index 7fcc0ab8..07d12ddb 100644
+--- a/examples/autodiff/CMakeLists.txt
++++ b/examples/autodiff/CMakeLists.txt
+@@ -4,7 +4,7 @@
+ 
+ if(BUILD_WITH_AUTODIFF_SUPPORT)
+   function(ADD_PINOCCHIO_CPP_AUTODIFF_EXAMPLE EXAMPLE)
+-    include_directories(SYSTEM ${cppadcg_INCLUDE_DIR})
++    include_directories(SYSTEM ${cppadcg_INCLUDE_DIR} ${cppad_INCLUDE_DIR})
+     add_pinocchio_cpp_example(${EXAMPLE})
+     target_link_libraries(${PROJECT_NAME}-example-cpp-${EXAMPLE} PUBLIC ${CMAKE_DL_LIBS}
+                                                                         ${cppad_LIBRARY})
+diff --git a/examples/autodiff/autodiff-rnea.cpp b/examples/autodiff/autodiff-rnea.cpp
+index 1d846339..6647f42f 100644
+--- a/examples/autodiff/autodiff-rnea.cpp
++++ b/examples/autodiff/autodiff-rnea.cpp
+@@ -57,12 +57,14 @@ int main(void)
+   A.setZero();
+   computeRNEADerivatives(model, data, Q, V, A);
+ 
++  Eigen::MatrixXd dtau_dv_autodiff = Eigen::Map<const Eigen::MatrixXd>(dtau_dv.data(), nv, nv).transpose();
++
+   std::cout << "Analytical derivatives" << std::endl;
+   std::cout << data.dtau_dv << std::endl;
+   std::cout << "Automatic differentiation" << std::endl;
+-  std::cout << dtau_dv.reshaped(nv, nv).transpose() << std::endl;
++  std::cout << dtau_dv_autodiff << std::endl;
+ 
+-  if (data.dtau_dv.isApprox(dtau_dv.reshaped(nv, nv).transpose()))
++  if (data.dtau_dv.isApprox(dtau_dv_autodiff))
+   {
+     std::cout << "Comparison from automatic differention to analytical derivatives succesful"
+               << std::endl;
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index d645cb85..e7ab9813 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -302,7 +302,7 @@ if(BUILD_WITH_CODEGEN_SUPPORT)
+   # CPPAD_DEBUG_AND_RELEASE allow to mix debug and release versions of CppAD in the same program.
+   # This can happen when Pinocchio is build in Debug mode using another library using cppad.
+   target_compile_definitions(${PROJECT_NAME}_cppadcg PUBLIC CPPAD_DEBUG_AND_RELEASE)
+-  target_include_directories(${PROJECT_NAME}_cppadcg SYSTEM ${CPPADCG_SCOPE} ${cppadcg_INCLUDE_DIR})
++  target_include_directories(${PROJECT_NAME}_cppadcg SYSTEM ${CPPADCG_SCOPE} ${cppadcg_INCLUDE_DIR} ${CPPAD_SCOPE} ${cppad_INCLUDE_DIR})
+   target_link_libraries(${PROJECT_NAME}_cppadcg ${CPPADCG_SCOPE} ${cppadcg_LIBRARY}
+                         ${cppad_LIBRARY})
+ endif()
+diff --git a/unittest/cppadcg/CMakeLists.txt b/unittest/cppadcg/CMakeLists.txt
+index ea8c7e1e..88b77cea 100644
+--- a/unittest/cppadcg/CMakeLists.txt
++++ b/unittest/cppadcg/CMakeLists.txt
+@@ -1,6 +1,6 @@
+ macro(ADD_CPPADCG_UNIT_TEST name)
+   include_directories(SYSTEM ${cppad_INCLUDE_DIR})
+-  include_directories(SYSTEM ${cppadcodegen_INCLUDE_DIR})
++  include_directories(SYSTEM ${cppadcg_INCLUDE_DIR})
+   add_pinocchio_unit_test(${name} PACKAGES ${cppad_LIBRARY} ${CMAKE_DL_LIBS})
+   get_cpp_test_name(${name} ${CMAKE_CURRENT_SOURCE_DIR} TEST_NAME)
+   add_dependencies(${PROJECT_NAME}-test-cpp-cppadcg ${TEST_NAME})

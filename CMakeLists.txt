@@ -33,6 +33,7 @@ find_package(pinocchio
         REQUIRED CONFIG
 )
 
+find_library(hpp-fcl hpp-fcl HINTS ${CMAKE_BINARY_DIR}/install/hpp-fcl/lib)
 find_library(cppad_lib cppad_lib HINTS ${CMAKE_BINARY_DIR}/install/CppAD/lib)
 find_library(urdf-compiler urdf-compiler PATHS ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/build)
 find_library(buildit buildit PATHS ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build)
@@ -127,10 +128,11 @@ add_custom_target(
 #SCRIPTS
 set(SCRIPT_SOURCES
     scripts/eval_fk.cpp
-    scripts/gen_fk.cpp
     scripts/debug_fk.cpp
+    scripts/debug_fkcc.cpp
     scripts/pin_fk.cpp
     scripts/pin_fk_codegen.cpp
+    scripts/pin_fk_codegen_vectorized_comp.cpp
     scripts/pin_rnea_codegen.cpp
 )
 
@@ -144,13 +146,13 @@ foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
 
     target_link_libraries(${SCRIPT_NAME} PUBLIC pinocchio::pinocchio)
     target_link_libraries(${SCRIPT_NAME} PUBLIC ${cppad_lib})
+    target_link_libraries(${SCRIPT_NAME} PUBLIC ${hpp-fcl})
     target_link_libraries(${SCRIPT_NAME} PUBLIC Eigen3::Eigen)
 
     target_include_directories(${SCRIPT_NAME} PUBLIC 
         ${CMAKE_BINARY_DIR}/install/CppAD/include
         ${CMAKE_BINARY_DIR}/install/CppADCodeGen/include
         ${CMAKE_CURRENT_SOURCE_DIR}/gen
-        ${CMAKE_BINARY_DIR}/install/CppAD/lib
         ${CMAKE_BINARY_DIR}/install/pinocchio/include
     )
     target_compile_options(${SCRIPT_NAME} PRIVATE 
