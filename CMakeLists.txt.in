@@ -42,9 +42,11 @@ ExternalProject_Add(CppADCodeGen
     INSTALL_DIR ${CMAKE_BINARY_DIR}/install/CppADCodeGen
 )
 
+include_directories(${CMAKE_BINARY_DIR}/install/CppADCodeGen/include)
+
 # Build hpp-fcl
 ExternalProject_Add(hpp-fcl
-    DEPENDS CppAD
+    DEPENDS
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/hpp-fcl
     BINARY_DIR ${CMAKE_BINARY_DIR}/hpp-fcl
     GIT_SHALLOW TRUE
@@ -55,13 +57,20 @@ ExternalProject_Add(hpp-fcl
     INSTALL_DIR ${CMAKE_BINARY_DIR}/install/hpp-fcl
 )
 
+include_directories(${CMAKE_BINARY_DIR}/install/hpp-fcl/include)
+link_directories(${CMAKE_BINARY_DIR}/install/hpp-fcl/lib)
+
 # Build pinocchio, depends on CppAD, CppADCodeGen
 ExternalProject_Add(pinocchio
-    DEPENDS hpp-fcl
+    DEPENDS hpp-fcl CppAD CppADCodeGen
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/deps/pinocchio
     BINARY_DIR ${CMAKE_BINARY_DIR}/pinocchio
-    CMAKE_ARGS -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DBUILD_PYTHON_INTERFACE=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    CMAKE_CACHE_ARGS -DHPP-FCL_HOME:STRING=${CMAKE_BINARY_DIR}/install/hpp-fcl/include -DGOOGLETEST_GIT:BOOL=ON -DCMAKE_INSTALL_PREFIX:STRING=${CMAKE_BINARY_DIR}/install/pinocchio
+    CMAKE_ARGS -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DBUILD_PYTHON_INTERFACE=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DBUILD_WITH_COLLISION_SUPPORT=ON -DBUILD_WITH_CODEGEN_SUPPORT=ON
+    -Dcppadcg_PREFIX=${CMAKE_BINARY_DIR}/install/CppADCodeGen -Dcppad_PREFIX=${CMAKE_BINARY_DIR}/install/CppAD
+    #-DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/install #/home/radhika/ctup_stuff/ctup-experiments/build/install/CppAD;/home/radhika/ctup_stuff/ctup-experiments/build/install/CppADCodeGen/;${CMAKE_BINARY_DIR}/install/hpp-fcl/lib/cmake/hpp-fcl
+    -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/install/CppAD;${CMAKE_BINARY_DIR}/install/CppADCodeGen/;${CMAKE_BINARY_DIR}/install/hpp-fcl/
+    -DCMAKE_MODULE_PATH=${CMAKE_BINARY_DIR}/install/hpp-fcl/lib/cmake/hpp-fcl
+    CMAKE_CACHE_ARGS -DHPP-FCL_HOME:STRING=${CMAKE_BINARY_DIR}/install/hpp-fcl/include -DCPPAD_HOME:STRING=${CMAKE_BINARY_DIR}/install/CppAD/include -DGOOGLETEST_GIT:BOOL=ON -DCMAKE_INSTALL_PREFIX:STRING=${CMAKE_BINARY_DIR}/install/pinocchio 
     BUILD_COMMAND make
     INSTALL_DIR ${CMAKE_BINARY_DIR}/install/pinocchio
 )
