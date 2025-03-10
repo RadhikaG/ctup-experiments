@@ -20,6 +20,7 @@
 #include "pinocchio/multibody/model.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
+#include <Eigen/src/Core/util/ForwardDeclarations.h>
 #include <string>
 
 using builder::dyn_var;
@@ -104,13 +105,12 @@ struct robot_data {
   builder::array<SpatialVector<double>> v;
   builder::array<SpatialVector<double>> a;
   builder::array<SpatialVector<double>> f;
-  builder::array<SpatialVector<double>> tau;
+  matrix_layout<double> tau;
 
-  robot_data(size_t N) {
+  robot_data(size_t N) : tau(N, 1, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED) {
     v.set_size(N);
     a.set_size(N);
     f.set_size(N);
-    tau.set_size(N);
   }
 };
 
@@ -130,15 +130,20 @@ static void set_fixed_transforms_inertias(builder::array<Xform<Scalar>> &X_T,
 
   for (static_var<size_t> i = 1; i < (JointIndex)model.njoints; i = i+1) {
     Eigen::Matrix<double, 6, 6> pin_X_T = model.jointPlacements[i];
-
     Eigen::Matrix<double, 6, 6> pin_I = model.inertias[i];
+
+    Eigen::Matrix<double, 6, 6> mod_I;
+    mod_I.topLeftCorner(3,3) = pin_I.bottomRightCorner(3,3);
+    mod_I.bottomLeftCorner(3,3) = pin_I.topRightCorner(3,3);
+    mod_I.bottomRightCorner(3,3) = pin_I.topLeftCorner(3,3);
+    mod_I.topRightCorner(3,3) = pin_I.bottomLeftCorner(3,3);
 
     for (r = 0; r < 6; r = r + 1) {
       for (c = 0; c < 6; c = c + 1) {
         entry = pin_X_T.coeffRef(c, r);
         X_T[i].set_entry_to_constant(r, c, entry);
 
-        entry = pin_I.coeffRef(c, r);
+        entry = mod_I.coeffRef(r, c);
         I[i].set_entry_to_constant(r, c, entry);
       }
     }
@@ -180,19 +185,18 @@ static void mxS(SpatialVector<double> &mxSvec, const SingletonSpatialVector<doub
   }
 }
 
-static void vxIv(SpatialVector<double> &vecXIvec, const SpatialVector<double> &vec, const SpatialInertia<double> &I) {
+static void vxIv(SpatialVector<double> &vecXIvec, SpatialVector<double> &vec, SpatialInertia<double> &I) {
   matrix_layout<double> temp(6, 1, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED);
   temp.set_zero();
   temp = I * vec;
-  
   dyn_var<double> vxiv_0, vxiv_1, vxiv_2, vxiv_3, vxiv_4, vxiv_5;
 
-  vxiv_0 = -vec.get_entry(2,0)*temp.get_entry(1,0) + vec.get_entry(1,0)*temp.get_entry(2,0) + -vec.get_entry(2+3,0)*temp.get_entry(1+3,0) + vec.get_entry(1+3,0)*temp.get_entry(2+3,0);
-  vxiv_1 = vec.get_entry(2,0)*temp.get_entry(0,0) + -vec.get_entry(0,0)*temp.get_entry(2,0) + vec.get_entry(2+3,0)*temp.get_entry(0+3,0) + -vec.get_entry(0+3,0)*temp.get_entry(2+3,0);
-  vxiv_2 = -vec.get_entry(1,0)*temp.get_entry(0,0) + vec.get_entry(0,0)*temp.get_entry(1,0) + -vec.get_entry(1+3,0)*temp.get_entry(0+3,0) + vec.get_entry(0+3,0)*temp.get_entry(1+3,0);
-  vxiv_3 = -vec.get_entry(2,0)*temp.get_entry(1+3,0) + vec.get_entry(1,0)*temp.get_entry(2+3,0);
-  vxiv_4 = vec.get_entry(2,0)*temp.get_entry(0+3,0) + -vec.get_entry(0,0)*temp.get_entry(2+3,0);
-  vxiv_5 = -vec.get_entry(1,0)*temp.get_entry(0+3,0) + vec.get_entry(0,0)*temp.get_entry(1+3,0);
+  vxiv_0 = -vec.get_entry(2,0)*temp.get_entry(1,0) +  vec.get_entry(1,0)*temp.get_entry(2,0) + -vec.get_entry(2+3,0)*temp.get_entry(1+3,0) +  vec.get_entry(1+3,0)*temp.get_entry(2+3,0);
+  vxiv_1 =  vec.get_entry(2,0)*temp.get_entry(0,0) + -vec.get_entry(0,0)*temp.get_entry(2,0) +  vec.get_entry(2+3,0)*temp.get_entry(0+3,0) + -vec.get_entry(0+3,0)*temp.get_entry(2+3,0);
+  vxiv_2 = -vec.get_entry(1,0)*temp.get_entry(0,0) +  vec.get_entry(0,0)*temp.get_entry(1,0) + -vec.get_entry(1+3,0)*temp.get_entry(0+3,0) +  vec.get_entry(0+3,0)*temp.get_entry(1+3,0);
+  vxiv_3 = -vec.get_entry(2,0)*temp.get_entry(1+3,0) +  vec.get_entry(1,0)*temp.get_entry(2+3,0);
+  vxiv_4 =  vec.get_entry(2,0)*temp.get_entry(0+3,0) + -vec.get_entry(0,0)*temp.get_entry(2+3,0);
+  vxiv_5 = -vec.get_entry(1,0)*temp.get_entry(0+3,0) +  vec.get_entry(0,0)*temp.get_entry(1+3,0);
 
   vecXIvec.set_entry_to_nonconstant(0, 0, vxiv_0);
   vecXIvec.set_entry_to_nonconstant(1, 0, vxiv_1);
@@ -270,9 +274,9 @@ static void rnea(const Model &model,
       rd.a[i] = X_pi[i] * gravity_vec;
     }
 
-    rd.v[i] += S[i] * (dyn_var<double>)(builder::cast)qd(i);
+    rd.v[i] += S[i] * (dyn_var<double>)(builder::cast)qd(i-1);
 
-    mxS(mxSvec, S[i], rd.v[i], (dyn_var<double>)(builder::cast)qd(i));
+    mxS(mxSvec, S[i], rd.v[i], (dyn_var<double>)(builder::cast)qd(i-1));
     rd.a[i] += mxSvec;
 
     // compute f
@@ -284,13 +288,15 @@ static void rnea(const Model &model,
   // backward pass
 
   for (i = (JointIndex)model.njoints-1; i > 0; i = i-1) {
-    rd.tau[i] = transpose(S[i]) * rd.f[i];
+    rd.tau.set_entry_to_nonconstant(i, 0, (transpose(S[i]) * rd.f[i]).gen_entry_at(0, 0));
 
     parent = model.parents[i];
     if (parent > 0) {
       rd.f[parent] += transpose(X_pi[i]) * rd.f[i];
     }
   }
+
+  print_matrix_layout("tau: ", rd.tau);
 }
 
 int main(int argc, char* argv[]) {

@@ -13,6 +13,7 @@
 int main(int argc, char ** argv)
 {
   const int N_ITER = 1000000;
+  const int NBT = 16;
 
   using namespace CppAD;
   using namespace CppAD::cg;
@@ -25,8 +26,8 @@ int main(int argc, char ** argv)
   typedef ModelTpl<ADCG> ADModel;
   typedef DataTpl<ADCG> ADData;
   typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 1> ADVectorXs;
-  //typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 36> ADMatrixDyn6x6; // spatial Xform
-  typedef Eigen::Matrix<ADCG, 6, 6> ADMatrixDyn6x6; // spatial Xform
+  //typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 36> ADMatrixDyn6x6; // spatial Xdorm
+  typedef Eigen::Matrix<ADCG, 6, 6> ADMatrixDyn6x6; // spatial Xdorm
   
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
   const std::string urdf_filename = (argc<=1) ? PINOCCHIO_MODEL_DIR + std::string("/others/robots/ur_description/urdf/ur5_robot.urdf") : argv[1];
@@ -35,7 +36,13 @@ int main(int argc, char ** argv)
   // Load the urdf model
   Model model;
   pinocchio::urdf::buildModel(urdf_filename,model);
-  std::cout << "model name: " << model.name << std::endl;
+  std::cout << "model name: " << model.name << ", njoints: " << model.njoints << "\n";
+
+  // Sample a random configuration
+  //PINOCCHIO_ALIGNED_STD_VECTOR(Eigen::VectorXd) qs(N_ITER);
+  //for (size_t i = 0; i < N_ITER; ++i)
+  //  qs[i] = randomConfiguration(model).cast<double>();
+  Eigen::VectorXd q = randomConfiguration(model);
 
   // make symbolic model
   ADModel ad_model = model.cast<ADCG>();
@@ -74,13 +81,14 @@ int main(int argc, char ** argv)
   p2.saveSources();
 
   std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
-  Eigen::VectorXd q = randomConfiguration(model);
-  Eigen::VectorXd y = g_model->ForwardZero(q);
+  Eigen::VectorXd y; // for flattened pin cg output
 
-  //std::cout << y << "\n";
+  std::cout << y << "\n";
   auto start = std::chrono::system_clock::now();
   for (int i = 0; i < N_ITER; i++) {
-    y = g_model->ForwardZero(q);
+    for (int j = 0; j < NBT; j++) {
+      y = g_model->ForwardZero(q);
+    }
   }
   auto end = std::chrono::system_clock::now();
   auto elapsed =
