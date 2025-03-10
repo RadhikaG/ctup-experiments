@@ -12,6 +12,7 @@
 #include "Eigen/Dense"
 #include "builder/static_var.h"
 #include "builder/lib/utils.h"
+#include "builder/array.h"
 
 // ignore unused header warning in IDE, this is needed
 #include "pinocchio/multibody/joint/joint-collection.hpp"
@@ -72,7 +73,7 @@ struct Box {
 };
 
 struct Envir_Objects{
-    std::vector<Sphere> speheres;
+    std::vector<Sphere> spheres;
     std::vector<Cylinder> cylinders;
     std::vector<Box> boxs;
 };
@@ -110,14 +111,13 @@ static void parseCollisionObjects(const YAML::Node& collisionObjectsNode, std::v
     }
 }
 
-
 static dyn_var<int> Sphere_Environment_Collision(
 const Envir_Objects& obj,
 dyn_var<ctup::BlazeStaticVector<double,16>&> ax, dyn_var<ctup::BlazeStaticVector<double,16>&> ay, dyn_var<ctup::BlazeStaticVector<double,16>&> az, dyn_var<double> ar,
 dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> bx, dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> by, dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> bz, dyn_var<vector_t<double>&> br) {
   dyn_var<int> res=false;
-  for(static_var<size_t> l=0;l<std::size(obj.speheres);l=l+1){
-    const Sphere& sphere=obj.speheres[l];
+  for(static_var<size_t> l=0;l<std::size(obj.spheres);l=l+1){
+    const Sphere& sphere=obj.spheres[l];
     dyn_var<ctup::BlazeStaticVector<double,16>> xs = (ax - sphere.center_x);
     dyn_var<ctup::BlazeStaticVector<double,16>> ys = (ay - sphere.center_y);
     dyn_var<ctup::BlazeStaticVector<double,16>> zs = (az - sphere.center_z);
@@ -127,12 +127,13 @@ dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> bx, dyn_var<vector_t<ctup
 
     sum = sum - rs*rs;
 
-    for(dyn_var<int> j=0;j<16 && res==false;j=j+1){
-      if(sum[j]<0.0){
-        res=true;
-      }
-    }
+    res=(ctup::backend::min<double, 16>(sum) < 0.0);
+
     if(res){
+      if(bx.size() == 0){
+        return 1;
+      }
+
       for(dyn_var<size_t> i=0;i<bx.size();i=i+1){
         xs = (bx[i] - sphere.center_x);
         ys = (by[i] - sphere.center_y);
@@ -143,11 +144,7 @@ dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> bx, dyn_var<vector_t<ctup
 
         sum = sum - rs*rs;
 
-        for(dyn_var<size_t> j=0;j<16;j=j+1){
-          if(sum[j]<0.0){
-            return 1;
-          }
-        }
+        if(ctup::backend::min<double, 16>(sum)<0.0) return true;
       }
       res=false;
     }
@@ -160,7 +157,7 @@ dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> bx, dyn_var<vector_t<ctup
       dyn_var<ctup::BlazeStaticVector<double,16>> zs = (az - cylinder.center_z);
       dyn_var<ctup::BlazeStaticVector<double,16>> dot= zs*cylinder.zv;
       
-      dyn_var<ctup::BlazeStaticVector<double,16>> cdf = ctup::backend::min<double, 16>(ctup::backend::max<double, 16>((dot * cylinder.rdv),1.0),0.0);
+      dyn_var<ctup::BlazeStaticVector<double,16>> cdf = ctup::backend::max<double, 16>(ctup::backend::min<double, 16>((dot * cylinder.rdv),1.0),0.0);
 
       zs = (az - (cylinder.center_z+cylinder.zv*cdf));
 
@@ -170,30 +167,26 @@ dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> bx, dyn_var<vector_t<ctup
 
       sum = sum - rs*rs;
 
-      for(dyn_var<size_t> j=0;j<16 && res == false;j=j+1){
-        if(sum[j]<0.0){
-          res=true;
-        }
-      }
+      res=(ctup::backend::min<double, 16>(sum) < 0.0);
 
       if(res){
+        if(bx.size() == 0){
+          return 1;
+        }
+        
         for(dyn_var<size_t> i=0;i<bx.size();i=i+1){
           xs = (bx[i] - cylinder.center_x);
           ys = (by[i] - cylinder.center_y);
           zs = (bz[i] - cylinder.center_z);
 
-          cdf = ctup::backend::min<double, 16>(ctup::backend::max<double, 16>((dot * cylinder.rdv),1.0),0.0);
+          cdf = ctup::backend::max<double, 16>(ctup::backend::min<double, 16>((dot * cylinder.rdv),1.0),0.0);
           zs = (az - (cylinder.center_z+cylinder.zv*cdf));
 
           sum= xs*xs+ys*ys+zs*zs;
           rs = br[i] + cylinder.radius;
           sum = sum - rs*rs;
 
-          for(dyn_var<size_t> j=0;j<16;j=j+1){
-            if(sum[j]<0.0){
-              return 1;
-            }
-          }
+          if(ctup::backend::min<double, 16>(sum)<0.0) return true;
         }
         res=false;
       }
@@ -217,13 +210,13 @@ dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> bx, dyn_var<vector_t<ctup
 
       sum = sum - ar*ar;
 
-      for(dyn_var<size_t> j=0;j<16 && res==false;j=j+1){
-        if(sum[j]<0.0){
-          res=true;
-        }
-      }
+      res=(ctup::backend::min<double, 16>(sum)<0.0);
 
       if(res){
+        if(bx.size() == 0){
+        return 1;
+        } 
+        
         for(dyn_var<size_t> i=0;i<bx.size();i=i+1){
           xs = (bx[i] - box.center_x);
           ys = (by[i] - box.center_y);
@@ -236,11 +229,7 @@ dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> bx, dyn_var<vector_t<ctup
           sum= a1*a1+a2*a2+a3*a3;
           sum = sum - br[i]*br[i];
 
-          for(dyn_var<int> j=0;j<16;j=j+1){
-            if(sum[j]<0.0){
-              return 1;
-            }
-          }
+          if(ctup::backend::min<double, 16>(sum)<0.0) return true;
         }
         res=false;
       }
@@ -408,6 +397,7 @@ static void set_X_T(Xform<double> X_T[], const Model &model) {
 
 static dyn_var<int> fk(const Model &model,const tinyxml2::XMLElement* root_one_sph, const tinyxml2::XMLElement* root_mult_sph,dyn_var<ctup::EigenMatrix<ctup::BlazeStaticVector<double,16>>> q) {
   Xform<double> X_T[model.njoints];
+  //builder::array<Xform<double>> X_T; X_T.set_size(model.njoints);
   Xform<ctup::EigenMatrix<double,16,1>> X_J[model.njoints];
   Xform<ctup::EigenMatrix<double,16,1>> X_0[model.njoints];
   typedef typename Model::JointIndex JointIndex;
@@ -416,6 +406,20 @@ static dyn_var<int> fk(const Model &model,const tinyxml2::XMLElement* root_one_s
 
   static_var<int> jtype;
   static_var<int> axis;
+
+  static_var<JointIndex> parent;
+  std::string joint_name;
+  Xform<ctup::EigenMatrix<double,16,1>> X_pi;
+
+  dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> dx;
+  dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> dy;
+  dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> dz;
+  dyn_var<vector_t<double>> dr;
+
+  dyn_var<vector_t<vector_t<ctup::BlazeStaticVector<double,16>>>> sx;
+  dyn_var<vector_t<vector_t<ctup::BlazeStaticVector<double,16>>>> sy;
+  dyn_var<vector_t<vector_t<ctup::BlazeStaticVector<double,16>>>> sz;
+  dyn_var<vector_t<vector_t<double>>> sr;
 
   for (i = 1; i < (size_t)model.njoints; i = i+1) {
     jtype = get_jtype(model, i);
@@ -427,13 +431,6 @@ static dyn_var<int> fk(const Model &model,const tinyxml2::XMLElement* root_one_s
     if (jtype == 'P') {
       X_J[i].set_prismatic_axis(axis);
     }
-  }
-  static_var<JointIndex> parent;
-  std::string joint_name;
-  Xform<ctup::EigenMatrix<double,16,1>> X_pi;
-  dyn_var<int> res;
-  
-  for (i = 1; i < (size_t)model.njoints; i = i+1) {
     
     X_J[i].jcalc(q[i-1]);//changed for blaze
 
@@ -445,78 +442,101 @@ static dyn_var<int> fk(const Model &model,const tinyxml2::XMLElement* root_one_s
     else {
       X_0[i] = X_pi;
     }
-    
+  /*
+    if(i==2){
+      dyn_var<EigenMatrix<ctup::EigenMatrix<double,16,1>, 6, 6>> final_ans;
+      toPinEigen(final_ans, X_0[2]);
+    }
+  */
 
     joint_name = model.names[i];
-    //std::cout << "Joint: " << model.names[i] << std::endl;
+    std::cout<<joint_name<<std::endl;
+
     std::vector<double> spheres=set_spheres(root_one_sph, root_mult_sph, joint_name);
-    
-    //Transform from relative position to global positions
+    if(spheres.size()!=0){
+      //Transform from relative position to global positions
 
-    dyn_var<ctup::EigenMatrix<double,16,1>> t[3];
-    
-    t[0]=ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 2)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 0)
-    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 2)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 1)
-    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 2)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 2);
+      dyn_var<ctup::EigenMatrix<double,16,1>> t[3];
 
-    t[1]=ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 0)
-    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 1)
-    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 2);
+      t[0]=-(ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 2)
+      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 2)
+      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 2));
 
-    t[2]=ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 0)
-    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 1)
-    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 2);
+      t[1]=(ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 2)
+      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 2)
+      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 2));
 
-    dyn_var<ctup::EigenMatrix<double,16,1>> p_global[3];
-    for(static_var<size_t> l=0;l<3;l=l+1){
-        p_global[l]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(l, 0) * spheres[0];
+      t[2]=-(ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 1)
+      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 1)
+      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 1));
+
+      dyn_var<ctup::EigenMatrix<double,16,1>> p_global[3];
+      for(static_var<size_t> l=0;l<3;l=l+1){
+          p_global[l]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, l) * spheres[0];
+          for(static_var<size_t> j=1;j<3;j=j+1){
+            p_global[l]=p_global[l] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(j, l) * spheres[j];
+          }
+      }
+
+      p_global[0]=p_global[0] + t[0];
+      p_global[1]=p_global[1] + t[1];
+      p_global[2]=p_global[2] + t[2];
+
+      dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> x;
+      x.resize((spheres.size()-4)/4);
+      dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> y;
+      y.resize((spheres.size()-4)/4);
+      dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> z;
+      z.resize((spheres.size()-4)/4);
+
+      dyn_var<vector_t<double>> rad_sph;
+      rad_sph.resize((spheres.size()-4)/4);
+
+      for(static_var<size_t> k=7;k<spheres.size();k=k+4){
+        static_var<int> ind=-1+(k/4);
+
+        x[ind]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 0) * spheres[0+ind*4];
         for(static_var<size_t> j=1;j<3;j=j+1){
-          p_global[l]=p_global[l] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(l, j) * spheres[j];
+          x[ind]=x[ind] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, j) * spheres[j+ind*4];
         }
+
+        y[ind]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 0) * spheres[0+ind*4];
+        for(static_var<size_t> j=1;j<3;j=j+1){
+          y[ind]=y[ind] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, j) * spheres[j+ind*4];
+        }
+
+        z[ind]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 0) * spheres[0+ind*4];
+        for(static_var<size_t> j=1;j<3;j=j+1){
+          z[ind]=z[ind] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, j) * spheres[j+ind*4];
+        }
+
+
+        x[ind]=x[ind] + t[0];
+        y[ind]=y[ind] + t[1];
+        z[ind]=z[ind] + t[2];
+
+        rad_sph[ind]=spheres[k];
+      }
+      dyn_var<int> res;
+      if(i!=1){
+        res= ctup::backend::self_collision(p_global[0], p_global[1], p_global[2], spheres[3], x, y, z, rad_sph, dx, dy, dz, dr, sx, sy, sz, sr);
+      }
+      res= ctup::backend::Sphere_Environment_Collision(p_global[0], p_global[1], p_global[2], spheres[3], x, y, z, rad_sph);
+
+      if(i!=(size_t)model.njoints-1){
+        dx.push_back(p_global[0]);
+        dy.push_back(p_global[1]);
+        dz.push_back(p_global[2]);
+        dr.push_back(spheres[3]);
+
+        sx.push_back(x);
+        sy.push_back(y);
+        sz.push_back(z);
+        sr.push_back(rad_sph);
+      }
     }
-
-    p_global[0]=p_global[0] + t[0];
-    p_global[1]=p_global[1] + t[1];
-    p_global[2]=p_global[2] + t[2];
-
-    dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> x;
-    x.resize((spheres.size()-4)/4);
-    dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> y;
-    y.resize((spheres.size()-4)/4);
-    dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> z;
-    z.resize((spheres.size()-4)/4);
-
-    dyn_var<vector_t<double>> rad_sph;
-    rad_sph.resize((spheres.size()-4)/4);
-
-    for(static_var<size_t> k=7;k<spheres.size();k=k+4){
-      static_var<int> ind=-1+k/4;
-
-      x[ind]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 0) * spheres[0+ind*4];
-      for(static_var<size_t> j=1;j<3;j=j+1){
-        x[ind]=x[ind] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, j) * spheres[j+ind*4];
-      }
-
-      y[ind]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 0) * spheres[0+ind*4];
-      for(static_var<size_t> j=1;j<3;j=j+1){
-        y[ind]=y[ind] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, j) * spheres[j+ind*4];
-      }
-
-      z[ind]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 0) * spheres[0+ind*4];
-      for(static_var<size_t> j=1;j<3;j=j+1){
-        z[ind]=z[ind] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, j) * spheres[j+ind*4];
-      }
-
-
-      x[ind]=x[ind] + t[0];
-      y[ind]=y[ind] + t[1];
-      z[ind]=z[ind] + t[2];
-
-      rad_sph[ind]=spheres[k];
-    }
-
-    dyn_var<int> res=ctup::backend::Sphere_Environment_Collision(p_global[0],p_global[1],p_global[2],spheres[3],x,y,z,rad_sph);
   }
+
   return 0;
 }
 
@@ -579,7 +599,7 @@ int main(int argc, char* argv[]) {
       std::cerr << "No collision objects found in the YAML file." << std::endl;
       return 1;
   }
-  std::vector<Sphere> speheres;
+  std::vector<Sphere> spheres;
   std::vector<Cylinder> cylinders;
   std::vector<Box> boxs;
   Envir_Objects env_obj;
@@ -636,7 +656,8 @@ int main(int argc, char* argv[]) {
           cylinders.push_back(a);
       }
   }
-  env_obj.speheres=speheres;
+  env_obj.spheres=spheres;
+
   env_obj.cylinders=cylinders;
   env_obj.boxs=boxs;
   //--------------------------
@@ -652,8 +673,8 @@ int main(int argc, char* argv[]) {
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
 
-  of << "#include \"Eigen/Dense\"\n";
-   of << "#include \"blaze/Math.h\"\n\n";
+  of << "#include \"blaze/Math.h\"\n\n";
+  of << "#include \"self_collision.h\"\n\n";
   of << "#include <iostream>\n\n";
   of << "namespace ctup_gen {\n\n";
 
