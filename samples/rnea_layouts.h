@@ -1,5 +1,5 @@
-#ifndef XFORM_LAYOUTS_H
-#define XFORM_LAYOUTS_H
+#ifndef RNEA_LAYOUTS_H
+#define RNEA_LAYOUTS_H
 
 #include "backend.h"
 #include "matrix_layout_composite.h"
@@ -113,7 +113,7 @@ struct Rotation : public matrix_layout<Scalar> {
 };
 
 template <typename Scalar>
-struct XformBlocked : public blocked_layout<Scalar> {
+struct Xform : public blocked_layout<Scalar> {
   using blocked_layout<Scalar>::set_partitions;
   using blocked_layout<Scalar>::set_new_block;
   using blocked_layout<Scalar>::operator=;
@@ -124,7 +124,7 @@ struct XformBlocked : public blocked_layout<Scalar> {
 
   static_var<int> joint_type;
 
-  XformBlocked() : blocked_layout<Scalar>(6, 6), 
+  Xform() : blocked_layout<Scalar>(6, 6), 
     rot(new Rotation<Scalar>()), trans(new Translation<Scalar>()), 
     minus_E_rcross(new matrix_layout<Scalar>(3, 3, SPARSE, FLATTENED, COMPRESSED)) {
 
@@ -156,13 +156,6 @@ struct XformBlocked : public blocked_layout<Scalar> {
     *minus_E_rcross = -(*rot) * (*trans);
   }
 };
-
-////// NON-BLOCKED //////
-/// Combos tested:
-/// * SPARSE, UNROLLED, UNCOMPRESSED
-/// * SPARSE, FLATTENED, UNCOMPRESSED
-/// * SPARSE, FLATTENED, COMPRESSED
-/// * TILE, EIGENMATRIX, UNCOMPRESSED
 
 template <typename Scalar>
 struct XformNonBlocked : public matrix_layout<Scalar> {
@@ -252,6 +245,62 @@ struct XformNonBlocked : public matrix_layout<Scalar> {
   using matrix_layout<Scalar>::operator=;
 };
 
+template <typename Scalar>
+struct SpatialVector : public matrix_layout<Scalar> {
+  using matrix_layout<Scalar>::set_entry_to_constant;
+  using matrix_layout<Scalar>::set_entry_to_nonconstant;
+  using matrix_layout<Scalar>::operator=;
+
+  SpatialVector() : matrix_layout<Scalar>(6, 1, DENSE, EIGENMATRIX, UNCOMPRESSED) {
+    matrix_layout<Scalar>::set_zero();
+  }
+};
+
+template <typename Scalar>
+struct SpatialInertia : public matrix_layout<Scalar> {
+  using matrix_layout<Scalar>::set_entry_to_constant;
+  using matrix_layout<Scalar>::set_entry_to_nonconstant;
+  using matrix_layout<Scalar>::operator=;
+
+  SpatialInertia() : matrix_layout<Scalar>(6, 6, DENSE, EIGENMATRIX, UNCOMPRESSED) {
+    matrix_layout<Scalar>::set_zero();
+  }
+};
+
+template <typename Scalar>
+struct SingletonSpatialVector : public matrix_layout<Scalar> {
+  using matrix_layout<Scalar>::set_entry_to_constant;
+  using matrix_layout<Scalar>::set_entry_to_nonconstant;
+  using matrix_layout<Scalar>::operator=;
+
+  static_var<int> motion_subspace_axis;
+
+  SingletonSpatialVector() : matrix_layout<Scalar>(6, 1, SPARSE, FLATTENED, SINGLETON) {
+    matrix_layout<Scalar>::set_zero();
+  }
+
+  void set_revolute_axis(char axis) {
+    motion_subspace_axis = axis;
+    if (motion_subspace_axis == 'X')
+      set_entry_to_constant(0, 0, 1);
+    else if (motion_subspace_axis == 'Y')
+      set_entry_to_constant(1, 0, 1);
+    else if (motion_subspace_axis == 'Z')
+      set_entry_to_constant(2, 0, 1);
+  }
+
+  void set_prismatic_axis(char axis) {
+    motion_subspace_axis = axis;
+    if (motion_subspace_axis == 'X')
+      set_entry_to_constant(3, 0, 1);
+    else if (motion_subspace_axis == 'Y')
+      set_entry_to_constant(4, 0, 1);
+    else if (motion_subspace_axis == 'Z')
+      set_entry_to_constant(5, 0, 1);
+  }
+};
+
 }
 
 #endif
+

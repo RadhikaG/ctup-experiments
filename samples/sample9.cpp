@@ -18,7 +18,6 @@
 #include "pinocchio/multibody/model.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
-#include <memory>
 #include <string>
 
 using builder::dyn_var;
@@ -29,7 +28,7 @@ using pinocchio::Model;
 /** helpers **/
 
 template <typename Scalar>
-using Xform = ctup::XformNonBlocked<Scalar>;
+using Xform = ctup::XformBlocked<Scalar>;
 
 using ctup::EigenMatrix;
 
@@ -145,8 +144,8 @@ static dyn_var<EigenMatrix<double, 6, 6>> fk(const Model &model, dyn_var<builder
       X_0[i] = X_pi * X_0[parent];
     }
     else {
-      //X_0[i] = ctup::blocked_layout_expr_leaf<double>(X_pi);
-      X_0[i] = ctup::matrix_layout_expr_leaf<double>(X_pi);
+      X_0[i] = ctup::blocked_layout_expr_leaf<double>(X_pi);
+      //X_0[i] = ctup::matrix_layout_expr_leaf<double>(X_pi);
     }
   }
 

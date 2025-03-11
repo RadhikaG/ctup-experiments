@@ -78,6 +78,7 @@ set(CFLAGS_PEDANTIC
 set(SAMPLES_SOURCES
     samples/sample8.cpp
     samples/sample9.cpp
+    samples/sample10.cpp
 )
 
 
@@ -129,6 +130,8 @@ set(SCRIPT_SOURCES
     scripts/eval_fk.cpp
     scripts/debug_fk.cpp
     scripts/debug_fkcc.cpp
+    scripts/debug_rnea.cpp
+    scripts/eval_rnea.cpp
     scripts/pin_fk.cpp
     scripts/pin_fk_codegen.cpp
     scripts/pin_fk_codegen_vectorized_comp.cpp
