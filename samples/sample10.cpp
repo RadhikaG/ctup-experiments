@@ -208,7 +208,7 @@ static void vxIv(SpatialVector<double> &vecXIvec, SpatialVector<double> &vec, Sp
 
 #define EIGEN_MAT_CAST (dyn_var<EigenMatrix<double>>)(builder::cast)
 
-static void rnea(const Model &model, 
+static dyn_var<builder::eigen_vectorXd_t> rnea(const Model &model, 
         dyn_var<builder::eigen_vectorXd_t &> q, 
         dyn_var<builder::eigen_vectorXd_t &> qd, 
         const double GRAVITY = -9.81) {
@@ -247,11 +247,11 @@ static void rnea(const Model &model,
 
     if (jtype == 'R') {
       X_J[i].set_revolute_axis(axis);
-      S[i].set_entry_to_constant(2, 0, 1);
+      S[i].set_revolute_axis(axis);
     }
     if (jtype == 'P') {
       X_J[i].set_prismatic_axis(axis);
-      S[i].set_entry_to_constant(5, 0, 1);
+      S[i].set_prismatic_axis(axis);
     }
   }
 
@@ -296,7 +296,8 @@ static void rnea(const Model &model,
     }
   }
 
-  print_matrix_layout("tau: ", rd.tau);
+  //print_matrix_layout("tau: ", rd.tau);
+  return rd.tau.denseify();
 }
 
 int main(int argc, char* argv[]) {

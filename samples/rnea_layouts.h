@@ -273,8 +273,30 @@ struct SingletonSpatialVector : public matrix_layout<Scalar> {
   using matrix_layout<Scalar>::set_entry_to_nonconstant;
   using matrix_layout<Scalar>::operator=;
 
+  static_var<int> motion_subspace_axis;
+
   SingletonSpatialVector() : matrix_layout<Scalar>(6, 1, SPARSE, FLATTENED, SINGLETON) {
     matrix_layout<Scalar>::set_zero();
+  }
+
+  void set_revolute_axis(char axis) {
+    motion_subspace_axis = axis;
+    if (motion_subspace_axis == 'X')
+      set_entry_to_constant(0, 0, 1);
+    else if (motion_subspace_axis == 'Y')
+      set_entry_to_constant(1, 0, 1);
+    else if (motion_subspace_axis == 'Z')
+      set_entry_to_constant(2, 0, 1);
+  }
+
+  void set_prismatic_axis(char axis) {
+    motion_subspace_axis = axis;
+    if (motion_subspace_axis == 'X')
+      set_entry_to_constant(3, 0, 1);
+    else if (motion_subspace_axis == 'Y')
+      set_entry_to_constant(4, 0, 1);
+    else if (motion_subspace_axis == 'Z')
+      set_entry_to_constant(5, 0, 1);
   }
 };
 

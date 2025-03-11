@@ -130,6 +130,8 @@ set(SCRIPT_SOURCES
     scripts/eval_fk.cpp
     scripts/debug_fk.cpp
     scripts/debug_fkcc.cpp
+    scripts/debug_rnea.cpp
+    scripts/eval_rnea.cpp
     scripts/pin_fk.cpp
     scripts/pin_fk_codegen.cpp
     scripts/pin_fk_codegen_vectorized_comp.cpp
