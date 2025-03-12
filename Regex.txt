@@ -5,7 +5,7 @@
 
 3.-
 
-    (int ([a-zA-Z0-9]*) =\s*Sphere_Environment_Collision\([^;]+\);)
+    (([a-zA-Z0-9]*) =\s*Sphere_Environment_Collision\([^;]+\);)
     
     $1
     if($2) return 1;
@@ -15,3 +15,9 @@
     Eigen::Array<double, 16, 1>
 
     blaze::StaticVector<double, 16>
+
+4.-
+    (([a-zA-Z0-9]*) =\s*self_collision\([^;]+\);)
+
+    $1
+    if($2) return 1;

@@ -398,7 +398,7 @@ static void set_X_T(Xform<double> X_T[], const Model &model) {
 static dyn_var<int> fk(const Model &model,const tinyxml2::XMLElement* root_one_sph, const tinyxml2::XMLElement* root_mult_sph,dyn_var<ctup::EigenMatrix<ctup::BlazeStaticVector<double,16>>> q) {
   Xform<double> X_T[model.njoints];
   //builder::array<Xform<double>> X_T; X_T.set_size(model.njoints);
-  Xform<ctup::EigenMatrix<double,16,1>> X_J[model.njoints];
+  Xform<ctup::EigenMatrix<double,16,1>> X_J;
   Xform<ctup::EigenMatrix<double,16,1>> X_0[model.njoints];
   typedef typename Model::JointIndex JointIndex;
   static_var<size_t> i;
@@ -421,20 +421,23 @@ static dyn_var<int> fk(const Model &model,const tinyxml2::XMLElement* root_one_s
   dyn_var<vector_t<vector_t<ctup::BlazeStaticVector<double,16>>>> sz;
   dyn_var<vector_t<vector_t<double>>> sr;
 
+  const int constante=2;
+  ctup::BlazeStaticVector<double,constante> test;
+
   for (i = 1; i < (size_t)model.njoints; i = i+1) {
     jtype = get_jtype(model, i);
     axis = get_joint_axis(model, i);
 
     if (jtype == 'R') {
-      X_J[i].set_revolute_axis(axis);
+      X_J.set_revolute_axis(axis);
     }
     if (jtype == 'P') {
-      X_J[i].set_prismatic_axis(axis);
+      X_J.set_prismatic_axis(axis);
     }
     
-    X_J[i].jcalc(q[i-1]);//changed for blaze
+    X_J.jcalc(q[i-1]);//changed for blaze
 
-    X_pi = X_J[i] * X_T[i];
+    X_pi = X_J * X_T[i];
     parent = model.parents[i];
     if (parent > 0) {
       X_0[i] = X_pi * X_0[parent];
@@ -450,7 +453,7 @@ static dyn_var<int> fk(const Model &model,const tinyxml2::XMLElement* root_one_s
   */
 
     joint_name = model.names[i];
-    std::cout<<joint_name<<std::endl;
+    std::cout<<joint_name<<std::endl
 
     std::vector<double> spheres=set_spheres(root_one_sph, root_mult_sph, joint_name);
     if(spheres.size()!=0){

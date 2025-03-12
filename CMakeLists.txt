@@ -77,7 +77,7 @@ set(CFLAGS_PEDANTIC
 
 #SAMPLES
 set(SAMPLES_SOURCES
-    samples/sample8.cpp
+    #samples/sample8.cpp
     samples/sample9.cpp
     samples/sample15.cpp
     samples/sample17.cpp
@@ -113,35 +113,35 @@ endforeach()
 # Generated code dumped in gen/ directory.
 ################################################
 
-add_custom_command(
-  OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
-  COMMAND ${CMAKE_BINARY_DIR}/sample8 ${CMAKE_SOURCE_DIR}/deps/pinocchio/models/baxter_simple.urdf ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
-  DEPENDS ${CMAKE_BINARY_DIR}/sample8
-  COMMENT "Executing sample8"
-  VERBATIM
-)
+# add_custom_command(
+#   OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
+#   COMMAND ${CMAKE_BINARY_DIR}/sample8 ${CMAKE_SOURCE_DIR}/deps/pinocchio/models/baxter_simple.urdf ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
+#   DEPENDS ${CMAKE_BINARY_DIR}/sample8
+#   COMMENT "Executing sample8"
+#   VERBATIM
+# )
 
-add_custom_target(
-  FK_GEN_DENSE ALL
-  DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
-)
+# add_custom_target(
+#   FK_GEN_DENSE ALL
+#   DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
+# )
 
-add_custom_command(
-  OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled.h
-  COMMAND ${CMAKE_BINARY_DIR}/sample9 ${CMAKE_SOURCE_DIR}/models/iiwa_rbd_accel.urdf ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled.h
-  DEPENDS ${CMAKE_BINARY_DIR}/sample9
-  COMMENT "Executing sample9"
-  VERBATIM
-)
+ add_custom_command(
+   OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled.h
+   COMMAND ${CMAKE_BINARY_DIR}/sample9 ${CMAKE_SOURCE_DIR}/models/ur5_spherized.urdf ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled.h
+   DEPENDS ${CMAKE_BINARY_DIR}/sample9
+   COMMENT "Executing sample9"
+   VERBATIM
+ )
 
-add_custom_target(
-  FK_GEN_UNROLLED ALL
-  DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled.h
-)
+ add_custom_target(
+   FK_GEN_UNROLLED ALL
+   DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled.h
+ )
 
 add_custom_command(
   OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled_simd.h
-  COMMAND ${CMAKE_BINARY_DIR}/sample15 ${CMAKE_SOURCE_DIR}/models/iiwa_rbd_accel.urdf ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled_simd.h
+  COMMAND ${CMAKE_BINARY_DIR}/sample15 ${CMAKE_SOURCE_DIR}/models/ur5_spherized.urdf  ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled_simd.h
   DEPENDS ${CMAKE_BINARY_DIR}/sample15
   COMMENT "Executing sample15"
   VERBATIM
@@ -152,18 +152,18 @@ add_custom_target(
   DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_unrolled_simd.h
 )
 
-add_custom_command(
-  OUTPUT ${CMAKE_SOURCE_DIR}/gen/cc_simd.h
-  COMMAND ${CMAKE_BINARY_DIR}/sample17 ${CMAKE_SOURCE_DIR}/models/baxter_spherized_1.urdf ${CMAKE_SOURCE_DIR}/models/baxter_spherized.urdf  ${CMAKE_SOURCE_DIR}/environment/scene0561.yaml ${CMAKE_SOURCE_DIR}/gen/cc_simd.h
-  DEPENDS ${CMAKE_BINARY_DIR}/sample17
-  COMMENT "Executing sample17"
-  VERBATIM
-)
+ add_custom_command(
+   OUTPUT ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
+   COMMAND ${CMAKE_BINARY_DIR}/sample17 ${CMAKE_SOURCE_DIR}/models/ur5_spherized_1.urdf ${CMAKE_SOURCE_DIR}/models/ur5_spherized.urdf  ${CMAKE_SOURCE_DIR}/environment/scene001.yaml ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
+   DEPENDS ${CMAKE_BINARY_DIR}/sample17
+   COMMENT "Executing sample17"
+   VERBATIM
+ )
 
-add_custom_target(
-  CC_SIMD ALL
-  DEPENDS ${CMAKE_SOURCE_DIR}/gen/cc_simd.h
-)
+ add_custom_target(
+   CC_SIMD ALL
+   DEPENDS ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
+ )
 
 
 ################################################
@@ -179,7 +179,7 @@ set(SCRIPT_SOURCES
     #scripts/pin_fk_codegen.cpp
     #scripts/pin_rnea_codegen.cpp
     #scripts/eval_simd.cpp
-    scripts/eval_fkcc.cpp
+    #scripts/eval_fkcc.cpp
 )
 
 #Compile SCRIPTS
