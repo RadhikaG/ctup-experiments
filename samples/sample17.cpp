@@ -453,7 +453,7 @@ static dyn_var<int> fk(const Model &model,const tinyxml2::XMLElement* root_one_s
   */
 
     joint_name = model.names[i];
-    std::cout<<joint_name<<std::endl
+    std::cout<<joint_name<<std::endl;
 
     std::vector<double> spheres=set_spheres(root_one_sph, root_mult_sph, joint_name);
     if(spheres.size()!=0){
