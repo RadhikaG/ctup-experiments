@@ -17,9 +17,16 @@
 // ignore unused header warning in IDE, this is needed
 #include "pinocchio/multibody/joint/joint-collection.hpp"
 #include "pinocchio/multibody/model.hpp"
+#include "pinocchio/algorithm/geometry.hpp"
+#include "pinocchio/collision/collision.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
+#include <hpp/fcl/collision_object.h>
+#include <hpp/fcl/shape/geometric_shapes.h>
 #include <memory>
+#include <pinocchio/multibody/fwd.hpp>
+#include <pinocchio/multibody/geometry.hpp>
+#include <pinocchio/spatial/fwd.hpp>
 #include <string>
 
 #include <tinyxml2.h>
@@ -29,6 +36,7 @@ using builder::dyn_var;
 using builder::static_var;
 
 using pinocchio::Model;
+using pinocchio::GeometryModel;
 
 using ctup::Xform;
 using ctup::EigenMatrix;
@@ -241,101 +249,130 @@ dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> bx, dyn_var<vector_t<ctup
   return 0;
 }
 
-static std::vector<double> set_spheres(const tinyxml2::XMLElement* root_one_sph, const tinyxml2::XMLElement* root_mult_sph, const std::string joint_name){
-  int found=false;
+static std::vector<double> joint_to_spheres(const pinocchio::Model &model, const pinocchio::GeometryModel &geom_model, const std::string joint_name) {
+  using namespace pinocchio;
+
+  JointIndex jid = model.getJointId(joint_name);
+
   std::vector<double> spheres;
-  
-  //READ 1 SPH COLLIISON
-  const tinyxml2::XMLElement* joint = root_one_sph->FirstChildElement("joint");
-  while(joint != nullptr && not(found)){
-  //for (const tinyxml2::XMLElement* joint = root_one_sph->FirstChildElement("joint"); joint != nullptr && not(found); joint = joint->NextSiblingElement("joint")) {
-    const char* joint_name_2 = joint->Attribute("name");
-    if(joint_name_2==joint_name){
-      // Get the child link name from the <child> tag
-      const tinyxml2::XMLElement* child = joint->FirstChildElement("child");
-      if (child) {
-        const char* child_link_name = child->Attribute("link");
 
-        // Find the <link> element matching the child link name
-        for (const tinyxml2::XMLElement* link = root_one_sph->FirstChildElement("link"); link != nullptr && not(found); link = link->NextSiblingElement("link")) {
-          const char* link_name = link->Attribute("name");
-          if (link_name && child_link_name && std::string(link_name) == child_link_name) {
-            // Get the <collision> elements inside the child link
-            for (const tinyxml2::XMLElement* collision = link->FirstChildElement("collision"); collision != nullptr; collision = collision->NextSiblingElement("collision")) {
-                const tinyxml2::XMLElement* origin = collision->FirstChildElement("origin");
-                if (origin) {
-                  const tinyxml2::XMLElement* sphere_col = (collision->FirstChildElement("geometry"))->FirstChildElement("sphere");
-                  const char* rad = sphere_col->Attribute("radius");
+  for (size_t i = 0; i < geom_model.geometryObjects.size(); i++) {
+    const GeometryObject &geom_obj = geom_model.geometryObjects[i];
+    // this function does pick out the "true" actuated parent, not the fixed joint parent
+    const JointIndex parent_joint_id = geom_obj.parentJoint;
 
-                  const char* xyz = origin->Attribute("xyz");
-                  //std::cout << "XYZ: " << xyz << std::endl;
-                  //std::cout << "Radius: " << rad << std::endl<<std::endl;
+    if (parent_joint_id != jid)
+      continue;
 
-                  std::string token;
-                  std::istringstream ss(xyz);
-                  while (std::getline(ss, token, ' ')) {
-                    spheres.push_back(std::stod(token));
-                    //std::cout << token << std::endl<<std::endl;
-                  }
-                  spheres.push_back(std::stod(rad));
-                }
-            }
-            found=true; // Stop looking for the child link once found
-          }
-        }
-        found=false;
-        for (const tinyxml2::XMLElement* link = root_mult_sph->FirstChildElement("link"); link != nullptr && not(found); link = link->NextSiblingElement("link")) {
-          const char* link_name = link->Attribute("name");
-          if (link_name && child_link_name && std::string(link_name) == child_link_name) {
-            // Get the <collision> elements inside the child link
-            for (const tinyxml2::XMLElement* collision = link->FirstChildElement("collision"); collision != nullptr; collision = collision->NextSiblingElement("collision")) {
-                const tinyxml2::XMLElement* origin = collision->FirstChildElement("origin");
-                if (origin) {
-                  const tinyxml2::XMLElement* sphere_col = (collision->FirstChildElement("geometry"))->FirstChildElement("sphere");
-                  const char* rad_2 = sphere_col->Attribute("radius");
-                  const char* xyz2 = origin->Attribute("xyz");
+    hpp::fcl::NODE_TYPE node_type = geom_obj.geometry->getNodeType();
+    assert(node_type == hpp::fcl::GEOM_SPHERE && "we don't support non sphere geoms inside robot");
 
-                  std::string token;
-                  std::istringstream ss(xyz2);
+    Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
+    double sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(geom_obj.geometry)->radius;
 
-                  int same= true;
-                  int loop=0;
-                  while (std::getline(ss, token,' ') && same) {
-                    if(double(std::stod(token))-spheres[loop]!=0){
-                      same=false;
-                    }
-                    loop=loop+1;
-                  }
-                  if(spheres[loop]!=std::stod(rad_2)) same=false;
-
-                  std::string token2;
-                  std::istringstream ss2(xyz2);
-                  if(not(same)){
-                    while (std::getline(ss2, token2,' ') ) {
-                      spheres.push_back(std::stod(token2));
-                      //std::cout << "Token: " << token2 << std::endl;
-                    }
-                    //std::cout << "XYZ: " << xyz2 << std::endl;
-                    //std::cout << "Radius: " << rad_2 << std::endl;
-                    spheres.push_back(std::stod(rad_2));
-                  }
-                  
-                }
-            }
-            found=true; // Stop looking for the child link once found
-          }
-        }
-        
-
-      }
-    }
-
-    joint = joint->NextSiblingElement("joint");
+    for (size_t p = 0; p < 3; p++)
+      spheres.push_back(sphere_xyz[p]);
+    spheres.push_back(sphere_radius);
   }
-  //std::cout << std::endl;
-  
+
   return spheres;
 }
+
+//static std::vector<double> set_spheres(const tinyxml2::XMLElement* root_one_sph, const tinyxml2::XMLElement* root_mult_sph, const std::string joint_name){
+//  int found=false;
+//  std::vector<double> spheres;
+//  
+//  //READ 1 SPH COLLIISON
+//  const tinyxml2::XMLElement* joint = root_one_sph->FirstChildElement("joint");
+//  while(joint != nullptr && not(found)){
+//  //for (const tinyxml2::XMLElement* joint = root_one_sph->FirstChildElement("joint"); joint != nullptr && not(found); joint = joint->NextSiblingElement("joint")) {
+//    const char* joint_name_2 = joint->Attribute("name");
+//    if(joint_name_2==joint_name){
+//      // Get the child link name from the <child> tag
+//      const tinyxml2::XMLElement* child = joint->FirstChildElement("child");
+//      if (child) {
+//        const char* child_link_name = child->Attribute("link");
+//
+//        // Find the <link> element matching the child link name
+//        for (const tinyxml2::XMLElement* link = root_one_sph->FirstChildElement("link"); link != nullptr && not(found); link = link->NextSiblingElement("link")) {
+//          const char* link_name = link->Attribute("name");
+//          if (link_name && child_link_name && std::string(link_name) == child_link_name) {
+//            // Get the <collision> elements inside the child link
+//            for (const tinyxml2::XMLElement* collision = link->FirstChildElement("collision"); collision != nullptr; collision = collision->NextSiblingElement("collision")) {
+//                const tinyxml2::XMLElement* origin = collision->FirstChildElement("origin");
+//                if (origin) {
+//                  const tinyxml2::XMLElement* sphere_col = (collision->FirstChildElement("geometry"))->FirstChildElement("sphere");
+//                  const char* rad = sphere_col->Attribute("radius");
+//
+//                  const char* xyz = origin->Attribute("xyz");
+//                  //std::cout << "XYZ: " << xyz << std::endl;
+//                  //std::cout << "Radius: " << rad << std::endl<<std::endl;
+//
+//                  std::string token;
+//                  std::istringstream ss(xyz);
+//                  while (std::getline(ss, token, ' ')) {
+//                    spheres.push_back(std::stod(token));
+//                    //std::cout << token << std::endl<<std::endl;
+//                  }
+//                  spheres.push_back(std::stod(rad));
+//                }
+//            }
+//            found=true; // Stop looking for the child link once found
+//          }
+//        }
+//        found=false;
+//        for (const tinyxml2::XMLElement* link = root_mult_sph->FirstChildElement("link"); link != nullptr && not(found); link = link->NextSiblingElement("link")) {
+//          const char* link_name = link->Attribute("name");
+//          if (link_name && child_link_name && std::string(link_name) == child_link_name) {
+//            // Get the <collision> elements inside the child link
+//            for (const tinyxml2::XMLElement* collision = link->FirstChildElement("collision"); collision != nullptr; collision = collision->NextSiblingElement("collision")) {
+//                const tinyxml2::XMLElement* origin = collision->FirstChildElement("origin");
+//                if (origin) {
+//                  const tinyxml2::XMLElement* sphere_col = (collision->FirstChildElement("geometry"))->FirstChildElement("sphere");
+//                  const char* rad_2 = sphere_col->Attribute("radius");
+//                  const char* xyz2 = origin->Attribute("xyz");
+//
+//                  std::string token;
+//                  std::istringstream ss(xyz2);
+//
+//                  int same= true;
+//                  int loop=0;
+//                  while (std::getline(ss, token,' ') && same) {
+//                    if(double(std::stod(token))-spheres[loop]!=0){
+//                      same=false;
+//                    }
+//                    loop=loop+1;
+//                  }
+//                  if(spheres[loop]!=std::stod(rad_2)) same=false;
+//
+//                  std::string token2;
+//                  std::istringstream ss2(xyz2);
+//                  if(not(same)){
+//                    while (std::getline(ss2, token2,' ') ) {
+//                      spheres.push_back(std::stod(token2));
+//                      //std::cout << "Token: " << token2 << std::endl;
+//                    }
+//                    //std::cout << "XYZ: " << xyz2 << std::endl;
+//                    //std::cout << "Radius: " << rad_2 << std::endl;
+//                    spheres.push_back(std::stod(rad_2));
+//                  }
+//                  
+//                }
+//            }
+//            found=true; // Stop looking for the child link once found
+//          }
+//        }
+//        
+//
+//      }
+//    }
+//
+//    joint = joint->NextSiblingElement("joint");
+//  }
+//  //std::cout << std::endl;
+//  
+//  return spheres;
+//}
 
 static int get_jtype(const Model &model, Model::JointIndex i) {
   std::string joint_name = model.joints[i].shortname();
@@ -395,7 +432,7 @@ static void set_X_T(Xform<double> X_T[], const Model &model) {
   }
 }
 
-static dyn_var<int> fk(const Model &model,const tinyxml2::XMLElement* root_one_sph, const tinyxml2::XMLElement* root_mult_sph,dyn_var<ctup::EigenMatrix<ctup::BlazeStaticVector<double,16>>> q) {
+static dyn_var<int> fk(const Model &model,const GeometryModel &geom_model,dyn_var<ctup::EigenMatrix<ctup::BlazeStaticVector<double,16>>> q) {
   Xform<double> X_T[model.njoints];
   //builder::array<Xform<double>> X_T; X_T.set_size(model.njoints);
   Xform<ctup::EigenMatrix<double,16,1>> X_J;
@@ -455,7 +492,7 @@ static dyn_var<int> fk(const Model &model,const tinyxml2::XMLElement* root_one_s
     joint_name = model.names[i];
     std::cout<<joint_name<<std::endl;
 
-    std::vector<double> spheres=set_spheres(root_one_sph, root_mult_sph, joint_name);
+    std::vector<double> spheres=joint_to_spheres(model, geom_model, joint_name);
     if(spheres.size()!=0){
       //Transform from relative position to global positions
 
@@ -673,6 +710,10 @@ int main(int argc, char* argv[]) {
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
 
+  // Pinocchio collision model processing
+  GeometryModel geom_model;
+  pinocchio::urdf::buildGeom(model, urdf_filename, pinocchio::COLLISION, geom_model);
+
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
 
@@ -697,7 +738,7 @@ int main(int argc, char* argv[]) {
   auto ast = context.extract_function_ast(Sphere_Environment_Collision, "Sphere_Environment_Collision", env_obj);
   block::c_code_generator::generate_code(ast, of, 0);
   of << "static ";
-  ast = context.extract_function_ast(fk, "fk", model, root_one_sph, root_mult_sph);
+  ast = context.extract_function_ast(fk, "fk", model, geom_model);
   block::c_code_generator::generate_code(ast, of, 0);
 
   of << "}\n";
