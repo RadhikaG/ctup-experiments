@@ -28,9 +28,12 @@
 #include <pinocchio/multibody/geometry.hpp>
 #include <pinocchio/spatial/fwd.hpp>
 #include <string>
+#include "pinocchio/parsers/srdf.hpp"
+#include "pinocchio/algorithm/joint-configuration.hpp"
+#include <iostream>
 
-#include <tinyxml2.h>
 #include <yaml-cpp/yaml.h>
+#include <map>
 
 using builder::dyn_var;
 using builder::static_var;
@@ -249,13 +252,13 @@ dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>&> bx, dyn_var<vector_t<ctup
   return 0;
 }
 
-static std::vector<double> joint_to_spheres(const pinocchio::Model &model, const pinocchio::GeometryModel &geom_model, const std::string joint_name) {
+static std::map<int, std::map<std::string, std::map<std::string, std::vector<float>>>>  joint_to_spheres(const pinocchio::Model &model, const pinocchio::GeometryModel &geom_model, const pinocchio::Model &model_2, const pinocchio::GeometryModel &geom_model_2, const std::string joint_name) {
   using namespace pinocchio;
 
   JointIndex jid = model.getJointId(joint_name);
 
-  std::vector<double> spheres;
-
+  std::map<int, std::map<std::string,std::map<std::string,std::vector<float>>>> spheres;  
+  std::map<std::string, int> rel_link_num;
   for (size_t i = 0; i < geom_model.geometryObjects.size(); i++) {
     const GeometryObject &geom_obj = geom_model.geometryObjects[i];
     // this function does pick out the "true" actuated parent, not the fixed joint parent
@@ -269,110 +272,42 @@ static std::vector<double> joint_to_spheres(const pinocchio::Model &model, const
 
     Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
     double sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(geom_obj.geometry)->radius;
+    std::cout<<"Link: "<<i<<std::endl;
+    (spheres[i]["one_sphere"]["x"]).push_back(sphere_xyz[0]);
+    (spheres[i]["one_sphere"]["y"]).push_back(sphere_xyz[1]);
+    (spheres[i]["one_sphere"]["z"]).push_back(sphere_xyz[2]); 
+    (spheres[i]["one_sphere"]["r"]).push_back(sphere_radius);
 
-    for (size_t p = 0; p < 3; p++)
-      spheres.push_back(sphere_xyz[p]);
-    spheres.push_back(sphere_radius);
+    rel_link_num[(model.frames[geom_obj.parentFrame].name)]=i;
+  }
+
+  jid = model_2.getJointId(joint_name);
+  for (size_t i = 0; i < geom_model_2.geometryObjects.size(); i++) {
+    const GeometryObject &geom_obj = geom_model_2.geometryObjects[i];
+    // this function does pick out the "true" actuated parent, not the fixed joint parent
+    const JointIndex parent_joint_id = geom_obj.parentJoint;
+
+    if (parent_joint_id != jid)
+      continue;
+
+    hpp::fcl::NODE_TYPE node_type = geom_obj.geometry->getNodeType();
+    assert(node_type == hpp::fcl::GEOM_SPHERE && "we don't support non sphere geoms inside robot");
+
+    Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
+    double sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(geom_obj.geometry)->radius;
+
+    int link_id = rel_link_num[(model_2.frames[geom_obj.parentFrame].name)];
+    //std::cout<<"Link: "<<link_id<<std::endl;
+    if(sphere_xyz[0]!=(spheres[link_id]["one_sphere"]["x"])[0] or sphere_xyz[1]!=(spheres[link_id]["one_sphere"]["y"])[0] or sphere_xyz[2]!=(spheres[link_id]["one_sphere"]["z"])[0] or sphere_radius!=(spheres[link_id]["one_sphere"]["r"])[0]){
+      (spheres[link_id]["multiple_sphere"]["x"]).push_back(sphere_xyz[0]);
+      (spheres[link_id]["multiple_sphere"]["y"]).push_back(sphere_xyz[1]);
+      (spheres[link_id]["multiple_sphere"]["z"]).push_back(sphere_xyz[2]);
+      (spheres[link_id]["multiple_sphere"]["r"]).push_back(sphere_radius);
+    }
   }
 
   return spheres;
 }
-
-//static std::vector<double> set_spheres(const tinyxml2::XMLElement* root_one_sph, const tinyxml2::XMLElement* root_mult_sph, const std::string joint_name){
-//  int found=false;
-//  std::vector<double> spheres;
-//  
-//  //READ 1 SPH COLLIISON
-//  const tinyxml2::XMLElement* joint = root_one_sph->FirstChildElement("joint");
-//  while(joint != nullptr && not(found)){
-//  //for (const tinyxml2::XMLElement* joint = root_one_sph->FirstChildElement("joint"); joint != nullptr && not(found); joint = joint->NextSiblingElement("joint")) {
-//    const char* joint_name_2 = joint->Attribute("name");
-//    if(joint_name_2==joint_name){
-//      // Get the child link name from the <child> tag
-//      const tinyxml2::XMLElement* child = joint->FirstChildElement("child");
-//      if (child) {
-//        const char* child_link_name = child->Attribute("link");
-//
-//        // Find the <link> element matching the child link name
-//        for (const tinyxml2::XMLElement* link = root_one_sph->FirstChildElement("link"); link != nullptr && not(found); link = link->NextSiblingElement("link")) {
-//          const char* link_name = link->Attribute("name");
-//          if (link_name && child_link_name && std::string(link_name) == child_link_name) {
-//            // Get the <collision> elements inside the child link
-//            for (const tinyxml2::XMLElement* collision = link->FirstChildElement("collision"); collision != nullptr; collision = collision->NextSiblingElement("collision")) {
-//                const tinyxml2::XMLElement* origin = collision->FirstChildElement("origin");
-//                if (origin) {
-//                  const tinyxml2::XMLElement* sphere_col = (collision->FirstChildElement("geometry"))->FirstChildElement("sphere");
-//                  const char* rad = sphere_col->Attribute("radius");
-//
-//                  const char* xyz = origin->Attribute("xyz");
-//                  //std::cout << "XYZ: " << xyz << std::endl;
-//                  //std::cout << "Radius: " << rad << std::endl<<std::endl;
-//
-//                  std::string token;
-//                  std::istringstream ss(xyz);
-//                  while (std::getline(ss, token, ' ')) {
-//                    spheres.push_back(std::stod(token));
-//                    //std::cout << token << std::endl<<std::endl;
-//                  }
-//                  spheres.push_back(std::stod(rad));
-//                }
-//            }
-//            found=true; // Stop looking for the child link once found
-//          }
-//        }
-//        found=false;
-//        for (const tinyxml2::XMLElement* link = root_mult_sph->FirstChildElement("link"); link != nullptr && not(found); link = link->NextSiblingElement("link")) {
-//          const char* link_name = link->Attribute("name");
-//          if (link_name && child_link_name && std::string(link_name) == child_link_name) {
-//            // Get the <collision> elements inside the child link
-//            for (const tinyxml2::XMLElement* collision = link->FirstChildElement("collision"); collision != nullptr; collision = collision->NextSiblingElement("collision")) {
-//                const tinyxml2::XMLElement* origin = collision->FirstChildElement("origin");
-//                if (origin) {
-//                  const tinyxml2::XMLElement* sphere_col = (collision->FirstChildElement("geometry"))->FirstChildElement("sphere");
-//                  const char* rad_2 = sphere_col->Attribute("radius");
-//                  const char* xyz2 = origin->Attribute("xyz");
-//
-//                  std::string token;
-//                  std::istringstream ss(xyz2);
-//
-//                  int same= true;
-//                  int loop=0;
-//                  while (std::getline(ss, token,' ') && same) {
-//                    if(double(std::stod(token))-spheres[loop]!=0){
-//                      same=false;
-//                    }
-//                    loop=loop+1;
-//                  }
-//                  if(spheres[loop]!=std::stod(rad_2)) same=false;
-//
-//                  std::string token2;
-//                  std::istringstream ss2(xyz2);
-//                  if(not(same)){
-//                    while (std::getline(ss2, token2,' ') ) {
-//                      spheres.push_back(std::stod(token2));
-//                      //std::cout << "Token: " << token2 << std::endl;
-//                    }
-//                    //std::cout << "XYZ: " << xyz2 << std::endl;
-//                    //std::cout << "Radius: " << rad_2 << std::endl;
-//                    spheres.push_back(std::stod(rad_2));
-//                  }
-//                  
-//                }
-//            }
-//            found=true; // Stop looking for the child link once found
-//          }
-//        }
-//        
-//
-//      }
-//    }
-//
-//    joint = joint->NextSiblingElement("joint");
-//  }
-//  //std::cout << std::endl;
-//  
-//  return spheres;
-//}
 
 static int get_jtype(const Model &model, Model::JointIndex i) {
   std::string joint_name = model.joints[i].shortname();
@@ -432,7 +367,7 @@ static void set_X_T(Xform<double> X_T[], const Model &model) {
   }
 }
 
-static dyn_var<int> fk(const Model &model,const GeometryModel &geom_model,dyn_var<ctup::EigenMatrix<ctup::BlazeStaticVector<double,16>>> q) {
+static dyn_var<int> fk(const Model &model,const GeometryModel &geom_model, const Model &model_2, const GeometryModel &geom_model_2 ,dyn_var<ctup::EigenMatrix<ctup::BlazeStaticVector<double,16>>> q) {
   Xform<double> X_T[model.njoints];
   //builder::array<Xform<double>> X_T; X_T.set_size(model.njoints);
   Xform<ctup::EigenMatrix<double,16,1>> X_J;
@@ -448,18 +383,25 @@ static dyn_var<int> fk(const Model &model,const GeometryModel &geom_model,dyn_va
   std::string joint_name;
   Xform<ctup::EigenMatrix<double,16,1>> X_pi;
 
-  dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> dx;
-  dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> dy;
-  dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> dz;
-  dyn_var<vector_t<double>> dr;
+  builder::array<dyn_var<ctup::BlazeStaticVector<double,16>>> dx; dx.set_size(geom_model.geometryObjects.size());
+  builder::array<dyn_var<ctup::BlazeStaticVector<double,16>>> dy; dy.set_size(geom_model.geometryObjects.size());
+  builder::array<dyn_var<ctup::BlazeStaticVector<double,16>>> dz; dz.set_size(geom_model.geometryObjects.size());
+  builder::array<dyn_var<double>> dr; dr.set_size(geom_model.geometryObjects.size());
 
-  dyn_var<vector_t<vector_t<ctup::BlazeStaticVector<double,16>>>> sx;
-  dyn_var<vector_t<vector_t<ctup::BlazeStaticVector<double,16>>>> sy;
-  dyn_var<vector_t<vector_t<ctup::BlazeStaticVector<double,16>>>> sz;
-  dyn_var<vector_t<vector_t<double>>> sr;
+  builder::array<dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>>> sx; sx.set_size(geom_model.geometryObjects.size());
+  builder::array<dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>>> sy; sy.set_size(geom_model.geometryObjects.size());
+  builder::array<dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>>> sz; sz.set_size(geom_model.geometryObjects.size());
+  builder::array<dyn_var<vector_t<double>>> sr; sr.set_size(geom_model.geometryObjects.size());
 
   const int constante=2;
   ctup::BlazeStaticVector<double,constante> test;
+  //Joint 0
+  {
+    dx[0]=0;
+    dy[0]=0;
+    dz[0]=0.9144;
+    dr[0]=0.08;
+  }
 
   for (i = 1; i < (size_t)model.njoints; i = i+1) {
     jtype = get_jtype(model, i);
@@ -492,88 +434,107 @@ static dyn_var<int> fk(const Model &model,const GeometryModel &geom_model,dyn_va
     joint_name = model.names[i];
     std::cout<<joint_name<<std::endl;
 
-    std::vector<double> spheres=joint_to_spheres(model, geom_model, joint_name);
-    if(spheres.size()!=0){
-      //Transform from relative position to global positions
+    //Transform from relative position to global positions
 
-      dyn_var<ctup::EigenMatrix<double,16,1>> t[3];
+    dyn_var<ctup::EigenMatrix<double,16,1>> t[3];
 
-      t[0]=-(ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 2)
-      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 2)
-      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 2));
+    t[0]=-(ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 2)
+    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 2)
+    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 1)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 2));
 
-      t[1]=(ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 2)
-      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 2)
-      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 2));
+    t[1]=(ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 2)
+    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 2)
+    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 2));
 
-      t[2]=-(ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 1)
-      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 1)
-      +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 1));
+    t[2]=-(ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(3, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 1)
+    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(4, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 1)
+    +ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(5, 0)*ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 1));
+    
+    std::map<int, std::map<std::string,std::map<std::string,std::vector<float>>>> spheres = joint_to_spheres(model, geom_model, model_2, geom_model_2, joint_name);
+    
+    std::map<int, std::map<std::string, std::map<std::string, std::vector<float>>>>::iterator outerIt;
+    /*
+    for (outerIt = spheres.begin(); outerIt != spheres.end(); ++outerIt) {
+      size_t link_id=outerIt->first;
+      std::cout <<link_id<<std::endl;
+    }
+    */
+    for (static_var<size_t> pair_idx = 0; pair_idx < spheres.size(); pair_idx=pair_idx+1) {
+      outerIt = spheres.begin();
+      std::advance(outerIt, pair_idx);
+      size_t link_id=outerIt->first;
+      std::cout <<link_id<<std::endl;
+      
+      dx[link_id]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 0) * (spheres[link_id]["one_sphere"]["x"][0]);
+      
+      dx[link_id]=dx[link_id] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 0) * (spheres[link_id]["one_sphere"]["y"][0]);
+      dx[link_id]=dx[link_id] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 0) * (spheres[link_id]["one_sphere"]["z"][0]);
+      
+      dy[link_id]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 1) * (spheres[link_id]["one_sphere"]["x"])[0];
+      dy[link_id]=dy[link_id] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 1) * (spheres[link_id]["one_sphere"]["y"])[0];
+      dy[link_id]=dy[link_id] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 1) * (spheres[link_id]["one_sphere"]["z"])[0];
 
-      dyn_var<ctup::EigenMatrix<double,16,1>> p_global[3];
-      for(static_var<size_t> l=0;l<3;l=l+1){
-          p_global[l]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, l) * spheres[0];
-          for(static_var<size_t> j=1;j<3;j=j+1){
-            p_global[l]=p_global[l] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(j, l) * spheres[j];
-          }
-      }
+      dz[link_id] = ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 2) * (spheres[link_id]["one_sphere"]["x"])[0];
+      dz[link_id]=dz[link_id] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 2) * (spheres[link_id]["one_sphere"]["y"])[0];
+      dz[link_id]=dz[link_id] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 2) * (spheres[link_id]["one_sphere"]["z"])[0];
+      
+      dx[link_id]=dx[link_id] + t[0];
+      dy[link_id]=dy[link_id] + t[1];
+      dz[link_id]=dz[link_id] + t[2];
+    
+      dr[link_id]=(spheres[link_id]["one_sphere"]["r"])[0];
 
-      p_global[0]=p_global[0] + t[0];
-      p_global[1]=p_global[1] + t[1];
-      p_global[2]=p_global[2] + t[2];
+      static_var<size_t> num_sph=(spheres[link_id]["mult_sphere"]["x"]).size();
 
       dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> x;
-      x.resize((spheres.size()-4)/4);
+      x.resize(num_sph);
       dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> y;
-      y.resize((spheres.size()-4)/4);
+      y.resize(num_sph);
       dyn_var<vector_t<ctup::BlazeStaticVector<double,16>>> z;
-      z.resize((spheres.size()-4)/4);
-
+      z.resize(num_sph);
       dyn_var<vector_t<double>> rad_sph;
-      rad_sph.resize((spheres.size()-4)/4);
+      rad_sph.resize(num_sph);
 
-      for(static_var<size_t> k=7;k<spheres.size();k=k+4){
-        static_var<int> ind=-1+(k/4);
+      for(static_var<size_t> k=0;k<num_sph;k=k+1){
+        x[k]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 0) * (spheres[link_id]["mult_sphere"]["x"])[k];
+        x[k]= x[k] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 1) * (spheres[link_id]["mult_sphere"]["y"])[k];
+        x[k]= x[k] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 2) * (spheres[link_id]["mult_sphere"]["z"])[k];
 
-        x[ind]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, 0) * spheres[0+ind*4];
-        for(static_var<size_t> j=1;j<3;j=j+1){
-          x[ind]=x[ind] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(0, j) * spheres[j+ind*4];
-        }
+        y[k]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 0) * (spheres[link_id]["mult_sphere"]["x"])[k];
+        y[k]= y[k] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 1) * (spheres[link_id]["mult_sphere"]["y"])[k];
+        y[k]= y[k] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 2) * (spheres[link_id]["mult_sphere"]["z"])[k];
 
-        y[ind]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, 0) * spheres[0+ind*4];
-        for(static_var<size_t> j=1;j<3;j=j+1){
-          y[ind]=y[ind] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(1, j) * spheres[j+ind*4];
-        }
+        z[k]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 0) * (spheres[link_id]["mult_sphere"]["x"])[k];
+        z[k]=z[k] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 1) * (spheres[link_id]["mult_sphere"]["y"])[k];
+        z[k]=z[k] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 2) * (spheres[link_id]["mult_sphere"]["z"])[k];
 
-        z[ind]= ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, 0) * spheres[0+ind*4];
-        for(static_var<size_t> j=1;j<3;j=j+1){
-          z[ind]=z[ind] + ctup::Xform_expr_leaf<ctup::EigenMatrix<double,16,1>>(X_0[i]).get_value_at(2, j) * spheres[j+ind*4];
-        }
+        x[k]=x[k] + t[0];
+        y[k]=y[k] + t[1];
+        z[k]=z[k] + t[2];
 
-
-        x[ind]=x[ind] + t[0];
-        y[ind]=y[ind] + t[1];
-        z[ind]=z[ind] + t[2];
-
-        rad_sph[ind]=spheres[k];
+        rad_sph[k]= (spheres[link_id]["mult_sphere"]["r"])[k];
       }
+
       dyn_var<int> res;
-      if(i!=1){
-        res= ctup::backend::self_collision(p_global[0], p_global[1], p_global[2], spheres[3], x, y, z, rad_sph, dx, dy, dz, dr, sx, sy, sz, sr);
+      
+      for(static_var<size_t> k = 0; k < geom_model.collisionPairs.size(); k=k+1)
+      {
+        const pinocchio::CollisionPair & cp = geom_model.collisionPairs[k];
+        if(cp.second==link_id){
+          std::cout << "collision pair: " << cp.first << " , " << cp.second<<std::endl;
+          std::string cp_str = "collision pair: ";
+          cp_str += std::to_string(cp.first) + ", " + std::to_string(cp.second);
+          builder::annotate(cp_str.c_str());
+          res= ctup::backend::self_collision(dx[link_id], dy[link_id], dz[link_id], dr[link_id], x, y, z, rad_sph, dx[cp.first], dy[cp.first], dz[cp.first], dr[cp.first], sx[cp.first], sy[cp.first], sz[cp.first], sr[cp.first]);
+        }
       }
-      res= ctup::backend::Sphere_Environment_Collision(p_global[0], p_global[1], p_global[2], spheres[3], x, y, z, rad_sph);
+      res= ctup::backend::Sphere_Environment_Collision(dx[link_id], dy[link_id], dz[link_id], dr[link_id], x, y, z, rad_sph);
 
-      if(i!=(size_t)model.njoints-1){
-        dx.push_back(p_global[0]);
-        dy.push_back(p_global[1]);
-        dz.push_back(p_global[2]);
-        dr.push_back(spheres[3]);
-
-        sx.push_back(x);
-        sy.push_back(y);
-        sz.push_back(z);
-        sr.push_back(rad_sph);
-      }
+      sx[link_id]=x;
+      sy[link_id]=y;
+      sz[link_id]=z;
+      sr[link_id]=rad_sph; 
+      
     }
   }
 
@@ -589,37 +550,8 @@ int main(int argc, char* argv[]) {
   const char* urdf_filename = argv[1];
   std::cout << urdf_filename << "\n";
 
-  // Load the URDF file
-  tinyxml2::XMLDocument doc;
-  if (doc.LoadFile(urdf_filename) != tinyxml2::XML_SUCCESS) {
-      std::cerr << "Failed to load URDF file: " << urdf_filename << std::endl;
-      return -1;
-  }
-
-  // Get the root element
-  tinyxml2::XMLElement* root_one_sph = doc.RootElement();
-  if (!root_one_sph) {
-      std::cerr << "Invalid URDF structure." << std::endl;
-      return -1;
-  }
-
   const char* urdf_filename_2 = argv[2];
   std::cout << urdf_filename_2 << "\n";
-
-  // Load the URDF file 2
-  tinyxml2::XMLDocument doc_2;
-  if (doc_2.LoadFile(urdf_filename_2) != tinyxml2::XML_SUCCESS) {
-      std::cerr << "Failed to load URDF file: " << urdf_filename_2 << std::endl;
-      return -1;
-  }
-
-  // Get the root element
-  tinyxml2::XMLElement* root_mult_sph = doc_2.RootElement();
-  if (!root_mult_sph) {
-      std::cerr << "Invalid URDF structure." << std::endl;
-      return -1;
-  }
-
   //--------------------------
   //END LOAD URDF FILE
   //--------------------------
@@ -696,23 +628,40 @@ int main(int argc, char* argv[]) {
           cylinders.push_back(a);
       }
   }
-  env_obj.spheres=spheres;
 
+  env_obj.spheres=spheres;
   env_obj.cylinders=cylinders;
   env_obj.boxs=boxs;
   //--------------------------
   //END LOAD YAML FILE
   //--------------------------
 
-  const std::string header_filename = (argc <= 4) ? "./fk_gen.h" : argv[4];
+  const std::string header_filename = (argc <= 5) ? "./fk_gen.h" : argv[5];
   std::cout << header_filename << "\n";
 
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
-
-  // Pinocchio collision model processing
   GeometryModel geom_model;
   pinocchio::urdf::buildGeom(model, urdf_filename, pinocchio::COLLISION, geom_model);
+
+  geom_model.addAllCollisionPairs();
+  const std::string srdf_filename = argv[4];
+  pinocchio::srdf::removeCollisionPairs(model, geom_model, srdf_filename);
+
+  Model model_2;
+  GeometryModel geom_model_2;
+  pinocchio::urdf::buildModel(urdf_filename_2, model_2);
+  pinocchio::urdf::buildGeom(model_2, urdf_filename_2, pinocchio::COLLISION, geom_model_2);
+
+  //joint_to_spheres(model, geom_model, model_2, geom_model_2, "wrist_3_joint");
+  //std::cout<<"---------------"<<std::endl;
+  /*
+  for(size_t k = 0; k < geom_model.collisionPairs.size(); ++k)
+  {
+    const pinocchio::CollisionPair & cp = geom_model.collisionPairs[k];
+    std::cout << "collision pair: " << cp.first << " , " << cp.second<<std::endl;
+  }
+  */
 
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
@@ -738,7 +687,7 @@ int main(int argc, char* argv[]) {
   auto ast = context.extract_function_ast(Sphere_Environment_Collision, "Sphere_Environment_Collision", env_obj);
   block::c_code_generator::generate_code(ast, of, 0);
   of << "static ";
-  ast = context.extract_function_ast(fk, "fk", model, geom_model);
+  ast = context.extract_function_ast(fk, "fk", model, geom_model, model_2, geom_model_2);
   block::c_code_generator::generate_code(ast, of, 0);
 
   of << "}\n";
