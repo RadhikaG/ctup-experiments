@@ -370,7 +370,7 @@ static void set_X_T(Xform<double> X_T[], const Model &model) {
 static dyn_var<int> fk(const Model &model,const GeometryModel &geom_model, const Model &model_2, const GeometryModel &geom_model_2 ,dyn_var<ctup::EigenMatrix<ctup::BlazeStaticVector<double,16>>> q) {
   Xform<double> X_T[model.njoints];
   //builder::array<Xform<double>> X_T; X_T.set_size(model.njoints);
-  Xform<ctup::EigenMatrix<double,16,1>> X_J;
+  Xform<ctup::EigenMatrix<double,16,1>> X_J[model.njoints];
   Xform<ctup::EigenMatrix<double,16,1>> X_0[model.njoints];
   typedef typename Model::JointIndex JointIndex;
   static_var<size_t> i;
@@ -408,15 +408,15 @@ static dyn_var<int> fk(const Model &model,const GeometryModel &geom_model, const
     axis = get_joint_axis(model, i);
 
     if (jtype == 'R') {
-      X_J.set_revolute_axis(axis);
+      X_J[i].set_revolute_axis(axis);
     }
     if (jtype == 'P') {
-      X_J.set_prismatic_axis(axis);
+      X_J[i].set_prismatic_axis(axis);
     }
     
-    X_J.jcalc(q[i-1]);//changed for blaze
+    X_J[i].jcalc(q[i-1]);//changed for blaze
 
-    X_pi = X_J * X_T[i];
+    X_pi = X_J[i] * X_T[i];
     parent = model.parents[i];
     if (parent > 0) {
       X_0[i] = X_pi * X_0[parent];
@@ -424,12 +424,6 @@ static dyn_var<int> fk(const Model &model,const GeometryModel &geom_model, const
     else {
       X_0[i] = X_pi;
     }
-  /*
-    if(i==2){
-      dyn_var<EigenMatrix<ctup::EigenMatrix<double,16,1>, 6, 6>> final_ans;
-      toPinEigen(final_ans, X_0[2]);
-    }
-  */
 
     joint_name = model.names[i];
     std::cout<<joint_name<<std::endl;
@@ -453,12 +447,7 @@ static dyn_var<int> fk(const Model &model,const GeometryModel &geom_model, const
     std::map<int, std::map<std::string,std::map<std::string,std::vector<float>>>> spheres = joint_to_spheres(model, geom_model, model_2, geom_model_2, joint_name);
     
     std::map<int, std::map<std::string, std::map<std::string, std::vector<float>>>>::iterator outerIt;
-    /*
-    for (outerIt = spheres.begin(); outerIt != spheres.end(); ++outerIt) {
-      size_t link_id=outerIt->first;
-      std::cout <<link_id<<std::endl;
-    }
-    */
+
     for (static_var<size_t> pair_idx = 0; pair_idx < spheres.size(); pair_idx=pair_idx+1) {
       outerIt = spheres.begin();
       std::advance(outerIt, pair_idx);
