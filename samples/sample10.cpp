@@ -93,28 +93,31 @@ using ctup::SpatialInertia;
 using ctup::SpatialVector;
 using ctup::SingletonSpatialVector;
 
+template <typename T>
+struct vector: public builder::custom_type<T> {
+  static constexpr const char* type_name = "std::vector";
+  typedef T dereference_type;
+  dyn_var<void(int)> resize = builder::with_name("resize");
+};
 
 struct robot_data {
   static constexpr const char* type_name = "robot_data";
-
-  //SpatialVector<double> v[model.njoints];
-  //SpatialVector<double> a[model.njoints];
-  //SpatialVector<double> f[model.njoints];
-  //SpatialVector<double> tau[model.njoints];
-
-  builder::array<SpatialVector<double>> v;
-  builder::array<SpatialVector<double>> a;
-  builder::array<SpatialVector<double>> f;
-  matrix_layout<double> tau;
-
-  robot_data(size_t N) : tau(N, 1, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED) {
-    v.set_size(N);
-    a.set_size(N);
-    f.set_size(N);
-  }
+  dyn_var<vector<builder::eigen_vectorXd_t>> v = builder::with_name("v");
+  dyn_var<vector<builder::eigen_vectorXd_t>> a = builder::with_name("a");
+  dyn_var<vector<builder::eigen_vectorXd_t>> f = builder::with_name("f");
+  dyn_var<builder::eigen_vectorXd_t> tau = builder::with_name("tau");
 };
 
-//dyn_var<robot_data> rd = builder::as_global("rd");
+static void init_rd(static_var<size_t> N, dyn_var<robot_data*> rd) {
+  rd->v.resize(N);
+  rd->a.resize(N);
+  rd->f.resize(N);
+  for (dyn_var<size_t> i = 0; i < N; i = i+1) {
+    rd->v[i].setZero();
+    rd->a[i].setZero();
+    rd->f[i].setZero();
+  }
+}
 
 /** helpers end **/
 
@@ -209,13 +212,30 @@ static void vxIv(SpatialVector<double> &vecXIvec, SpatialVector<double> &vec, Sp
 #define EIGEN_MAT_CAST (dyn_var<EigenMatrix<double>>)(builder::cast)
 
 static dyn_var<builder::eigen_vectorXd_t> rnea(const Model &model, 
+        //dyn_var<robot_data*> rd,
         dyn_var<builder::eigen_vectorXd_t &> q, 
         dyn_var<builder::eigen_vectorXd_t &> qd, 
         const double GRAVITY = -9.81) {
 
-  robot_data rd(model.njoints);
-
   typedef typename Model::JointIndex JointIndex;
+  const JointIndex njoints = (JointIndex)model.njoints;
+
+  // hooked up to global robot_data struct for persistent result storage
+  builder::array<SpatialVector<double>> v;
+  builder::array<SpatialVector<double>> a;
+  builder::array<SpatialVector<double>> f;
+  v.set_size(njoints);
+  a.set_size(njoints);
+  f.set_size(njoints);
+  matrix_layout<double> tau(model.njoints, 1, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED);
+
+  //// ----------- binding local vars for storing to persistent struct
+  //for (static_var<JointIndex> i = 1; i < njoints; i = i+1) {
+  //  v[i].set_matrix(rd->v[i]);
+  //  a[i].set_matrix(rd->a[i]);
+  //  f[i].set_matrix(rd->f[i]);
+  //}
+  //tau.set_matrix(rd->tau);
 
   SingletonSpatialVector<double> gravity_vec;
   gravity_vec.set_entry_to_constant(5, 0, -GRAVITY);
@@ -241,7 +261,7 @@ static dyn_var<builder::eigen_vectorXd_t> rnea(const Model &model,
   static_var<int> jtype;
   static_var<int> axis;
 
-  for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
+  for (i = 1; i < njoints; i = i+1) {
     jtype = get_jtype(model, i);
     axis = get_joint_axis(model, i);
 
@@ -260,44 +280,44 @@ static dyn_var<builder::eigen_vectorXd_t> rnea(const Model &model,
   static_var<JointIndex> parent;
 
   // forward pass
-  for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
+  for (i = 1; i < njoints; i = i+1) {
     X_J[i].jcalc(q(i-1));
 
     X_pi[i] = X_J[i] * X_T[i];
     parent = model.parents[i];
     if (parent > 0) {
-      rd.v[i] = X_pi[i] * rd.v[parent];
-      rd.a[i] = X_pi[i] * rd.a[parent];
+      v[i] = X_pi[i] * v[parent];
+      a[i] = X_pi[i] * a[parent];
     }
     else {
       // parent is base, v[i] remains zero
-      rd.a[i] = X_pi[i] * gravity_vec;
+      a[i] = X_pi[i] * gravity_vec;
     }
 
-    rd.v[i] += S[i] * (dyn_var<double>)(builder::cast)qd(i-1);
+    v[i] += S[i] * (dyn_var<double>)(builder::cast)qd(i-1);
 
-    mxS(mxSvec, S[i], rd.v[i], (dyn_var<double>)(builder::cast)qd(i-1));
-    rd.a[i] += mxSvec;
+    mxS(mxSvec, S[i], v[i], (dyn_var<double>)(builder::cast)qd(i-1));
+    a[i] += mxSvec;
 
     // compute f
     // todo implement runtime func
-    vxIv(vecXIvec, rd.v[i], I[i]);
-    rd.f[i] = I[i] * rd.a[i] + vecXIvec;
+    vxIv(vecXIvec, v[i], I[i]);
+    f[i] = I[i] * a[i] + vecXIvec;
   }
 
   // backward pass
 
-  for (i = (JointIndex)model.njoints-1; i > 0; i = i-1) {
-    rd.tau.set_entry_to_nonconstant(i, 0, (transpose(S[i]) * rd.f[i]).gen_entry_at(0, 0));
+  for (i = njoints-1; i > 0; i = i-1) {
+    tau.set_entry_to_nonconstant(i, 0, (transpose(S[i]) * f[i]).gen_entry_at(0, 0));
 
     parent = model.parents[i];
     if (parent > 0) {
-      rd.f[parent] += transpose(X_pi[i]) * rd.f[i];
+      f[parent] += transpose(X_pi[i]) * f[i];
     }
   }
 
-  //print_matrix_layout("tau: ", rd.tau);
-  return rd.tau.denseify();
+  //print_matrix_layout("tau: ", tau);
+  return tau.denseify();
 }
 
 int main(int argc, char* argv[]) {
@@ -326,7 +346,8 @@ int main(int argc, char* argv[]) {
   of << "  std::cout << matrix << \"\\n\";\n";
   of << "}\n\n";
 
-  //block::c_code_generator::generate_struct_decl<dyn_var<robot_data>>(of);
+  block::c_code_generator::generate_struct_decl<dyn_var<robot_data>>(of);
+  of << "\n";
 
   //auto rd_decl = std::make_shared<block::decl_stmt>();
   //rd_decl->decl_var = rd.block_var;
@@ -336,7 +357,11 @@ int main(int argc, char* argv[]) {
 
   builder::builder_context context;
 
-  auto ast = context.extract_function_ast(rnea, "rnea", model, -9.81);
+  auto ast = context.extract_function_ast(init_rd, "init_rd", model.njoints);
+  of << "static ";
+  block::c_code_generator::generate_code(ast, of, 0);
+
+  ast = context.extract_function_ast(rnea, "rnea", model, -9.81);
   of << "static ";
   block::c_code_generator::generate_code(ast, of, 0);
 

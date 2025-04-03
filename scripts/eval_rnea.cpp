@@ -100,10 +100,13 @@ int main(int argc, char ** argv)
   timer.toc(std::cout, NBT);
 
   //ctup_gen::set_X_T();
+  ctup_gen::robot_data * rd = new ctup_gen::robot_data;
+  ctup_gen::init_rd(rd);
 
   timer.tic();
   SMOOTH(NBT) {
     ctup_res = ctup_gen::rnea(q, qd);
+    //ctup_res = ctup_gen::rnea(rd, q, qd);
   }
   std::cout << "ctup gen avg time taken (us): \t\t\t\t";
   timer.toc(std::cout, NBT);
