@@ -88,6 +88,7 @@ foreach(SAMPLE_SOURCE ${SAMPLES_SOURCES})
     add_executable(${SAMPLE_NAME} ${SAMPLE_SOURCE})
     target_link_libraries(${SAMPLE_NAME} PUBLIC Eigen3::Eigen)
     target_link_libraries(${SAMPLE_NAME} PUBLIC pinocchio::pinocchio)
+    target_link_libraries(${SAMPLE_NAME} PUBLIC ${hpp-fcl})
     target_link_libraries(${SAMPLE_NAME} PUBLIC ${buildit})
     target_link_libraries(${SAMPLE_NAME} PUBLIC ${urdf-compiler})
     target_include_directories(${SAMPLE_NAME} PUBLIC

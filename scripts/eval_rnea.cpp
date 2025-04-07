@@ -17,7 +17,7 @@ int main(int argc, char ** argv)
   
   PinocchioTicToc timer(PinocchioTicToc::NS);
   //const int NBT = 100 * 100;
-  const int NBT = 10000;
+  const int NBT = 100000;
 
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
   const std::string urdf_filename = (argc<=1) ? PINOCCHIO_MODEL_DIR + std::string("/others/robots/ur_description/urdf/ur5_robot.urdf") : argv[1];
@@ -100,11 +100,12 @@ int main(int argc, char ** argv)
   timer.toc(std::cout, NBT);
 
   //ctup_gen::set_X_T();
-  ctup_gen::robot_data * rd = new ctup_gen::robot_data;
-  ctup_gen::init_rd(rd);
+  //ctup_gen::robot_data * rd = new ctup_gen::robot_data;
+  //ctup_gen::init_rd(rd);
 
   timer.tic();
   SMOOTH(NBT) {
+    //ctup_gen::init_gl();
     ctup_res = ctup_gen::rnea(q, qd);
     //ctup_res = ctup_gen::rnea(rd, q, qd);
   }

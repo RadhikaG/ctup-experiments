@@ -43,7 +43,7 @@ struct Translation : public matrix_layout<Scalar> {
   using matrix_layout<Scalar>::set_entry_to_constant;
   using matrix_layout<Scalar>::set_entry_to_nonconstant;
 
-  Translation() : matrix_layout<Scalar>(3, 3, SPARSE, UNROLLED, COMPRESSED) {
+  Translation() : matrix_layout<Scalar>(3, 3, SPARSE, FLATTENED, COMPRESSED) {
     matrix_layout<Scalar>::set_zero();
   }
 
@@ -80,7 +80,7 @@ struct Rotation : public matrix_layout<Scalar> {
 
   static_var<int> joint_xform_axis;
 
-  Rotation() : matrix_layout<Scalar>(3, 3, SPARSE, UNROLLED, COMPRESSED) {
+  Rotation() : matrix_layout<Scalar>(3, 3, SPARSE, FLATTENED, COMPRESSED) {
     matrix_layout<Scalar>::set_identity();
   }
 
@@ -126,7 +126,7 @@ struct Xform : public blocked_layout<Scalar> {
 
   Xform() : blocked_layout<Scalar>(6, 6), 
     rot(new Rotation<Scalar>()), trans(new Translation<Scalar>()), 
-    minus_E_rcross(new matrix_layout<Scalar>(3, 3, SPARSE, UNROLLED, COMPRESSED)) {
+    minus_E_rcross(new matrix_layout<Scalar>(3, 3, SPARSE, FLATTENED, COMPRESSED)) {
 
     minus_E_rcross->set_zero();
     set_partitions({0, 3}, {0, 3});
@@ -167,7 +167,7 @@ struct XformNonBlocked : public matrix_layout<Scalar> {
   static_var<int> joint_type;
   static_var<int> joint_xform_axis;
 
-  XformNonBlocked() : matrix_layout<Scalar>(6, 6, SPARSE, UNROLLED, COMPRESSED) {
+  XformNonBlocked() : matrix_layout<Scalar>(6, 6, SPARSE, FLATTENED, COMPRESSED) {
     matrix_layout<Scalar>::set_identity();
   }
 
@@ -251,7 +251,7 @@ struct SpatialVector : public matrix_layout<Scalar> {
   using matrix_layout<Scalar>::set_entry_to_nonconstant;
   using matrix_layout<Scalar>::operator=;
 
-  SpatialVector() : matrix_layout<Scalar>(6, 1, DENSE, EIGENMATRIX, UNCOMPRESSED) {
+  SpatialVector() : matrix_layout<Scalar>(6, 1, DENSE, FLATTENED, UNCOMPRESSED) {
     matrix_layout<Scalar>::set_zero();
   }
 };
@@ -262,7 +262,7 @@ struct SpatialInertia : public matrix_layout<Scalar> {
   using matrix_layout<Scalar>::set_entry_to_nonconstant;
   using matrix_layout<Scalar>::operator=;
 
-  SpatialInertia() : matrix_layout<Scalar>(6, 6, DENSE, EIGENMATRIX, UNCOMPRESSED) {
+  SpatialInertia() : matrix_layout<Scalar>(6, 6, SPARSE, FLATTENED, COMPRESSED) {
     matrix_layout<Scalar>::set_zero();
   }
 };

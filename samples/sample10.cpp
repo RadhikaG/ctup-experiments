@@ -87,7 +87,7 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
 
 //using ctup::Xform;
 template <typename Scalar>
-using Xform = ctup::XformNonBlocked<Scalar>;
+using Xform = ctup::Xform<Scalar>;
 
 using ctup::SpatialInertia;
 using ctup::SpatialVector;
@@ -346,22 +346,22 @@ int main(int argc, char* argv[]) {
   of << "  std::cout << matrix << \"\\n\";\n";
   of << "}\n\n";
 
-  block::c_code_generator::generate_struct_decl<dyn_var<robot_data>>(of);
-  of << "\n";
-
   //auto rd_decl = std::make_shared<block::decl_stmt>();
   //rd_decl->decl_var = rd.block_var;
   ////rd.resize(model.njoints);
   //rd_decl->accept(&codegen);
   //of << "\n\n";
 
+  //block::c_code_generator::generate_struct_decl<dyn_var<robot_data>>(of);
+  //of << "\n";
+
   builder::builder_context context;
 
-  auto ast = context.extract_function_ast(init_rd, "init_rd", model.njoints);
-  of << "static ";
-  block::c_code_generator::generate_code(ast, of, 0);
+  //auto ast = context.extract_function_ast(init_rd, "init_rd", model.njoints);
+  //of << "static ";
+  //block::c_code_generator::generate_code(ast, of, 0);
 
-  ast = context.extract_function_ast(rnea, "rnea", model, -9.81);
+  auto ast = context.extract_function_ast(rnea, "rnea", model, -9.81);
   of << "static ";
   block::c_code_generator::generate_code(ast, of, 0);
 
