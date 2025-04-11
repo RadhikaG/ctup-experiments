@@ -14,8 +14,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 find_package(LLVM ${LLVM_VERSION} REQUIRED)
 find_package(Clang ${LLVM_VERSION} REQUIRED)
 
-find_package(Eigen3 REQUIRED CONFIG)
+set(EIGEN3_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/eigen")
+find_package(Eigen3 3.3 REQUIRED HINTS ${EIGEN3_INCLUDE_DIR})
 add_definitions(-DOPENCV_DISABLE_EIGEN_TENSOR_SUPPORT)
+set(BLAZE_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/blaze")
 
 # Configure the helper CMakeLists with the dependencies
 configure_file(CMakeLists.txt.in ${CMAKE_BINARY_DIR}/deps-build/CMakeLists.txt)
@@ -79,6 +81,8 @@ set(SAMPLES_SOURCES
     samples/sample8.cpp
     samples/sample9.cpp
     samples/sample10.cpp
+    samples/deprecated/sample15.cpp
+    samples/deprecated/sample17.cpp
 )
 
 
@@ -121,6 +125,19 @@ add_custom_target(
   DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
 )
 
+add_custom_command(
+  OUTPUT ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
+  COMMAND ${CMAKE_BINARY_DIR}/sample17 ${CMAKE_SOURCE_DIR}/models/ur5_spherized_1.urdf ${CMAKE_SOURCE_DIR}/models/ur5_spherized.urdf  ${CMAKE_SOURCE_DIR}/environment/scene001.yaml ${CMAKE_SOURCE_DIR}/models/ur5.srdf  ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
+  DEPENDS ${CMAKE_BINARY_DIR}/sample17
+  COMMENT "Executing sample17"
+  VERBATIM
+)
+
+add_custom_target(
+  CC_SIMD ALL
+  DEPENDS ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
+)
+
 ################################################
 # Compiling experiment scripts for comparing baselines with generated code.
 # Experiment scripts are located in the scripts/ dir.
@@ -131,6 +148,7 @@ set(SCRIPT_SOURCES
     scripts/eval_fk.cpp
     scripts/debug_fk.cpp
     scripts/debug_fkcc.cpp
+    scripts/eval_fkcc.cpp
     scripts/debug_rnea.cpp
     scripts/eval_rnea.cpp
     scripts/pin_fk.cpp
@@ -151,12 +169,15 @@ foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
     target_link_libraries(${SCRIPT_NAME} PUBLIC ${cppad_lib})
     target_link_libraries(${SCRIPT_NAME} PUBLIC ${hpp-fcl})
     target_link_libraries(${SCRIPT_NAME} PUBLIC Eigen3::Eigen)
+    target_link_libraries(${SAMPLE_NAME} PUBLIC -lyaml-cpp)
 
     target_include_directories(${SCRIPT_NAME} PUBLIC 
         ${CMAKE_BINARY_DIR}/install/CppAD/include
         ${CMAKE_BINARY_DIR}/install/CppADCodeGen/include
         ${CMAKE_CURRENT_SOURCE_DIR}/gen
         ${CMAKE_BINARY_DIR}/install/pinocchio/include
+        ${EIGEN3_INCLUDE_DIR}
+        ${BLAZE_INCLUDE_DIR}
     )
     target_compile_options(${SCRIPT_NAME} PRIVATE 
         -O3 -g -DNDEBUG

@@ -3,14 +3,20 @@
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/geometry.hpp"
 #include "pinocchio/collision/collision.hpp"
+#include "pinocchio/utils/timer.hpp"
 #include <iostream>
 int main(int argc, char ** argv)
 {
   using namespace pinocchio;
-  const std::string pin_model_path = (argc <= 1) ? "models/" : argv[1];
-  const std::string urdf_filename = pin_model_path + std::string("/example-robot-data/robots/talos_data/robots/talos_reduced.urdf");
+  const std::string pin_model_path = argv[1];
+  const std::string urdf_filename = pin_model_path + std::string("ur5_spherized_1.urdf");
   // You should change here to set up your own SRDF file
-  const std::string srdf_filename = pin_model_path + std::string("/example-robot-data/robots/talos_data/srdf/talos.srdf");
+  const std::string srdf_filename = pin_model_path + std::string("ur5.srdf");
+
+  PinocchioTicToc timer(PinocchioTicToc::NS);
+  //const int NBT = 100 * 100;
+  const int NBT = 10000;
+
   // Load the URDF model contained in urdf_filename
   Model model;
   pinocchio::urdf::buildModel(urdf_filename,model);
@@ -25,10 +31,26 @@ int main(int argc, char ** argv)
   // Build the data associated to the geom_model
   GeometryData geom_data(geom_model); // contained the intermediate computations, like the placement of all the geometries with respect to the world frame
   // Load the reference configuration of the robots (this one should be collision free)
-  pinocchio::srdf::loadReferenceConfigurations(model,srdf_filename); // the reference configuratio stored in the SRDF file is called half_sitting
-  const Model::ConfigVectorType & q = model.referenceConfigurations["half_sitting"];
+  const Model::ConfigVectorType & q = randomConfiguration(model);
+  std::cout << "Configurations: " <<std::endl;
+  std::cout << q <<std::endl;
+
   // And test all the collision pairs
+  timer.tic();
+  SMOOTH(NBT)
+  {
   computeCollisions(model,data,geom_model,geom_data,q);
+  }
+  std::cout << "pin avg time taken (ns): \t\t\t\t";
+  timer.toc(std::cout, NBT);
+
+  std::cout << "Sphere Positions:" <<std::endl;
+  for(size_t i=0;i<geom_model.geometryObjects.size();++i){
+    Eigen::Vector3d sphere_pos = geom_data.oMg[i].translation().transpose();
+    std::cout <<sphere_pos<<std::endl;
+    std::cout <<std::endl;
+  }
+
   // Print the status of all the collision pairs
   for(size_t k = 0; k < geom_model.collisionPairs.size(); ++k)
   {
