@@ -356,6 +356,7 @@ int main(int argc, char* argv[]) {
   //of << "\n";
 
   builder::builder_context context;
+  context.run_rce = true;
 
   //auto ast = context.extract_function_ast(init_rd, "init_rd", model.njoints);
   //of << "static ";
