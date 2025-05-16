@@ -60,6 +60,7 @@ using ctup::BlazeStaticMatrix;
 using ctup::backend::blazeVecSIMDd;
 
 builder::dyn_var<void(BlazeStaticMatrix<double> &)> print_matrix = builder::as_global("print_matrix");
+
 builder::dyn_var<void(char *)> print_string = builder::as_global("print_string");
 
 template <typename Scalar>
@@ -75,6 +76,7 @@ static void toRawMatrix(dyn_var<BlazeStaticMatrix<blazeVecSIMDd>> &raw_mat, Xfor
     for (c = 0; c < 6; c = c + 1)
       raw_mat(r, c) = xform.get_entry(r, c);
 }
+
 /** helpers end **/
 
 template <typename Prim>
@@ -145,15 +147,15 @@ static dyn_var<BlazeStaticMatrix<blazeVecSIMDd>> fk(const Model &model, dyn_var<
   // CTUP debug
   //for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
   //  if (i <= 4) {
-  //    print_Xmat_pin_order("XT ", X_T[i]);
-  //    print_Xmat_pin_order("XJ ", X_J[i]);
+  //    print_Xmat("XT ", X_T[i]);
+  //    print_Xmat("XJ ", X_J[i]);
   //    X_pi = X_J[i] * X_T[i];
-  //    print_Xmat_pin_order("Xpi ", X_pi);
-  //    print_Xmat_pin_order("Xpar ", X_0[model.parents[i]]);
+  //    print_Xmat("Xpi ", X_pi);
+  //    print_Xmat("Xpar ", X_0[model.parents[i]]);
   //  }
 
   //  std::string prefix("X ");
-  //  print_Xmat_pin_order(prefix + std::to_string(i), X_0[i]);
+  //  print_Xmat(prefix + std::to_string(i), X_0[i]);
   //}
 
   dyn_var<BlazeStaticMatrix<blazeVecSIMDd>> final_ans;
@@ -198,7 +200,7 @@ int main(int argc, char* argv[]) {
   of << "      std::cout << rowVec;\n";
   of << "    }\n";
   of << "  }\n";
-  of << "}\n";
+  of << "}\n\n";
 
   of << "template<typename MT>\n";
   of << "static void print_matrix(const blaze::DenseMatrix<MT, blaze::rowMajor>& matrix) {\n";

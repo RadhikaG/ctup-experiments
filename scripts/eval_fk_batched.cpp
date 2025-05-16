@@ -10,8 +10,8 @@
 #include "fk_gen_batched.h"
 #include <iostream>
 
-//static blaze::StaticMatrix<blaze::StaticVector<double, 8>, 6, 6> fk (blaze::StaticVector<blaze::StaticVector<double, 8>, 19>& arg1) {
-//  blaze::StaticVector<blaze::StaticVector<double, 8>, 19>& var0 = arg1;
+#define NQ 7 // change for iiwa - 7, hyq - 12, baxter - 19
+#define SIMD_WIDTH 4
 
 int main(int argc, char ** argv)
 {
@@ -39,10 +39,10 @@ int main(int argc, char ** argv)
     qs[i] = randomConfiguration(model);
   }
 
-  blaze::StaticVector<blaze::StaticVector<double, 8>, 12> qs_blaze[NBT];
+  blaze::StaticVector<blaze::StaticVector<double, SIMD_WIDTH>, NQ> qs_blaze[NBT];
 
   for (size_t i = 0; i < NBT; ++i) {
-    for (size_t d = 0; d < (size_t)model.nq; ++d) {
+    for (size_t d = 0; d < NQ; ++d) {
       // broadcasting single double qs[i][d] entry to wide blaze array
       qs_blaze[i][d] = qs[i][d];
     }
@@ -64,19 +64,19 @@ int main(int argc, char ** argv)
   // make symbolic model
   ADModel ad_model = model.cast<ADCG>();
   ADData ad_data(ad_model);
-  ADVectorXs ad_X = ADVectorXs(ad_model.nq);
-  ADMatrix6x6 ad_Ys[model.nq];
+  ADVectorXs ad_X = ADVectorXs(ad_model.nq); // input is a function of actuated dofs
+  ADMatrix6x6 ad_Ys[model.njoints]; // output is a function of # robot geoms
 
   Independent(ad_X);
 
   forwardKinematics(ad_model, ad_data, ad_X);
 
-  for (int i = 0; i < model.nq; i++) {
+  for (int i = 0; i < model.njoints; i++) {
     ad_Ys[i] = ad_data.oMi[i];
   }
 
-  ADVectorXs ad_Y_flat(model.nq * 36);
-  for (int jid = 0; jid < model.nq; jid++) {
+  ADVectorXs ad_Y_flat(model.njoints * 36);
+  for (int jid = 0; jid < model.njoints; jid++) {
     int joint_xform_start = jid * 36;
     for (int i = 0; i < 36; i++)
       ad_Y_flat(joint_xform_start + i) = ad_Ys[jid](i);
@@ -99,7 +99,7 @@ int main(int argc, char ** argv)
   std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
   /** Pinocchio codegen end **/
 
-  blaze::StaticMatrix<blaze::StaticVector<double, 8>, 6, 6> ctup_res;
+  blaze::StaticMatrix<blaze::StaticVector<double, 4>, 6, 6> ctup_res;
   Eigen::Matrix<double, 6, 6> pin_res, pin_cg_res;
   Eigen::VectorXd y; // for flattened pin cg output
 
@@ -128,7 +128,7 @@ int main(int argc, char ** argv)
   timer.tic();
   SMOOTH(NBT)
   {
-    for (size_t w = 0; w < 8; w++)
+    for (size_t w = 0; w < SIMD_WIDTH; w++)
       y = g_model->ForwardZero(qs[_smooth]);
   }
   std::cout << "pin cg avg time taken (ns): \t\t\t\t";
@@ -137,13 +137,13 @@ int main(int argc, char ** argv)
   timer.tic();
   SMOOTH(NBT)
   {
-    for (size_t w = 0; w < 8; w++)
+    for (size_t w = 0; w < SIMD_WIDTH; w++)
       forwardKinematics(model,data,qs[_smooth]);
   }
   std::cout << "pin vanilla avg time taken (ns): \t\t\t\t";
   timer.toc(std::cout, NBT);
 
-  pin_res = data.oMi[model.nq-1];
+  pin_res = data.oMi[model.njoints-1];
   pin_cg_res = Eigen::Map<const Eigen::MatrixXd>(y.data() + y.size() - 36, 6, 6);
 
   std::cout << "pin_cg_res: \n" << pin_cg_res << std::endl;

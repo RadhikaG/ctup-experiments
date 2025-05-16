@@ -4,6 +4,8 @@
 #include <chrono>
 
 #define SMOOTH(s) for (size_t _smooth = 0; _smooth < s; ++_smooth)
+#define NQ 7 // change for iiwa - 7, hyq - 12, baxter - 19
+#define SIMD_WIDTH 4
 
 int main(int argc, char ** argv)
 {
@@ -24,16 +26,16 @@ int main(int argc, char ** argv)
   else
     assert(false && "script doesn't work for other robots");
   
-  blaze::StaticVector<blaze::StaticVector<double, 8>, 12> qs_blaze[NBT];
+  blaze::StaticVector<blaze::StaticVector<double, SIMD_WIDTH>, NQ> qs_blaze[NBT];
 
   for (size_t i = 0; i < NBT; ++i) {
-    for (size_t d = 0; d < nq; ++d) {
+    for (size_t d = 0; d < NQ; ++d) {
       // broadcasting single double qs[i][d] entry to wide blaze array
       qs_blaze[i][d] = d;
     }
   }
 
-  blaze::StaticMatrix<blaze::StaticVector<double, 8>, 6, 6> ctup_res;
+  blaze::StaticMatrix<blaze::StaticVector<double, SIMD_WIDTH>, 6, 6> ctup_res;
 
   auto start = std::chrono::steady_clock::now();
   SMOOTH(NBT)
