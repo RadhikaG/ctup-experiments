@@ -2,8 +2,8 @@
 
 Dependencies:
 1. `$ sudo apt install cmake libassimp-dev liburdfdom-dev libeigen3-dev liboctomap-dev`
-2. `$ sudo apt install bear libyaml-cpp-dev`
-3. `$ sudo apt install llvm clang clang-tools libclang-dev`
+2. `$ sudo apt install bear libyaml-cpp-dev libboost-all-dev`
+3. `$ sudo apt install llvm clang clang-tools libclang-dev g++`
 
 Setup instructions:
 
@@ -18,6 +18,7 @@ Part 1: building dependencies from source
 8. `$ cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1`
 9. Build will die once while building CppADCodeGen, then run: `$ export PKG_CONFIG_PATH=$(pwd)/install/CppAD/lib/pkgconfig:$PKG_CONFIG_PATH`
 10. Run again: `$ cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1`
+11. Build will occasionally die trying to find dependencies, running this will sometimes fix it: `$ export CMAKE_PREFIX_PATH="$(pwd)/install/CppAD:$(pwd)/install/CppADCodeGen/:$(pwd)/install/hpp-fcl/"`
 
 Part 2: building code generators in samples/ and experiments in scripts/
 1. `$ make -j4`
