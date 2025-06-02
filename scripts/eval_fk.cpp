@@ -94,7 +94,7 @@ int main(int argc, char ** argv)
   {
     ctup_res = ctup_gen::fk(qs[_smooth]);
   }
-  std::cout << "ctup gen avg time taken (us): \t\t\t\t";
+  std::cout << "ctup gen avg time taken (ns): \t\t\t\t";
   timer.toc(std::cout, NBT);
 
   timer.tic();
@@ -102,7 +102,7 @@ int main(int argc, char ** argv)
   {
     y = g_model->ForwardZero(qs[_smooth]);
   }
-  std::cout << "pin cg avg time taken (us): \t\t\t\t";
+  std::cout << "pin cg avg time taken (ns): \t\t\t\t";
   timer.toc(std::cout, NBT);
 
   timer.tic();
@@ -110,7 +110,7 @@ int main(int argc, char ** argv)
   {
     forwardKinematics(model,data,qs[_smooth]);
   }
-  std::cout << "pin vanilla avg time taken (us): \t\t\t\t";
+  std::cout << "pin vanilla avg time taken (ns): \t\t\t\t";
   timer.toc(std::cout, NBT);
 
 

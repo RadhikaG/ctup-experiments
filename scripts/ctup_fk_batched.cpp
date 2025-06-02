@@ -1,19 +1,24 @@
+// export CXX=/home/ubuntu/build/gcc-15.1-build/gcc-15.1.0-install/bin/g++
+// $CXX -std=c++17 -O3 -ffast-math -gno-as-locview-support -I../gen -I../deps/compile-time-urdf-parser/deps/eigen -I../deps/compile-time-urdf-parser/deps/blaze ../scripts/ctup_fk_batched.cpp -o ctup_fk_batched
+// export LD_LIBRARY_PATH=/home/ubuntu/build/gcc-15.1-build/gcc-15.1.0-install/lib64/
 #include "fk_gen_batched.h"
 #include "blaze/Math.h"
 #include <iostream>
 #include <chrono>
 
 #define SMOOTH(s) for (size_t _smooth = 0; _smooth < s; ++_smooth)
-#define NQ 7 // change for iiwa - 7, hyq - 12, baxter - 19
-#define SIMD_WIDTH 4
+#define NQ 12 // change for iiwa - 7, hyq - 12, baxter - 19
+#define SIMD_WIDTH 8
 
 int main(int argc, char ** argv)
 {
-  //const int NBT = 100 * 100;
-  const int NBT = 10000;
+  const int iterations = 1000000;
+  const int NBT = 1;
+
+  assert(argc == 2 && "missing urdf filename");
 
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
-  const std::string urdf_filename = (argc<=1) ? PINOCCHIO_MODEL_DIR + std::string("/others/robots/ur_description/urdf/ur5_robot.urdf") : argv[1];
+  const std::string urdf_filename = argv[1];
   std::cout << urdf_filename << "\n";
 
   size_t nq = 0;
@@ -26,7 +31,7 @@ int main(int argc, char ** argv)
   else
     assert(false && "script doesn't work for other robots");
   
-  blaze::StaticVector<blaze::StaticVector<double, SIMD_WIDTH>, NQ> qs_blaze[NBT];
+  blaze::DynamicVector<blaze::StaticVector<blaze::StaticVector<double, SIMD_WIDTH>, NQ>> qs_blaze(NBT);
 
   for (size_t i = 0; i < NBT; ++i) {
     for (size_t d = 0; d < NQ; ++d) {
@@ -38,14 +43,15 @@ int main(int argc, char ** argv)
   blaze::StaticMatrix<blaze::StaticVector<double, SIMD_WIDTH>, 6, 6> ctup_res;
 
   auto start = std::chrono::steady_clock::now();
-  SMOOTH(NBT)
+  SMOOTH(iterations)
   {
-    ctup_res = ctup_gen::fk(qs_blaze[_smooth]);
+    ctup_res = ctup_gen::fk(qs_blaze[0]);
   }
   auto end = std::chrono::steady_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
   std::cout << "ctup gen avg time taken (ns): \t\t\t\t";
-  std::cout << elapsed.count() / (NBT) << std::endl;
+  //std::cout << elapsed.count() / (NBT) << std::endl;
+  std::cout << elapsed.count() / (iterations) << std::endl;
 
   // we know ctup_res has broadcasted entries
   Eigen::Matrix<double, 6, 6> ctup_res_single;
