@@ -87,16 +87,16 @@ int main(int argc, char ** argv)
 
   // ----------- PINOCCHIO CODEGEN END ----------- //
 
-  Eigen::VectorXd ctup_res, pin_res;
+  Eigen::VectorXd ctup_res, pin_cg_res, pin_res;
 
   Eigen::VectorXd joined(q.size() + qd.size());
   joined << q, qd;
 
   timer.tic();
   SMOOTH(NBT) {
-    pin_res = g_model->ForwardZero(joined);
+    pin_cg_res = g_model->ForwardZero(joined);
   }
-  std::cout << "pin cg avg time taken (us): \t\t\t\t";
+  std::cout << "pin cg avg time taken (ns): \t\t\t\t";
   timer.toc(std::cout, NBT);
 
   //ctup_gen::set_X_T();
@@ -109,11 +109,19 @@ int main(int argc, char ** argv)
     ctup_res = ctup_gen::rnea(q, qd);
     //ctup_res = ctup_gen::rnea(rd, q, qd);
   }
-  std::cout << "ctup gen avg time taken (us): \t\t\t\t";
+  std::cout << "ctup gen avg time taken (ns): \t\t\t\t";
+  timer.toc(std::cout, NBT);
+
+  timer.tic();
+  SMOOTH(NBT) {
+    pin_res = rnea(model, data, q, qd, qdd);
+  }
+  std::cout << "pin vanilla avg time taken (ns): \t\t\t\t";
   timer.toc(std::cout, NBT);
 
   std::cout << "--------FINAL RES--------\n";
 
   std::cout << "ctup_res: \n" << ctup_res << std::endl;
+  std::cout << "pin_cg_res: \n" << pin_cg_res << std::endl;
   std::cout << "pin_res: \n" << pin_res << std::endl;
 }

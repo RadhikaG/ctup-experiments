@@ -140,6 +140,7 @@ static dyn_var<BlazeStaticMatrix<blazeVecSIMDd>> fk(const Model &model, dyn_var<
       X_0[i] = X_pi * X_0[parent];
     }
     else {
+      //X_0[i] = ctup::matrix_layout_expr_leaf<blazeVecSIMDd>(X_pi);
       X_0[i] = ctup::blocked_layout_expr_leaf<blazeVecSIMDd>(X_pi);
     }
   }

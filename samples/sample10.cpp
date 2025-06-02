@@ -100,24 +100,24 @@ struct vector: public builder::custom_type<T> {
   dyn_var<void(int)> resize = builder::with_name("resize");
 };
 
-struct robot_data {
-  static constexpr const char* type_name = "robot_data";
-  dyn_var<vector<builder::eigen_vectorXd_t>> v = builder::with_name("v");
-  dyn_var<vector<builder::eigen_vectorXd_t>> a = builder::with_name("a");
-  dyn_var<vector<builder::eigen_vectorXd_t>> f = builder::with_name("f");
-  dyn_var<builder::eigen_vectorXd_t> tau = builder::with_name("tau");
-};
-
-static void init_rd(static_var<size_t> N, dyn_var<robot_data*> rd) {
-  rd->v.resize(N);
-  rd->a.resize(N);
-  rd->f.resize(N);
-  for (dyn_var<size_t> i = 0; i < N; i = i+1) {
-    rd->v[i].setZero();
-    rd->a[i].setZero();
-    rd->f[i].setZero();
-  }
-}
+//struct robot_data {
+//  static constexpr const char* type_name = "robot_data";
+//  dyn_var<vector<builder::eigen_vectorXd_t>> v = builder::with_name("v");
+//  dyn_var<vector<builder::eigen_vectorXd_t>> a = builder::with_name("a");
+//  dyn_var<vector<builder::eigen_vectorXd_t>> f = builder::with_name("f");
+//  dyn_var<builder::eigen_vectorXd_t> tau = builder::with_name("tau");
+//};
+//
+//static void init_rd(static_var<size_t> N, dyn_var<robot_data*> rd) {
+//  rd->v.resize(N);
+//  rd->a.resize(N);
+//  rd->f.resize(N);
+//  for (dyn_var<size_t> i = 0; i < N; i = i+1) {
+//    rd->v[i].setZero();
+//    rd->a[i].setZero();
+//    rd->f[i].setZero();
+//  }
+//}
 
 /** helpers end **/
 
