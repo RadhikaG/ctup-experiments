@@ -80,8 +80,9 @@ set(CFLAGS_PEDANTIC
 set(SAMPLES_SOURCES
     samples/sample8.cpp
     samples/sample9.cpp
-    #samples/sample10.cpp
+    samples/sample10.cpp
     samples/sample11.cpp
+    samples/sample12.cpp
     samples/deprecated/sample15.cpp
     samples/deprecated/sample17.cpp
 )
@@ -104,7 +105,7 @@ foreach(SAMPLE_SOURCE ${SAMPLES_SOURCES})
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build/gen_headers
     )
     target_compile_options(${SAMPLE_NAME} PRIVATE 
-        -O1 -g # Debug
+        -O2 -g # Debug
         ${CFLAGS_PEDANTIC}
     )
 endforeach()
@@ -151,14 +152,16 @@ set(SCRIPT_SOURCES
     scripts/debug_fk.cpp
     scripts/debug_fkcc.cpp
     scripts/eval_fkcc.cpp
-    #scripts/debug_rnea.cpp
-    #scripts/eval_rnea.cpp
+    scripts/debug_rnea.cpp
+    scripts/eval_rnea.cpp
     scripts/pin_fk.cpp
     scripts/pin_fk_codegen.cpp
     scripts/pin_fk_codegen_vectorized_comp.cpp
     scripts/pin_rnea_codegen.cpp
     scripts/eval_fk_batched.cpp
     scripts/debug_fk_batched.cpp
+    scripts/naive_fk_batched.cpp
+    scripts/naive_fk.cpp
 )
 
 #Compile SCRIPTS
@@ -186,28 +189,27 @@ foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
     target_compile_options(${SCRIPT_NAME} PRIVATE 
         -O3 -g -DNDEBUG
         -ffast-math
-        -march=native
         ${CFLAGS_PEDANTIC}
     )
 endforeach()
 
-set(BATCHED_SCRIPT_SOURCES
-  scripts/ctup_fk_batched.cpp
-)
-foreach(SCRIPT_SOURCE ${BATCHED_SCRIPT_SOURCES})
-    # get filename without extension
-    get_filename_component(SCRIPT_NAME ${SCRIPT_SOURCE} NAME_WE)
-    add_executable(${SCRIPT_NAME} ${SCRIPT_SOURCE})
-    target_link_libraries(${SCRIPT_NAME} PUBLIC Eigen3::Eigen)
-    target_include_directories(${SCRIPT_NAME} PUBLIC 
-        ${CMAKE_CURRENT_SOURCE_DIR}/gen
-        ${EIGEN3_INCLUDE_DIR}
-        ${BLAZE_INCLUDE_DIR}
-    )
-    target_compile_options(${SCRIPT_NAME} PRIVATE 
-        -O3 -DNDEBUG
-        -ffast-math
-        -march=native
-        ${CFLAGS_PEDANTIC}
-    )
-endforeach()
+#set(BATCHED_SCRIPT_SOURCES
+#  scripts/ctup_fk_batched.cpp
+#)
+#foreach(SCRIPT_SOURCE ${BATCHED_SCRIPT_SOURCES})
+#    # get filename without extension
+#    get_filename_component(SCRIPT_NAME ${SCRIPT_SOURCE} NAME_WE)
+#    add_executable(${SCRIPT_NAME} ${SCRIPT_SOURCE})
+#    target_link_libraries(${SCRIPT_NAME} PUBLIC Eigen3::Eigen)
+#    target_include_directories(${SCRIPT_NAME} PUBLIC 
+#        ${CMAKE_CURRENT_SOURCE_DIR}/gen
+#        ${EIGEN3_INCLUDE_DIR}
+#        ${BLAZE_INCLUDE_DIR}
+#    )
+#    target_compile_options(${SCRIPT_NAME} PRIVATE 
+#        -O3 -DNDEBUG
+#        -ffast-math
+#        -march=skylake-avx512
+#        ${CFLAGS_PEDANTIC}
+#    )
+#endforeach()
