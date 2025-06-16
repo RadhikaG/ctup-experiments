@@ -39,8 +39,6 @@ using builder::static_var;
 using pinocchio::Model;
 using pinocchio::GeometryModel;
 
-using ctup::EigenMatrix;
-using ctup::vector_t;
 using ctup::backend::blazeVecSIMDd;
 
 /////////////////////////////////////////////
@@ -193,6 +191,37 @@ using Xform = ctup::Xform<Scalar>;
 
 /////////////////////////////////////////////
 
+namespace backend {
+template <typename T>
+struct aligned_vector_t: public builder::custom_type<T> {
+  // gen/self_collision.h
+  static constexpr const char* type_name = "AlignedSVd8Vector";
+  typedef T dereference_type;
+  dyn_var<void(int)> size = builder::with_name("size");
+  dyn_var<int(void)> resize = builder::with_name("resize");
+  dyn_var<T(void)> push_back = builder::with_name("push_back");
+};
+}
+
+using backend::aligned_vector_t;
+
+namespace runtime {
+
+builder::dyn_var<int (
+    // coarse sph 1
+    blazeVecSIMDd&, blazeVecSIMDd&, blazeVecSIMDd&, double,
+    // fine sph 1
+    aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, std::vector<double>&,
+    // coarse sph 2 
+    blazeVecSIMDd&, blazeVecSIMDd&, blazeVecSIMDd&, double,
+    // fine sph 2
+    aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, std::vector<double>&
+        )> 
+    self_collision_link_vs_link = builder::as_global("runtime::self_collision_link_vs_link");
+}
+
+/////////////////////////////////////////////
+
 static void parseCollisionObjects(const YAML::Node& collisionObjectsNode, std::vector<CollisionObject>& objects) {
   for (const auto& objNode : collisionObjectsNode) {
     CollisionObject obj;
@@ -210,22 +239,22 @@ static void parseCollisionObjects(const YAML::Node& collisionObjectsNode, std::v
   }
 }
 
-static dyn_var<int> Sphere_Environment_Collision(
-    const Envir_Objects &obj,
-    // single coarse grained sphere per link
-    dyn_var<blazeVecSIMDd &> coarse_x, 
-    dyn_var<blazeVecSIMDd &> coarse_y, 
-    dyn_var<blazeVecSIMDd &> coarse_z, 
-    dyn_var<double> coarse_r,
-    // many fine grained spheres per link
-    dyn_var<vector_t<blazeVecSIMDd> &> fine_x, 
-    dyn_var<vector_t<blazeVecSIMDd> &> fine_y, 
-    dyn_var<vector_t<blazeVecSIMDd> &> fine_z, 
-    dyn_var<vector_t<double> &> fine_r) {
+//static dyn_var<int> Sphere_Environment_Collision(
+//    const Envir_Objects &obj,
+//    // single coarse grained sphere per link
+//    dyn_var<blazeVecSIMDd &> coarse_x, 
+//    dyn_var<blazeVecSIMDd &> coarse_y, 
+//    dyn_var<blazeVecSIMDd &> coarse_z, 
+//    dyn_var<double> coarse_r,
+//    // many fine grained spheres per link
+//    dyn_var<aligned_vector_t<blazeVecSIMDd> &> fine_x, 
+//    dyn_var<aligned_vector_t<blazeVecSIMDd> &> fine_y, 
+//    dyn_var<aligned_vector_t<blazeVecSIMDd> &> fine_z, 
+//    dyn_var<aligned_vector_t<double> &> fine_r) {
+//
+//}
 
-}
-
-static std::map<int, LinkSpheres>& joint_to_child_spheres(
+static std::map<size_t, LinkSpheres> joint_to_child_spheres(
     const pinocchio::Model &model_coarse, 
     const pinocchio::GeometryModel &geom_model_coarse, 
     const pinocchio::Model &model_fine, 
@@ -235,9 +264,9 @@ static std::map<int, LinkSpheres>& joint_to_child_spheres(
 
   JointIndex jid = model_coarse.getJointId(joint_name);
 
-  std::map<int, LinkSpheres> link_spheres;
+  std::map<size_t, LinkSpheres> link_spheres;
 
-  std::map<std::string, int> rel_link_num;
+  std::map<std::string, size_t> rel_link_num;
   for (size_t i = 0; i < geom_model_coarse.geometryObjects.size(); i++) {
     LinkSpheres ls;
 
@@ -282,7 +311,7 @@ static std::map<int, LinkSpheres>& joint_to_child_spheres(
     double sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(
             geom_obj.geometry)->radius;
 
-    int link_id = rel_link_num[(model_fine.frames[geom_obj.parentFrame].name)];
+    size_t link_id = rel_link_num[(model_fine.frames[geom_obj.parentFrame].name)];
 
     bool no_sphere_overlap = 
         sphere_xyz[0] != link_spheres[link_id].coarse_x || 
@@ -290,7 +319,7 @@ static std::map<int, LinkSpheres>& joint_to_child_spheres(
         sphere_xyz[2] != link_spheres[link_id].coarse_z || 
         sphere_radius != link_spheres[link_id].coarse_r;
 
-    if(no_sphere_overlap){
+    if (no_sphere_overlap) {
       link_spheres[link_id].fine_x.push_back(sphere_xyz[0]);
       link_spheres[link_id].fine_y.push_back(sphere_xyz[1]);
       link_spheres[link_id].fine_z.push_back(sphere_xyz[2]);
@@ -338,7 +367,7 @@ static size_t get_max_n_fine_sph(
 
   for (JointIndex i = 1; i < (JointIndex)model_coarse.njoints; i++) {
     std::string joint_name = model_coarse.names[i];
-    std::map<int, LinkSpheres> link_spheres = joint_to_child_spheres(
+    std::map<size_t, LinkSpheres> link_spheres = joint_to_child_spheres(
             model_coarse, geom_model_coarse,
             model_fine, geom_model_fine,
             joint_name);
@@ -395,6 +424,7 @@ static dyn_var<int> fkcc(
   X_0.set_size(model_coarse.njoints);
 
   // coarse collision geom sphere positions
+  // storing one coarse sphere per link
   dyn_var<blazeVecSIMDd[]> coarse_x_0, coarse_y_0, coarse_z_0;
   dyn_var<double[]> coarse_r;
 
@@ -405,19 +435,20 @@ static dyn_var<int> fkcc(
   resize_arr(coarse_r, n_coarse_sph);
 
   // fine collision geom sphere positions
-  dyn_var<blazeVecSIMDd[]> fine_x_0, fine_y_0, fine_z_0, fine_r;
+  dyn_var<aligned_vector_t<blazeVecSIMDd>> fine_x_0, fine_y_0, fine_z_0, fine_r;
   // we rewrite to the same array, so we size the array to have
   // the max number of fine spheres present for a single link
   size_t max_n_fine_sph = get_max_n_fine_sph(
           model_coarse, geom_model_coarse, model_fine, geom_model_fine);
-  resize_arr(fine_x_0, max_n_fine_sph);
-  resize_arr(fine_y_0, max_n_fine_sph);
-  resize_arr(fine_z_0, max_n_fine_sph);
-  resize_arr(fine_r, max_n_fine_sph);
+  fine_x_0.resize(max_n_fine_sph);
+  fine_y_0.resize(max_n_fine_sph);
+  fine_z_0.resize(max_n_fine_sph);
+  fine_r.resize(max_n_fine_sph);
 
-  // data structure for storing intermediate self collision spheres in forward prop order
-  dyn_var<ctup::vector_t<blazeVecSIMDd>[]> sc_x, sc_y, sc_z;
-  dyn_var<ctup::vector_t<double>[]> sc_r;
+  // data structure for storing intermediate self collision fine spheres in forward prop order
+  // storing vector of fine spheres per link
+  dyn_var<aligned_vector_t<blazeVecSIMDd>[]> sc_x, sc_y, sc_z;
+  dyn_var<aligned_vector_t<double>[]> sc_r;
 
   resize_arr(sc_x, model_coarse.njoints);
   resize_arr(sc_y, model_coarse.njoints);
@@ -465,12 +496,12 @@ static dyn_var<int> fkcc(
 
     // X_0 now contains the global transform of the joint wrt the world
 
-    std::map<int, LinkSpheres> link_spheres = joint_to_child_spheres(
+    std::map<size_t, LinkSpheres> link_spheres = joint_to_child_spheres(
             model_coarse, geom_model_coarse,
             model_fine, geom_model_fine,
             joint_name);
 
-    std::map<int, LinkSpheres>::iterator outerIt;
+    std::map<size_t, LinkSpheres>::iterator outerIt;
 
     // we now transform the nominal transform of each sphere wrt its joint by X_0
     // to get the global transform of each sphere wrt the world
@@ -545,22 +576,22 @@ static dyn_var<int> fkcc(
           // we first CC the two coarse spheres associated w the cp
           // if they're in collision, we CC two sets of fine spheres
           // associated w the cp
-          cc_res = ctup::backend::self_collision(
-              // coarse sph assoc. w cp.second
+          cc_res = runtime::self_collision_link_vs_link(
+              // coarse sphere assoc. w cp.second
               coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id], 
-              // fine sph assoc. w cp.second
+              // fine spheres assoc. w cp.second
               fine_x_0, fine_y_0, fine_z_0, fine_r, 
-              // coarse sph assoc. w cp.first
+              // coarse sphere assoc. w cp.first
               coarse_x_0[cp.first], coarse_y_0[cp.first], coarse_z_0[cp.first], coarse_r[cp.first], 
-              // fine sph assoc. w cp.first
+              // fine spheres assoc. w cp.first
               sc_x[cp.first], sc_y[cp.first], sc_z[cp.first], sc_r[cp.first]);
           // return cc_res // can't do this because static_var bug
         }
       }
       // if we find no self collision, we do a two-level CC of each link against the environment
-      cc_res = ctup::backend::Sphere_Environment_Collision(
-              coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id],
-              fine_x_0, fine_y_0, fine_z_0, fine_r);
+      //cc_res = ctup::backend::Sphere_Environment_Collision(
+      //        coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id],
+      //        fine_x_0, fine_y_0, fine_z_0, fine_r);
       // return cc_res // can't do this because static_var bug
 
       // if cc_res is not in collision, we store the current global position of fine grained spheres corres. to link_id
@@ -718,11 +749,11 @@ int main(int argc, char* argv[]) {
   builder::builder_context context;
   context.run_rce = true;
 
+  //of << "static ";
+  //auto ast = context.extract_function_ast(Sphere_Environment_Collision, "Sphere_Environment_Collision", env_obj);
+  //block::c_code_generator::generate_code(ast, of, 0);
   of << "static ";
-  auto ast = context.extract_function_ast(Sphere_Environment_Collision, "Sphere_Environment_Collision", env_obj);
-  block::c_code_generator::generate_code(ast, of, 0);
-  of << "static ";
-  ast = context.extract_function_ast(fk, "fk", model, geom_model, model_2, geom_model_2);
+  auto ast = context.extract_function_ast(fkcc, "fkcc", model, geom_model, model_2, geom_model_2);
   block::c_code_generator::generate_code(ast, of, 0);
 
   of << "}\n";
