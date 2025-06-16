@@ -83,6 +83,7 @@ set(SAMPLES_SOURCES
     samples/sample10.cpp
     samples/sample11.cpp
     samples/sample12.cpp
+    samples/sample13.cpp
     samples/deprecated/sample15.cpp
     samples/deprecated/sample17.cpp
 )

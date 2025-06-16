@@ -211,11 +211,11 @@ builder::dyn_var<int (
     // coarse sph 1
     blazeVecSIMDd&, blazeVecSIMDd&, blazeVecSIMDd&, double,
     // fine sph 1
-    aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, std::vector<double>&,
+    aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, ctup::vector_t<double>&,
     // coarse sph 2 
     blazeVecSIMDd&, blazeVecSIMDd&, blazeVecSIMDd&, double,
     // fine sph 2
-    aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, std::vector<double>&
+    aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, ctup::vector_t<double>&
         )> 
     self_collision_link_vs_link = builder::as_global("runtime::self_collision_link_vs_link");
 }
@@ -411,7 +411,7 @@ static dyn_var<int> fkcc(
     const pinocchio::GeometryModel &geom_model_coarse, 
     const pinocchio::Model &model_fine, 
     const pinocchio::GeometryModel &geom_model_fine,
-    dyn_var<ctup::BlazeStaticVector<blazeVecSIMDd> &> q) {
+    dyn_var<aligned_vector_t<blazeVecSIMDd>&> q) {
   typedef typename Model::JointIndex JointIndex;
 
   // joint transforms for FK
