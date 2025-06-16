@@ -1,74 +1,109 @@
-static int self_collision(blaze::StaticVector<float,8>& ax, blaze::StaticVector<float,8>& ay, blaze::StaticVector<float,8>& az, float ar,
-std::vector<blaze::StaticVector<float,8>>& bx, std::vector<blaze::StaticVector<float,8>>& by, std::vector<blaze::StaticVector<float,8>>& bz, std::vector<float>& br,
-std::vector<blaze::StaticVector<float,8>>& dx, std::vector<blaze::StaticVector<float,8>>& dy, std::vector<blaze::StaticVector<float,8>>& dz, std::vector<float>& dr,
-std::vector<std::vector<blaze::StaticVector<float,8>>>& sx, std::vector<std::vector<blaze::StaticVector<float,8>>>& sy, std::vector<std::vector<blaze::StaticVector<float,8>>>& sz, std::vector<std::vector<float>>& sr){
-  int res=false;
-  for(size_t l=0;l<dx.size();l=l+1){
-    blaze::StaticVector<float,8> xs = (ax - dx[l]);
-    blaze::StaticVector<float,8> ys = (ay - dy[l]);
-    blaze::StaticVector<float,8> zs = (az - dz[l]);
+#ifndef SELF_COLLISION_H
+#define SELF_COLLISION_H
 
-    blaze::StaticVector<float,8> sum= xs*xs+ys*ys+zs*zs;
-    float rs = ar + dr[l];
+#include "blaze/Math.h"
+#include <vector>
 
-    sum = sum - rs*rs;
+namespace runtime {
 
-    res=(blaze::min(sum) < 0.0);
+using blazeVecSIMDd = blaze::StaticVector<double, 8>;
+using Allocator = blaze::AlignedAllocator<blazeVecSIMDd>;
+using AlignedSVd8Vector = std::vector<blazeVecSIMDd, Allocator>;
 
-    if(res){
-      if(bx.size() == 0 and (sx[l]).size() == 0 ){
-        return 1;
+static bool self_collision_link_vs_link(
+    blazeVecSIMDd& coarse_1_x, 
+    blazeVecSIMDd& coarse_1_y, 
+    blazeVecSIMDd& coarse_1_z, 
+    double coarse_1_r,
+    AlignedSVd8Vector& fine_1_x, 
+    AlignedSVd8Vector& fine_1_y, 
+    AlignedSVd8Vector& fine_1_z, 
+    std::vector<double>& fine_1_r,
+    blazeVecSIMDd& coarse_2_x, 
+    blazeVecSIMDd& coarse_2_y, 
+    blazeVecSIMDd& coarse_2_z, 
+    double coarse_2_r,
+    AlignedSVd8Vector& fine_2_x, 
+    AlignedSVd8Vector& fine_2_y, 
+    AlignedSVd8Vector& fine_2_z, 
+    std::vector<double>& fine_2_r) {
+
+  bool is_coarse_collide = false;
+
+  // coarse CC check, see if coarse spheres intersect
+  blazeVecSIMDd xs = coarse_1_x - coarse_2_x;
+  blazeVecSIMDd ys = coarse_1_y - coarse_2_y;
+  blazeVecSIMDd zs = coarse_1_z - coarse_2_z;
+
+  blazeVecSIMDd sum = xs*xs + ys*ys + zs*zs;
+  double rs = coarse_1_r + coarse_2_r;
+
+  sum = sum - rs*rs;
+
+  is_coarse_collide = (blaze::min(sum) < 0.0);
+
+  // coarse spheres do not intersect, no fine check needed
+  if (!is_coarse_collide)
+    return false;
+
+  if (is_coarse_collide) {
+    // no fine spheres for either link, link geoms do intersect
+    if(fine_1_x.size() == 0 and fine_2_x.size() == 0) {
+      return true;
+    }
+    else if (fine_1_x.size() == 0) {
+      for (size_t j = 0; j < fine_2_x.size(); j++) {
+        xs = (coarse_1_x - (fine_2_x[j]);
+        ys = (coarse_1_y - (fine_2_y[j]);
+        zs = (coarse_1_z - (fine_2_z[j]);
+
+        sum = xs*xs + ys*ys + zs*zs;
+        rs = coarse_1_r + fine_2_r[j];
+
+        sum = sum - rs*rs;
+
+        if (blaze::min(sum) < 0.0)
+          return true;
       }
-      else if(bx.size() == 0){
-        for(size_t j=0;j<(sx[l]).size();j=j+1){
-          xs = (ax - (sx[l])[j]);
-          ys = (ay - (sy[l])[j]);
-          zs = (az - (sz[l])[j]);
+    }
+    else if (fine_2_x.size() == 0) {
+      for(size_t i = 0; i < fine_1_x.size(); i++) {
+        xs = (fine_1_x[i] - coarse_2_x);
+        ys = (fine_1_y[i] - coarse_2_y);
+        zs = (fine_1_z[i] - coarse_2_z);
 
-          sum= xs*xs+ys*ys+zs*zs;
-          rs = ar + (sr[l])[j];
+        sum = xs*xs + ys*ys + zs*zs;
+        rs = fine_1_r[i] + coarse_2_r;
+
+        sum = sum - rs*rs;
+
+        if (blaze::min(sum) < 0.0)
+          return true;
+      }
+    }
+    else {
+      for (size_t j = 0; j< fine_2_x.size(); j++) {
+        for (size_t i = 0; i < fine_1_x.size(); i++) {
+          xs = (fine_1_x[i] - fine_2_x[j]);
+          ys = (fine_1_y[i] - fine_2_y[j]);
+          zs = (fine_1_z[i] - fine_2_z[j]);
+
+          sum = xs*xs + ys*ys + zs*zs;
+          rs = fine_1_r[i] + fine_2_r[j];
 
           sum = sum - rs*rs;
 
-          if(blaze::min(sum)<0.0){
+          if (blaze::min(sum) < 0.0) 
             return true;
-          }
         }
       }
-      else if((sx[l]).size() == 0 ){
-        for(size_t i=0;i<bx.size();i=i+1){
-          xs = (bx[i] - dx[l]);
-          ys = (by[i] - dy[l]);
-          zs = (bz[i] - dz[l]);
-
-          sum= xs*xs+ys*ys+zs*zs;
-          rs = br[i] + dr[l];
-
-          sum = sum - rs*rs;
-
-          if(blaze::min(sum)<0.0){
-            return true;
-          }
-        }
-      }
-      else{
-        for(size_t j=0;j<(sx[l]).size();j=j+1){
-          for(size_t i=0;i<bx.size();i=i+1){
-            xs = (bx[i] - (sx[l])[j]);
-            ys = (by[i] - (sy[l])[j]);
-            zs = (bz[i] - (sz[l])[j]);
-
-            sum= xs*xs+ys*ys+zs*zs;
-            rs = br[i] + (sr[l])[j];
-
-            sum = sum - rs*rs;
-
-            if(blaze::min(sum)<0.0) return true;
-          }
-        }
-      }
-      res=false;
     }
   }
+
+  // if control flow gets here, means none of the fine checks collided
   return false;
 }
+
+}
+
+#endif
