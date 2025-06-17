@@ -487,16 +487,25 @@ static dyn_var<int> fkcc(
   static_var<JointIndex> parent;
   std::string joint_name;
 
-  for (i = 1; i < (JointIndex)model_coarse.njoints; i = i+1) {
-    X_J[i].jcalc(q[i-1]);
-
-    X_pi = X_J[i] * X_T[i];
-    parent = model_coarse.parents[i];
-    if (parent > 0) {
-      X_0[i] = X_pi * X_0[parent];
+  for (i = 0; i < (JointIndex)model_coarse.njoints; i = i+1) {
+    if (i == 0) {
+      // special case different from generic FK
+      // the "universe" joint has child spheres associated with it, that we
+      // must process prior to running self collision checks for
+      // {child sphs of joint 1 vs. child sphs of "universe"/joint 0}.
+      X_0[i].set_identity();
     }
     else {
-      X_0[i] = ctup::matrix_layout_expr_leaf<blazeVecSIMDd>(X_pi);
+      X_J[i].jcalc(q[i-1]);
+
+      X_pi = X_J[i] * X_T[i];
+      parent = model_coarse.parents[i];
+      if (parent > 0) {
+        X_0[i] = X_pi * X_0[parent];
+      }
+      else {
+        X_0[i] = ctup::matrix_layout_expr_leaf<blazeVecSIMDd>(X_pi);
+      }
     }
 
     joint_name = model_coarse.names[i];

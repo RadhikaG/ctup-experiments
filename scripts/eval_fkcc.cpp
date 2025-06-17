@@ -1,3 +1,6 @@
+// export CXX=/home/ubuntu/build/gcc-15.1-build/gcc-15.1.0-install/bin/g++
+// $CXX -std=c++17 -O3 -ffast-math -gno-as-locview-support -I../gen -I../deps/compile-time-urdf-parser/deps/eigen -I../deps/compile-time-urdf-parser/deps/blaze ../scripts/eval_fkcc.cpp -o eval_fkcc
+// export LD_LIBRARY_PATH=/home/ubuntu/build/gcc-15.1-build/gcc-15.1.0-install/lib64/
 #include <blaze/Math.h>
 #include "cc_simd_blah.h"
 #include <iostream>

@@ -15,7 +15,7 @@ int main(int argc, char ** argv)
 
   PinocchioTicToc timer(PinocchioTicToc::NS);
   //const int NBT = 100 * 100;
-  const int NBT = 10000;
+  const int NBT = 100000;
 
   // Load the URDF model contained in urdf_filename
   Model model;
@@ -31,13 +31,15 @@ int main(int argc, char ** argv)
   // Build the data associated to the geom_model
   GeometryData geom_data(geom_model); // contained the intermediate computations, like the placement of all the geometries with respect to the world frame
   // Load the reference configuration of the robots (this one should be collision free)
-  const Model::ConfigVectorType & q = randomConfiguration(model);
+  //const Model::ConfigVectorType & q = randomConfiguration(model);
+  Model::ConfigVectorType q(6);
+  q << -0.3369, 1.2966, -0.6775, -0.6775, -1.4218, -0.7067;
   std::cout << "Configurations: " <<std::endl;
   std::cout << q <<std::endl;
 
   // And test all the collision pairs
   timer.tic();
-  SMOOTH(NBT)
+  SMOOTH(NBT*8)
   {
   computeCollisions(model,data,geom_model,geom_data,q);
   }
