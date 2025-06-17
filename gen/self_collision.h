@@ -4,11 +4,11 @@
 #include "blaze/Math.h"
 #include <vector>
 
-namespace runtime {
-
 using blazeVecSIMDd = blaze::StaticVector<double, 8>;
 using Allocator = blaze::AlignedAllocator<blazeVecSIMDd>;
 using AlignedSVd8Vector = std::vector<blazeVecSIMDd, Allocator>;
+
+namespace runtime {
 
 static bool self_collision_link_vs_link(
     blazeVecSIMDd& coarse_1_x, 
@@ -53,9 +53,9 @@ static bool self_collision_link_vs_link(
     }
     else if (fine_1_x.size() == 0) {
       for (size_t j = 0; j < fine_2_x.size(); j++) {
-        xs = (coarse_1_x - (fine_2_x[j]);
-        ys = (coarse_1_y - (fine_2_y[j]);
-        zs = (coarse_1_z - (fine_2_z[j]);
+        xs = (coarse_1_x - fine_2_x[j]);
+        ys = (coarse_1_y - fine_2_y[j]);
+        zs = (coarse_1_z - fine_2_z[j]);
 
         sum = xs*xs + ys*ys + zs*zs;
         rs = coarse_1_r + fine_2_r[j];

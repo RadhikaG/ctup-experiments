@@ -426,6 +426,8 @@ static dyn_var<int> fkcc(
   // coarse collision geom sphere positions
   // storing one coarse sphere per link
   dyn_var<blazeVecSIMDd[]> coarse_x_0, coarse_y_0, coarse_z_0;
+  // one coarse sph only has single radius
+  // indexed as: coarse[link_id]
   dyn_var<double[]> coarse_r;
 
   size_t n_coarse_sph = geom_model_coarse.geometryObjects.size();
@@ -435,9 +437,13 @@ static dyn_var<int> fkcc(
   resize_arr(coarse_r, n_coarse_sph);
 
   // fine collision geom sphere positions
-  dyn_var<aligned_vector_t<blazeVecSIMDd>> fine_x_0, fine_y_0, fine_z_0, fine_r;
+  dyn_var<aligned_vector_t<blazeVecSIMDd>> fine_x_0, fine_y_0, fine_z_0;
+  dyn_var<ctup::vector_t<double>> fine_r;
   // we rewrite to the same array, so we size the array to have
   // the max number of fine spheres present for a single link
+  // indexed as: fine[sph_id_for_link_id]
+  // within each fine_xyz[sph_id_for_link_id], all the values will be different (since different x,y,zs for each vector of fine sphs)
+  // but fine_r[sph_id_for_link_id] will be a single value, since radius of all the fine sphs will be the same
   size_t max_n_fine_sph = get_max_n_fine_sph(
           model_coarse, geom_model_coarse, model_fine, geom_model_fine);
   fine_x_0.resize(max_n_fine_sph);
@@ -447,13 +453,15 @@ static dyn_var<int> fkcc(
 
   // data structure for storing intermediate self collision fine spheres in forward prop order
   // storing vector of fine spheres per link
+  // indexed as: sc[sph_id_for_link_id]
   dyn_var<aligned_vector_t<blazeVecSIMDd>[]> sc_x, sc_y, sc_z;
-  dyn_var<aligned_vector_t<double>[]> sc_r;
+  dyn_var<ctup::vector_t<double>[]> sc_r;
 
-  resize_arr(sc_x, model_coarse.njoints);
-  resize_arr(sc_y, model_coarse.njoints);
-  resize_arr(sc_z, model_coarse.njoints);
-  resize_arr(sc_r, model_coarse.njoints);
+  // n_links = n_coarse_sph
+  resize_arr(sc_x, n_coarse_sph);
+  resize_arr(sc_y, n_coarse_sph);
+  resize_arr(sc_z, n_coarse_sph);
+  resize_arr(sc_r, n_coarse_sph);
 
   static_var<JointIndex> i;
 
@@ -496,6 +504,8 @@ static dyn_var<int> fkcc(
 
     // X_0 now contains the global transform of the joint wrt the world
 
+    // joint_to_child_spheres returns a map:
+    // link_spheres[link_id] = {coarse sph, list of fine sphs}
     std::map<size_t, LinkSpheres> link_spheres = joint_to_child_spheres(
             model_coarse, geom_model_coarse,
             model_fine, geom_model_fine,
@@ -585,7 +595,9 @@ static dyn_var<int> fkcc(
               coarse_x_0[cp.first], coarse_y_0[cp.first], coarse_z_0[cp.first], coarse_r[cp.first], 
               // fine spheres assoc. w cp.first
               sc_x[cp.first], sc_y[cp.first], sc_z[cp.first], sc_r[cp.first]);
-          // return cc_res // can't do this because static_var bug
+
+          //if (cc_res)
+          //  return true; // can't do this because static_var bug
         }
       }
       // if we find no self collision, we do a two-level CC of each link against the environment
@@ -741,8 +753,8 @@ int main(int argc, char* argv[]) {
   of << "  std::cout << str << \"\\n\";\n";
   of << "}\n\n";
 
-  of << "template<typename Derived>\n";
-  of << "static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {\n";
+  of << "template<typename MT>\n";
+  of << "static void print_matrix(const blaze::DenseMatrix<MT, blaze::rowMajor>& matrix) {\n";
   of << "  std::cout << matrix << \"\\n\";\n";
   of << "}\n\n";
 

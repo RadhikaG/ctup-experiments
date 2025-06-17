@@ -1,0 +1,3 @@
+in vim:
+
+%s/^\s*\(\w\+\)\s*=\s*runtime::self_collision_link_vs_link(.*);/\0\r  if (\1)\r    return 1;/g
