@@ -16,7 +16,41 @@ static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {
 }
 
 static int Sphere_Environment_Collision (blaze::StaticVector<double, 16>& arg1, blaze::StaticVector<double, 16>& arg2, blaze::StaticVector<double, 16>& arg3, double arg4, std::vector<blaze::StaticVector<double, 16>>& arg5, std::vector<blaze::StaticVector<double, 16>>& arg6, std::vector<blaze::StaticVector<double, 16>>& arg7, std::vector<double>& arg8) {
-  return 0;
+  int var19;
+  int var8 = 0;
+  blaze::StaticVector<double, 16> var9 = arg1 - 1000.0;
+  blaze::StaticVector<double, 16> var10 = arg2 - 1000.0;
+  blaze::StaticVector<double, 16> var11 = arg3 - 1000.0;
+  blaze::StaticVector<double, 16> var12 = var11 * 0.757278793762896;
+  blaze::StaticVector<double, 16> var13 = max(min(var12 * 0.03, 1.0), 0.0);
+  var11 = arg3 - (1000.0 + (0.757278793762896 * var13));
+  blaze::StaticVector<double, 16> var14 = ((var9 * var9) + (var10 * var10)) + (var11 * var11);
+  double var15 = arg4 + 0.14;
+  var14 = var14 - (var15 * var15);
+  var8 = min(var14) < 0.0;
+  if (var8) {
+    if (arg5.size() == 0) {
+      return 1;
+    } 
+    for (unsigned long int var17 = 0; var17 < arg5.size(); var17 = var17 + 1) {
+      var9 = arg5[var17] - 1000.0;
+      var10 = arg6[var17] - 1000.0;
+      var11 = arg7[var17] - 1000.0;
+      var13 = max(min(var12 * 0.03, 1.0), 0.0);
+      var11 = arg3 - (1000.0 + (0.757278793762896 * var13));
+      var14 = ((var9 * var9) + (var10 * var10)) + (var11 * var11);
+      var15 = arg8[var17] + 0.14;
+      var14 = var14 - (var15 * var15);
+      if (min(var14) < 0.0) {
+        return 1;
+      } 
+    }
+    var8 = 0;
+    var19 = 0;
+    return var19;
+  } 
+  var19 = 0;
+  return var19;
 }
 
 static int fk (Eigen::Matrix<blaze::StaticVector<double, 16>, Eigen::Dynamic, Eigen::Dynamic> arg4) {

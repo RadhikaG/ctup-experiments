@@ -9,6 +9,7 @@
 #include <hpp/fcl/collision_object.h>
 #include <hpp/fcl/shape/geometric_shapes.h>
 #include <memory>
+#include <ostream>
 #include <pinocchio/multibody/fwd.hpp>
 #include <pinocchio/multibody/geometry.hpp>
 #include <pinocchio/spatial/fwd.hpp>
@@ -39,45 +40,45 @@ using builder::static_var;
 using pinocchio::Model;
 using pinocchio::GeometryModel;
 
-using ctup::backend::blazeVecSIMDd;
+using ctup::backend::blaze_avx256f;
 
 /////////////////////////////////////////////
 
 struct Sphere {
-    double center_x;
-    double center_y;
-    double center_z;
-    double radius;
+    float center_x;
+    float center_y;
+    float center_z;
+    float radius;
 };
 
 struct Cylinder {
-    double center_x;
-    double center_y;
-    double center_z;
-    double radius;
-    double xv;
-    double yv;
-    double zv;
-    double rdv;
+    float center_x;
+    float center_y;
+    float center_z;
+    float radius;
+    float xv;
+    float yv;
+    float zv;
+    float rdv;
     bool z_aligned;
 };
 
 struct Box {
-    double center_x;
-    double center_y;
-    double center_z;
-    double caxis_1_x;
-    double caxis_1_y;
-    double caxis_1_z;
-    double caxis_1_r;
-    double caxis_2_x;
-    double caxis_2_y;
-    double caxis_2_z;
-    double caxis_2_r;
-    double caxis_3_x;
-    double caxis_3_y;
-    double caxis_3_z;
-    double caxis_3_r;
+    float center_x;
+    float center_y;
+    float center_z;
+    float caxis_1_x;
+    float caxis_1_y;
+    float caxis_1_z;
+    float caxis_1_r;
+    float caxis_2_x;
+    float caxis_2_y;
+    float caxis_2_z;
+    float caxis_2_r;
+    float caxis_3_x;
+    float caxis_3_y;
+    float caxis_3_z;
+    float caxis_3_r;
     bool xyz_aligned;
 };
 
@@ -89,12 +90,12 @@ struct Envir_Objects{
 
 struct Primitive {
     std::string type;
-    std::vector<double> dimensions;
+    std::vector<float> dimensions;
 };
 
 struct Pose {
-    std::vector<double> position;
-    std::vector<double> orientation;
+    std::vector<float> position;
+    std::vector<float> orientation;
 };
 
 struct CollisionObject {
@@ -104,14 +105,14 @@ struct CollisionObject {
 };
 
 struct LinkSpheres {
-  double coarse_x;
-  double coarse_y;
-  double coarse_z;
-  double coarse_r;
-  std::vector<double> fine_x;
-  std::vector<double> fine_y;
-  std::vector<double> fine_z;
-  std::vector<double> fine_r;
+  float coarse_x;
+  float coarse_y;
+  float coarse_z;
+  float coarse_r;
+  std::vector<float> fine_x;
+  std::vector<float> fine_y;
+  std::vector<float> fine_z;
+  std::vector<float> fine_r;
 };
 
 namespace ctup {
@@ -190,12 +191,23 @@ template <typename Scalar>
 using Xform = ctup::Xform<Scalar>;
 
 /////////////////////////////////////////////
+///// DEBUG HELPERS
+
+builder::dyn_var<void(ctup::BlazeStaticMatrix<float> &)> print_matrix = builder::as_global("print_matrix");
+builder::dyn_var<void(char *)> print_string = builder::as_global("print_string");
+
+template <typename Scalar>
+static void print_Xmat(std::string prefix, Xform<Scalar> &xform) {
+  print_string(prefix.c_str());
+  print_matrix(xform.denseify());
+}
+
+/////////////////////////////////////////////
 
 namespace backend {
 template <typename T>
 struct aligned_vector_t: public builder::custom_type<T> {
-  // gen/self_collision.h
-  static constexpr const char* type_name = "AlignedSVd8Vector";
+  static constexpr const char* type_name = "ctup_runtime::AlignedVec";
   typedef T dereference_type;
   dyn_var<void(int)> size = builder::with_name("size");
   dyn_var<int(void)> resize = builder::with_name("resize");
@@ -207,17 +219,36 @@ using backend::aligned_vector_t;
 
 namespace runtime {
 
+constexpr char environment_t_name[] = "vamp::collision::Environment";
+template <typename DataT>
+using environment_t = typename builder::name<environment_t_name, DataT>;
+
 builder::dyn_var<int (
+    // geom_id_1, helpful for debug
+    size_t,
     // coarse sph 1
-    blazeVecSIMDd&, blazeVecSIMDd&, blazeVecSIMDd&, double,
+    blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, float,
     // fine sph 1
-    aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, ctup::vector_t<double>&,
+    aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, ctup::vector_t<float>&,
+    // geom_id_2, helpful for debug
+    size_t,
     // coarse sph 2 
-    blazeVecSIMDd&, blazeVecSIMDd&, blazeVecSIMDd&, double,
+    blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, float,
     // fine sph 2
-    aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, aligned_vector_t<blazeVecSIMDd>&, ctup::vector_t<double>&
+    aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, ctup::vector_t<float>&
         )> 
-    self_collision_link_vs_link = builder::as_global("runtime::self_collision_link_vs_link");
+    self_collision_link_vs_link = builder::as_global("ctup_runtime::self_collision_link_vs_link");
+
+builder::dyn_var<int (
+    // coarse sph
+    blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, float,
+    // fine sphs
+    aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, ctup::vector_t<float>&,
+    // vamp environment type
+    environment_t<blaze_avx256f>
+        )>
+    link_vs_environment_collision = builder::as_global("ctup_runtime::link_vs_environment_collision");
+
 }
 
 /////////////////////////////////////////////
@@ -229,11 +260,11 @@ static void parseCollisionObjects(const YAML::Node& collisionObjectsNode, std::v
     
     const auto& primitiveNode = objNode["primitives"][0];
     obj.primitive.type = primitiveNode["type"].as<std::string>();
-    obj.primitive.dimensions = primitiveNode["dimensions"].as<std::vector<double>>();
+    obj.primitive.dimensions = primitiveNode["dimensions"].as<std::vector<float>>();
     
     const auto& poseNode = objNode["primitive_poses"][0];
-    obj.pose.position = poseNode["position"].as<std::vector<double>>();
-    obj.pose.orientation = poseNode["orientation"].as<std::vector<double>>();
+    obj.pose.position = poseNode["position"].as<std::vector<float>>();
+    obj.pose.orientation = poseNode["orientation"].as<std::vector<float>>();
 
     objects.push_back(obj);
   }
@@ -242,15 +273,15 @@ static void parseCollisionObjects(const YAML::Node& collisionObjectsNode, std::v
 //static dyn_var<int> Sphere_Environment_Collision(
 //    const Envir_Objects &obj,
 //    // single coarse grained sphere per link
-//    dyn_var<blazeVecSIMDd &> coarse_x, 
-//    dyn_var<blazeVecSIMDd &> coarse_y, 
-//    dyn_var<blazeVecSIMDd &> coarse_z, 
-//    dyn_var<double> coarse_r,
+//    dyn_var<blaze_avx256f &> coarse_x, 
+//    dyn_var<blaze_avx256f &> coarse_y, 
+//    dyn_var<blaze_avx256f &> coarse_z, 
+//    dyn_var<float> coarse_r,
 //    // many fine grained spheres per link
-//    dyn_var<aligned_vector_t<blazeVecSIMDd> &> fine_x, 
-//    dyn_var<aligned_vector_t<blazeVecSIMDd> &> fine_y, 
-//    dyn_var<aligned_vector_t<blazeVecSIMDd> &> fine_z, 
-//    dyn_var<aligned_vector_t<double> &> fine_r) {
+//    dyn_var<aligned_vector_t<blaze_avx256f> &> fine_x, 
+//    dyn_var<aligned_vector_t<blaze_avx256f> &> fine_y, 
+//    dyn_var<aligned_vector_t<blaze_avx256f> &> fine_z, 
+//    dyn_var<aligned_vector_t<float> &> fine_r) {
 //
 //}
 
@@ -281,7 +312,7 @@ static std::map<size_t, LinkSpheres> joint_to_child_spheres(
     assert(node_type == hpp::fcl::GEOM_SPHERE && "we don't support non sphere geoms inside robot");
 
     Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
-    double sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(geom_obj.geometry)->radius;
+    float sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(geom_obj.geometry)->radius;
     std::cout << "Link: " << i << std::endl;
     ls.coarse_x = sphere_xyz[0];
     ls.coarse_y = sphere_xyz[1];
@@ -308,7 +339,7 @@ static std::map<size_t, LinkSpheres> joint_to_child_spheres(
             "we don't support non sphere geoms inside robot");
 
     Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
-    double sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(
+    float sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(
             geom_obj.geometry)->radius;
 
     size_t link_id = rel_link_num[(model_fine.frames[geom_obj.parentFrame].name)];
@@ -383,7 +414,7 @@ static size_t get_max_n_fine_sph(
   return max_n_fine_sph;
 }
 
-static void set_X_T(builder::array<Xform<blazeVecSIMDd>>& X_T, const Model &model) {
+static void set_X_T(builder::array<Xform<blaze_avx256f>>& X_T, const Model &model) {
   typedef typename Model::JointIndex JointIndex;
   static_var<JointIndex> i;
 
@@ -396,7 +427,7 @@ static void set_X_T(builder::array<Xform<blazeVecSIMDd>>& X_T, const Model &mode
     // setting E
     for (r = 0; r < 4; r = r + 1) {
       for (c = 0; c < 4; c = c + 1) {
-        double entry = pin_X_T.coeffRef(c, r);
+        float entry = pin_X_T.coeffRef(r, c);
         if (std::abs(entry) < 1e-5)
           X_T[i].set_entry_to_constant(r, c, 0);
         else
@@ -411,13 +442,14 @@ static dyn_var<int> fkcc(
     const pinocchio::GeometryModel &geom_model_coarse, 
     const pinocchio::Model &model_fine, 
     const pinocchio::GeometryModel &geom_model_fine,
-    dyn_var<aligned_vector_t<blazeVecSIMDd>&> q) {
+    dyn_var<const runtime::environment_t<blaze_avx256f>&> environment,
+    dyn_var<const aligned_vector_t<blaze_avx256f>&> q) {
   typedef typename Model::JointIndex JointIndex;
 
   // joint transforms for FK
-  builder::array<Xform<blazeVecSIMDd>> X_T;
-  builder::array<Xform<blazeVecSIMDd>> X_J;
-  builder::array<Xform<blazeVecSIMDd>> X_0;
+  builder::array<Xform<blaze_avx256f>> X_T;
+  builder::array<Xform<blaze_avx256f>> X_J;
+  builder::array<Xform<blaze_avx256f>> X_0;
 
   X_T.set_size(model_coarse.njoints);
   X_J.set_size(model_coarse.njoints);
@@ -425,10 +457,10 @@ static dyn_var<int> fkcc(
 
   // coarse collision geom sphere positions
   // storing one coarse sphere per link
-  dyn_var<blazeVecSIMDd[]> coarse_x_0, coarse_y_0, coarse_z_0;
+  dyn_var<blaze_avx256f[]> coarse_x_0, coarse_y_0, coarse_z_0;
   // one coarse sph only has single radius
   // indexed as: coarse[link_id]
-  dyn_var<double[]> coarse_r;
+  dyn_var<float[]> coarse_r;
 
   size_t n_coarse_sph = geom_model_coarse.geometryObjects.size();
   resize_arr(coarse_x_0, n_coarse_sph);
@@ -437,8 +469,8 @@ static dyn_var<int> fkcc(
   resize_arr(coarse_r, n_coarse_sph);
 
   // fine collision geom sphere positions
-  dyn_var<aligned_vector_t<blazeVecSIMDd>> fine_x_0, fine_y_0, fine_z_0;
-  dyn_var<ctup::vector_t<double>> fine_r;
+  dyn_var<aligned_vector_t<blaze_avx256f>> fine_x_0, fine_y_0, fine_z_0;
+  dyn_var<ctup::vector_t<float>> fine_r;
   // we rewrite to the same array, so we size the array to have
   // the max number of fine spheres present for a single link
   // indexed as: fine[sph_id_for_link_id]
@@ -454,8 +486,8 @@ static dyn_var<int> fkcc(
   // data structure for storing intermediate self collision fine spheres in forward prop order
   // storing vector of fine spheres per link
   // indexed as: sc[sph_id_for_link_id]
-  dyn_var<aligned_vector_t<blazeVecSIMDd>[]> sc_x, sc_y, sc_z;
-  dyn_var<ctup::vector_t<double>[]> sc_r;
+  dyn_var<aligned_vector_t<blaze_avx256f>[]> sc_x, sc_y, sc_z;
+  dyn_var<ctup::vector_t<float>[]> sc_r;
 
   // n_links = n_coarse_sph
   resize_arr(sc_x, n_coarse_sph);
@@ -482,7 +514,7 @@ static dyn_var<int> fkcc(
     }
   }
 
-  Xform<blazeVecSIMDd> X_pi;
+  Xform<blaze_avx256f> X_pi;
 
   static_var<JointIndex> parent;
   std::string joint_name;
@@ -492,19 +524,22 @@ static dyn_var<int> fkcc(
       // special case different from generic FK
       // the "universe" joint has child spheres associated with it, that we
       // must process prior to running self collision checks for
-      // {child sphs of joint 1 vs. child sphs of "universe"/joint 0}.
+      // collision pairs assoc. with child sphs of joint 1 against
+      // child sphs of "universe"/joint 0
       X_0[i].set_identity();
     }
     else {
       X_J[i].jcalc(q[i-1]);
 
+      // using standard featherstone matmul ordering
+      // if comparing w pinocchio, transpose each matrix
       X_pi = X_J[i] * X_T[i];
       parent = model_coarse.parents[i];
       if (parent > 0) {
         X_0[i] = X_pi * X_0[parent];
       }
       else {
-        X_0[i] = ctup::matrix_layout_expr_leaf<blazeVecSIMDd>(X_pi);
+        X_0[i] = ctup::matrix_layout_expr_leaf<blaze_avx256f>(X_pi);
       }
     }
 
@@ -525,27 +560,38 @@ static dyn_var<int> fkcc(
     // we now transform the nominal transform of each sphere wrt its joint by X_0
     // to get the global transform of each sphere wrt the world
     // X_0_sph = X_0_j * X_j_sph
-    // in code: coarse_0[link_id] = X_0 * link_spheres[link_id]
+    //
+    // in code: 
+    // coarse_0[link_id] = X_0 * link_spheres[link_id]
+    // But, we only care about the translation component so:
+    // coarse_0[link_id].trans = X_0.rot * link_spheres[link_id].trans + X_0.trans
 
     for (static_var<size_t> pair_idx = 0; pair_idx < link_spheres.size(); pair_idx = pair_idx+1) {
       outerIt = link_spheres.begin();
       std::advance(outerIt, pair_idx);
       size_t link_id = outerIt->first;
-      std::cout << link_id << std::endl;
+      // child link of joint_name
+      // joint_name is always a true actuated joint, child links can be 
+      // connected via fixed joints to joint_name as well.
+      //std::cout << "child link: " << link_id << std::endl;
+
+      //std::cout << link_spheres[link_id].coarse_x << " " <<
+      //      link_spheres[link_id].coarse_y << " " <<
+      //      link_spheres[link_id].coarse_z << "\n";
 
       coarse_x_0[link_id] = 
           X_0[i].get_entry(0,0) * link_spheres[link_id].coarse_x +
-          X_0[i].get_entry(1,0) * link_spheres[link_id].coarse_y +
-          X_0[i].get_entry(2,0) * link_spheres[link_id].coarse_z;
+          X_0[i].get_entry(0,1) * link_spheres[link_id].coarse_y +
+          X_0[i].get_entry(0,2) * link_spheres[link_id].coarse_z;
 
       coarse_y_0[link_id] = 
-          X_0[i].get_entry(0,1) * link_spheres[link_id].coarse_x +
+          X_0[i].get_entry(1,0) * link_spheres[link_id].coarse_x +
           X_0[i].get_entry(1,1) * link_spheres[link_id].coarse_y +
-          X_0[i].get_entry(2,1) * link_spheres[link_id].coarse_z;
+          X_0[i].get_entry(1,2) * link_spheres[link_id].coarse_z;
 
       coarse_z_0[link_id] = 
-          X_0[i].get_entry(0,2) * link_spheres[link_id].coarse_x +
-          X_0[i].get_entry(1,2) * link_spheres[link_id].coarse_y +
+          X_0[i].get_entry(2,0) * link_spheres[link_id].coarse_x +
+          X_0[i].get_entry(2,1) * link_spheres[link_id].coarse_y +
           X_0[i].get_entry(2,2) * link_spheres[link_id].coarse_z;
 
       // translation component
@@ -556,22 +602,21 @@ static dyn_var<int> fkcc(
       coarse_r[link_id] = link_spheres[link_id].coarse_r;
 
       static_var<size_t> n_fine_sph = link_spheres[link_id].fine_r.size();
-
       // for fine grained sphere geoms
       for(static_var<size_t> k = 0; k < n_fine_sph; k = k+1){
         fine_x_0[k] = 
             X_0[i].get_entry(0,0) * link_spheres[link_id].fine_x[k] +
-            X_0[i].get_entry(1,0) * link_spheres[link_id].fine_y[k] +
-            X_0[i].get_entry(2,0) * link_spheres[link_id].fine_z[k];
+            X_0[i].get_entry(0,1) * link_spheres[link_id].fine_y[k] +
+            X_0[i].get_entry(0,2) * link_spheres[link_id].fine_z[k];
 
         fine_y_0[k] = 
-            X_0[i].get_entry(0,1) * link_spheres[link_id].fine_x[k] +
+            X_0[i].get_entry(1,0) * link_spheres[link_id].fine_x[k] +
             X_0[i].get_entry(1,1) * link_spheres[link_id].fine_y[k] +
-            X_0[i].get_entry(2,1) * link_spheres[link_id].fine_z[k];
+            X_0[i].get_entry(1,2) * link_spheres[link_id].fine_z[k];
 
         fine_z_0[k] = 
-            X_0[i].get_entry(0,2) * link_spheres[link_id].fine_x[k] +
-            X_0[i].get_entry(1,2) * link_spheres[link_id].fine_y[k] +
+            X_0[i].get_entry(2,0) * link_spheres[link_id].fine_x[k] +
+            X_0[i].get_entry(2,1) * link_spheres[link_id].fine_y[k] +
             X_0[i].get_entry(2,2) * link_spheres[link_id].fine_z[k];
 
         fine_x_0[k] += X_0[i].get_entry(0,3);
@@ -583,10 +628,12 @@ static dyn_var<int> fkcc(
 
       dyn_var<int> cc_res;
 
+      // for each child link of joint_name, we perform self collision checks
+      // against previously cached FK geometries higher up the kinematic chain
       for(static_var<size_t> cp_it = 0; cp_it < geom_model_coarse.collisionPairs.size(); cp_it = cp_it+1) {
         const pinocchio::CollisionPair & cp = geom_model_coarse.collisionPairs[cp_it];
         if (cp.second == link_id) {
-          std::cout << "collision pair: " << cp.first << "," << cp.second << std::endl;
+          //std::cout << "collision pair: " << cp.first << "," << cp.second << std::endl;
           std::string cp_str = "collision pair: ";
           cp_str += std::to_string(cp.first) + "," + std::to_string(cp.second);
           builder::annotate(cp_str.c_str());
@@ -596,10 +643,12 @@ static dyn_var<int> fkcc(
           // if they're in collision, we CC two sets of fine spheres
           // associated w the cp
           cc_res = runtime::self_collision_link_vs_link(
+              cp.second,
               // coarse sphere assoc. w cp.second
-              coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id], 
+              coarse_x_0[cp.second], coarse_y_0[cp.second], coarse_z_0[cp.second], coarse_r[cp.second], 
               // fine spheres assoc. w cp.second
               fine_x_0, fine_y_0, fine_z_0, fine_r, 
+              cp.first,
               // coarse sphere assoc. w cp.first
               coarse_x_0[cp.first], coarse_y_0[cp.first], coarse_z_0[cp.first], coarse_r[cp.first], 
               // fine spheres assoc. w cp.first
@@ -610,9 +659,10 @@ static dyn_var<int> fkcc(
         }
       }
       // if we find no self collision, we do a two-level CC of each link against the environment
-      //cc_res = ctup::backend::Sphere_Environment_Collision(
-      //        coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id],
-      //        fine_x_0, fine_y_0, fine_z_0, fine_r);
+      cc_res = runtime::link_vs_environment_collision(
+              coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id],
+              fine_x_0, fine_y_0, fine_z_0, fine_r,
+              environment);
       // return cc_res // can't do this because static_var bug
 
       // if cc_res is not in collision, we store the current global position of fine grained spheres corres. to link_id
@@ -634,11 +684,11 @@ int main(int argc, char* argv[]) {
   //--------------------------
 
   // Path to the URDF file 1
-  const char* urdf_filename = argv[1];
-  std::cout << urdf_filename << "\n";
+  const char* urdf_filename_coarse = argv[1];
+  std::cout << urdf_filename_coarse << "\n";
 
-  const char* urdf_filename_2 = argv[2];
-  std::cout << urdf_filename_2 << "\n";
+  const char* urdf_filename_fine = argv[2];
+  std::cout << urdf_filename_fine << "\n";
   //--------------------------
   //END LOAD URDF FILE
   //--------------------------
@@ -646,10 +696,10 @@ int main(int argc, char* argv[]) {
   //--------------------------
   //LOAD YAML FILE
   //--------------------------
-  const std::string yaml_filename = argv[3];
-  std::cout << yaml_filename << "\n";
+  const std::string env_filename = argv[3];
+  std::cout << env_filename << "\n";
 
-  YAML::Node root = YAML::LoadFile(yaml_filename);
+  YAML::Node root = YAML::LoadFile(env_filename);
   // Parse collision objects
   std::vector<CollisionObject> collisionObjects;
   if (root["world"] && root["world"]["collision_objects"]) {
@@ -726,26 +776,43 @@ int main(int argc, char* argv[]) {
   const std::string header_filename = (argc <= 5) ? "./fk_gen.h" : argv[5];
   std::cout << header_filename << "\n";
 
-  Model model;
-  pinocchio::urdf::buildModel(urdf_filename, model);
-  GeometryModel geom_model;
-  pinocchio::urdf::buildGeom(model, urdf_filename, pinocchio::COLLISION, geom_model);
+  Model model_coarse;
+  pinocchio::urdf::buildModel(urdf_filename_coarse, model_coarse);
+  GeometryModel geom_model_coarse;
+  pinocchio::urdf::buildGeom(model_coarse, urdf_filename_coarse, pinocchio::COLLISION, geom_model_coarse);
 
-  geom_model.addAllCollisionPairs();
+  /////
+  //for (std::size_t i = 0; i < geom_model_coarse.geometryObjects.size(); ++i)
+  //{
+  //  const pinocchio::GeometryObject & geom_obj = geom_model_coarse.geometryObjects[i];
+  //  const pinocchio::SE3 & placement = geom_obj.placement;
+
+  //  std::string joint_name = model_coarse.names[geom_obj.parentJoint];
+
+  //  std::cout << "Geometry: " << geom_obj.name << std::endl;
+  //  std::cout << "  Parent joint: " << joint_name << std::endl;
+  //  std::cout << "  Placement translation: ["
+  //            << placement.translation().transpose() << "]" << std::endl;
+  //  std::cout << std::endl;
+  //}
+  //return 0;
+  //////
+
+  geom_model_coarse.addAllCollisionPairs();
   const std::string srdf_filename = argv[4];
-  pinocchio::srdf::removeCollisionPairs(model, geom_model, srdf_filename);
+  pinocchio::srdf::removeCollisionPairs(model_coarse, geom_model_coarse, srdf_filename);
 
-  Model model_2;
-  GeometryModel geom_model_2;
-  pinocchio::urdf::buildModel(urdf_filename_2, model_2);
-  pinocchio::urdf::buildGeom(model_2, urdf_filename_2, pinocchio::COLLISION, geom_model_2);
+  Model model_fine;
+  GeometryModel geom_model_fine;
+  pinocchio::urdf::buildModel(urdf_filename_fine, model_fine);
+  pinocchio::urdf::buildGeom(model_fine, urdf_filename_fine, pinocchio::COLLISION, geom_model_fine);
 
-  //joint_to_spheres(model, geom_model, model_2, geom_model_2, "wrist_3_joint");
+  //joint_to_spheres(model_coarse, geom_model_coarse, model_fine, geom_model_fine, "wrist_3_joint");
   //std::cout<<"---------------"<<std::endl;
   /*
-  for(size_t k = 0; k < geom_model.collisionPairs.size(); ++k)
+  for(size_t k = 0; k < geom_model_coarse.collisionPairs.size(); ++k)
   {
-    const pinocchio::CollisionPair & cp = geom_model.collisionPairs[k];
+    const pinocchio::CollisionPair & cp = geom_model_coarse.collisionPairs[k];
     std::cout << "collision pair: " << cp.first << " , " << cp.second<<std::endl;
   }
   */
@@ -753,8 +820,10 @@ int main(int argc, char* argv[]) {
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
 
-  of << "#include \"blaze/Math.h\"\n\n";
-  of << "#include \"self_collision.h\"\n\n";
+  of << "// clang-format off\n\n";
+  of << "#include \"Eigen/Dense\"\n\n";
+  of << "#include \"ctup/typedefs.h\"\n\n";
+  of << "#include \"ctup_fkcc/runtime/collision.h\"\n\n";
   of << "#include <iostream>\n\n";
   of << "namespace ctup_gen {\n\n";
 
@@ -767,14 +836,20 @@ int main(int argc, char* argv[]) {
   of << "  std::cout << matrix << \"\\n\";\n";
   of << "}\n\n";
 
+  of << "template<typename Derived>\n";
+  of << "static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {\n";
+  of << "  std::cout << matrix << \"\\n\";\n";
+  of << "}\n\n";
+
   builder::builder_context context;
   context.run_rce = true;
 
   //of << "static ";
   //auto ast = context.extract_function_ast(Sphere_Environment_Collision, "Sphere_Environment_Collision", env_obj);
   //block::c_code_generator::generate_code(ast, of, 0);
+  //
   of << "static ";
-  auto ast = context.extract_function_ast(fkcc, "fkcc", model, geom_model, model_2, geom_model_2);
+  auto ast = context.extract_function_ast(fkcc, "fkcc", model_coarse, geom_model_coarse, model_fine, geom_model_fine);
   block::c_code_generator::generate_code(ast, of, 0);
 
   of << "}\n";

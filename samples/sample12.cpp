@@ -277,7 +277,7 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
 
 using ctup::BlazeStaticVector;
 using ctup::BlazeStaticMatrix;
-using ctup::backend::blazeVecSIMDd;
+using ctup::backend::blaze_avx512d;
 
 builder::dyn_var<void(BlazeStaticMatrix<double> &)> print_matrix = builder::as_global("print_matrix");
 builder::dyn_var<void(char *)> print_string = builder::as_global("print_string");
@@ -288,7 +288,7 @@ static void print_Xmat(std::string prefix, Xform<Scalar> &xform) {
   print_matrix(xform.denseify());
 }
 
-static void toRawMatrix(dyn_var<BlazeStaticMatrix<blazeVecSIMDd>> &raw_mat, Xform<blazeVecSIMDd> &xform) {
+static void toRawMatrix(dyn_var<BlazeStaticMatrix<blaze_avx512d>> &raw_mat, Xform<blaze_avx512d> &xform) {
   static_var<int> r, c;
 
   for (r = 0; r < 6; r = r + 1)
@@ -317,12 +317,12 @@ static void set_X_T(builder::array<Xform<Prim>> &X_T, const Model &model) {
   }
 }
 
-static dyn_var<BlazeStaticMatrix<blazeVecSIMDd>> fk(const Model &model, dyn_var<BlazeStaticVector<blazeVecSIMDd> &> q) {
+static dyn_var<BlazeStaticMatrix<blaze_avx512d>> fk(const Model &model, dyn_var<BlazeStaticVector<blaze_avx512d> &> q) {
   typedef typename Model::JointIndex JointIndex;
 
-  builder::array<Xform<blazeVecSIMDd>> X_T;
-  builder::array<Xform<blazeVecSIMDd>> X_J;
-  builder::array<Xform<blazeVecSIMDd>> X_0;
+  builder::array<Xform<blaze_avx512d>> X_T;
+  builder::array<Xform<blaze_avx512d>> X_J;
+  builder::array<Xform<blaze_avx512d>> X_0;
 
   X_T.set_size(model.njoints);
   X_J.set_size(model.njoints);
@@ -347,7 +347,7 @@ static dyn_var<BlazeStaticMatrix<blazeVecSIMDd>> fk(const Model &model, dyn_var<
     }
   }
 
-  Xform<blazeVecSIMDd> X_pi;
+  Xform<blaze_avx512d> X_pi;
 
   static_var<JointIndex> parent;
   for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
@@ -359,7 +359,7 @@ static dyn_var<BlazeStaticMatrix<blazeVecSIMDd>> fk(const Model &model, dyn_var<
       X_0[i] = X_pi * X_0[parent];
     }
     else {
-      X_0[i] = ctup::blocked_layout_expr_leaf<blazeVecSIMDd>(X_pi);
+      X_0[i] = ctup::blocked_layout_expr_leaf<blaze_avx512d>(X_pi);
     }
   }
 
@@ -377,7 +377,7 @@ static dyn_var<BlazeStaticMatrix<blazeVecSIMDd>> fk(const Model &model, dyn_var<
   //  print_Xmat(prefix + std::to_string(i), X_0[i]);
   //}
 
-  dyn_var<BlazeStaticMatrix<blazeVecSIMDd>> final_ans;
+  dyn_var<BlazeStaticMatrix<blaze_avx512d>> final_ans;
   final_ans.set_matrix_fixed_size(6, 6);
   toRawMatrix(final_ans, X_0[model.njoints-1]);
 
