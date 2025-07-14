@@ -147,27 +147,32 @@ struct Xform : public matrix_layout<Scalar> {
     cosq = backend::cos<Scalar>(q_i);
 
     if (joint_type == 'R') {
+      // switching to pinocchio transpose repr because
+      // regular featherstone notation isn't working with
+      // homogeneous transforms for some godforesaken reason.
+      // suspect it has sth to do with the X_T that pinocchio
+      // is spitting out.
+      // reverse the signs of the sines for feath (hah)
       if (joint_xform_axis == 'X') {
         set_entry_to_nonconstant(1, 1, cosq);
-        set_entry_to_nonconstant(1, 2, sinq);
-        set_entry_to_nonconstant(2, 1, -sinq);
+        set_entry_to_nonconstant(1, 2, -sinq);
+        set_entry_to_nonconstant(2, 1, sinq);
         set_entry_to_nonconstant(2, 2, cosq);
       }
       else if (joint_xform_axis == 'Y') {
         set_entry_to_nonconstant(0, 0, cosq);
-        set_entry_to_nonconstant(0, 2, -sinq);
-        set_entry_to_nonconstant(2, 0, sinq);
+        set_entry_to_nonconstant(0, 2, sinq);
+        set_entry_to_nonconstant(2, 0, -sinq);
         set_entry_to_nonconstant(2, 2, cosq);
       }
       else if (joint_xform_axis == 'Z') {
         set_entry_to_nonconstant(0, 0, cosq);
-        set_entry_to_nonconstant(0, 1, sinq);
-        set_entry_to_nonconstant(1, 0, -sinq);
+        set_entry_to_nonconstant(0, 1, -sinq);
+        set_entry_to_nonconstant(1, 0, sinq);
         set_entry_to_nonconstant(1, 1, cosq);
       }
     }
     else if (joint_type == 'P') {
-      // negative r-cross, opp signs of featherstone 2.23
       if (joint_xform_axis == 'X') {
         set_entry_to_nonconstant(0, 3, q_i);
       }
@@ -313,7 +318,6 @@ static std::map<size_t, LinkSpheres> joint_to_child_spheres(
 
     Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
     float sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(geom_obj.geometry)->radius;
-    std::cout << "Link: " << i << std::endl;
     ls.coarse_x = sphere_xyz[0];
     ls.coarse_y = sphere_xyz[1];
     ls.coarse_z = sphere_xyz[2]; 
@@ -422,7 +426,9 @@ static void set_X_T(builder::array<Xform<blaze_avx256f>>& X_T, const Model &mode
   static_var<size_t> c;
 
   for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
-    Eigen::Matrix<double, 4, 4> pin_X_T = model.jointPlacements[i];
+    // todo: understand what the heck is this outputing
+    // for homogeneous transforms
+    Eigen::Matrix<double, 4, 4> pin_X_T = model.jointPlacements[i].toHomogeneousMatrix();
 
     // setting E
     for (r = 0; r < 4; r = r + 1) {
@@ -437,6 +443,7 @@ static void set_X_T(builder::array<Xform<blaze_avx256f>>& X_T, const Model &mode
   }
 }
 
+// return 0 (invalid) if collision, 1 (valid) if collision-free
 static dyn_var<int> fkcc(
     const pinocchio::Model &model_coarse, 
     const pinocchio::GeometryModel &geom_model_coarse, 
@@ -531,12 +538,14 @@ static dyn_var<int> fkcc(
     else {
       X_J[i].jcalc(q[i-1]);
 
-      // using standard featherstone matmul ordering
-      // if comparing w pinocchio, transpose each matrix
-      X_pi = X_J[i] * X_T[i];
+      // todo: figure out why standard featherstone matmul
+      // ordering not working with X_T from pinocchio
+      //X_pi = X_J[i] * X_T[i]; // feath
+      X_pi = X_T[i] * X_J[i]; // pin
       parent = model_coarse.parents[i];
       if (parent > 0) {
-        X_0[i] = X_pi * X_0[parent];
+        //X_0[i] = X_pi * X_0[parent]; // feath
+        X_0[i] = X_0[parent] * X_pi; // pin
       }
       else {
         X_0[i] = ctup::matrix_layout_expr_leaf<blaze_avx256f>(X_pi);
@@ -544,7 +553,6 @@ static dyn_var<int> fkcc(
     }
 
     joint_name = model_coarse.names[i];
-    std::cout << joint_name << std::endl;
 
     // X_0 now contains the global transform of the joint wrt the world
 
@@ -569,7 +577,7 @@ static dyn_var<int> fkcc(
     for (static_var<size_t> pair_idx = 0; pair_idx < link_spheres.size(); pair_idx = pair_idx+1) {
       outerIt = link_spheres.begin();
       std::advance(outerIt, pair_idx);
-      size_t link_id = outerIt->first;
+      static_var<size_t> link_id = outerIt->first;
       // child link of joint_name
       // joint_name is always a true actuated joint, child links can be 
       // connected via fixed joints to joint_name as well.
@@ -655,7 +663,7 @@ static dyn_var<int> fkcc(
               sc_x[cp.first], sc_y[cp.first], sc_z[cp.first], sc_r[cp.first]);
 
           //if (cc_res)
-          //  return true; // can't do this because static_var bug
+          //  return 0; // can't do this because static_var bug
         }
       }
       // if we find no self collision, we do a two-level CC of each link against the environment
@@ -663,9 +671,11 @@ static dyn_var<int> fkcc(
               coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id],
               fine_x_0, fine_y_0, fine_z_0, fine_r,
               environment);
-      // return cc_res // can't do this because static_var bug
+      //if (cc_res)
+      //  return 0; // can't do this because static_var bug
 
-      // if cc_res is not in collision, we store the current global position of fine grained spheres corres. to link_id
+      // continuing down the chain, we store the current global position of 
+      // fine grained spheres corres. to link_id
       // we're exploiting the fact that we don't need to recalculate 
       // parent link global positions when iterating down the chain in FK
       sc_x[link_id] = fine_x_0;
@@ -675,7 +685,7 @@ static dyn_var<int> fkcc(
     }
   }
 
-  return 0;
+  return 1;
 }
 
 int main(int argc, char* argv[]) {

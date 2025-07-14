@@ -39,18 +39,18 @@ static bool self_collision_link_vs_link(
 
   bool is_coarse_collide = false;
 
-  //std::cout << "coarse sphere " << geom_id_1 << " translation: \n";
-  //std::cout << coarse_1_x[0] << " " <<
-  //  coarse_1_y[0] << " " <<
-  //  coarse_1_z[0] << "\n";
-  //std::cout << "coarse sphere " << geom_id_2 << " translation: \n";
-  //std::cout << coarse_2_x[0] << " " <<
-  //  coarse_2_y[0] << " " <<
-  //  coarse_2_z[0] << "\n";
+  std::cout << "coarse sphere " << geom_id_1 << " translation: \n";
+  std::cout << coarse_1_x[0] << " " <<
+    coarse_1_y[0] << " " <<
+    coarse_1_z[0] << "\n";
+  std::cout << "coarse sphere " << geom_id_2 << " translation: \n";
+  std::cout << coarse_2_x[0] << " " <<
+    coarse_2_y[0] << " " <<
+    coarse_2_z[0] << "\n";
 
   // checking 8 course sphs at once
 
-  // coarse CC check, see if coarse spheres intersect
+  // coarse cc check, see if coarse spheres intersect
   SV xs = coarse_1_x - coarse_2_x;
   SV ys = coarse_1_y - coarse_2_y;
   SV zs = coarse_1_z - coarse_2_z;
@@ -123,6 +123,97 @@ static bool self_collision_link_vs_link(
   // if control flow gets here, means none of the fine checks collided
   return false;
 }
+
+//template<typename SV>
+//static bool self_collision_link_vs_link(
+//    size_t geom_id_1,
+//    SV& coarse_1_x, 
+//    SV& coarse_1_y, 
+//    SV& coarse_1_z, 
+//    inner_type_t<SV> coarse_1_r,
+//    AlignedVec<SV>& fine_1_x, 
+//    AlignedVec<SV>& fine_1_y, 
+//    AlignedVec<SV>& fine_1_z, 
+//    std::vector<inner_type_t<SV>>& fine_1_r,
+//    size_t geom_id_2,
+//    SV& coarse_2_x, 
+//    SV& coarse_2_y, 
+//    SV& coarse_2_z, 
+//    inner_type_t<SV> coarse_2_r,
+//    AlignedVec<SV>& fine_2_x, 
+//    AlignedVec<SV>& fine_2_y, 
+//    AlignedVec<SV>& fine_2_z, 
+//    std::vector<inner_type_t<SV>>& fine_2_r) {
+//
+//  bool is_coarse_collide, is_fine_collide;
+//
+//  SV sv_1_r, sv_2_r;
+//
+//  sv_1_r = SV(coarse_1_r);
+//  sv_2_r = SV(coarse_2_r);
+//
+//  is_coarse_collide = vamp::sphere_sphere_self_collision(
+//    coarse_1_x, coarse_1_y, coarse_1_z, sv_1_r,
+//    coarse_2_x, coarse_2_y, coarse_2_z, sv_2_r
+//  );
+//
+//  // coarse spheres do not intersect, no fine check needed
+//  if (!is_coarse_collide)
+//    return false;
+//
+//  if (is_coarse_collide) {
+//    // no fine spheres for either link, link geoms do intersect
+//    if(fine_1_x.size() == 0 and fine_2_x.size() == 0) {
+//      return true;
+//    }
+//    else if (fine_1_x.size() == 0) {
+//      for (size_t j = 0; j < fine_2_x.size(); j++) {
+//        sv_2_r = SV(fine_2_r[j]);
+//
+//        is_fine_collide = vamp::sphere_sphere_self_collision(
+//            coarse_1_x, coarse_1_y, coarse_1_z, sv_1_r,
+//            fine_2_x[j], fine_2_y[j], fine_2_z[j], sv_2_r
+//        );
+//
+//        if (is_fine_collide)
+//          return true;
+//      }
+//    }
+//    else if (fine_2_x.size() == 0) {
+//      for(size_t i = 0; i < fine_1_x.size(); i++) {
+//        sv_1_r = SV(fine_1_r[i]);
+//
+//        is_fine_collide = vamp::sphere_sphere_self_collision(
+//            fine_1_x[i], fine_1_y[i], fine_1_z[i], sv_1_r,
+//            coarse_2_x, coarse_2_y, coarse_2_z, sv_2_r
+//        );
+//
+//        if (is_fine_collide)
+//          return true;
+//      }
+//    }
+//    else {
+//      for (size_t j = 0; j < fine_2_x.size(); j++) {
+//        sv_2_r = SV(fine_2_r[j]);
+//
+//        for (size_t i = 0; i < fine_1_x.size(); i++) {
+//          sv_1_r = SV(fine_1_r[i]);
+//
+//          is_fine_collide = vamp::sphere_sphere_self_collision(
+//              fine_1_x[i], fine_1_y[i], fine_1_z[i], sv_1_r,
+//              fine_2_x[j], fine_2_y[j], fine_2_z[j], sv_2_r
+//          );
+//
+//          if (is_fine_collide)
+//            return true;
+//          }
+//      }
+//    }
+//  }
+//
+//  // if control flow gets here, means none of the fine checks collided
+//  return false;
+//}
 
 template<typename SV>
 static bool link_vs_environment_collision(
