@@ -133,10 +133,10 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   var67[1ll] = var67[1ll] + 1.00355899333954f;
   var68[1ll] = 0.0799999982118607f;
   var69[1ll] = 0ll;
-  int var87;
-  var87 = ctup_runtime::link_vs_environment_collision(var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var70, var71, var72, var73, arg4);
-  if (var87)
-    return 0;
+  //int var87;
+  //var87 = ctup_runtime::link_vs_environment_collision(var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var70, var71, var72, var73, arg4);
+  //if (var87)
+  //  return 0;
   var74[1ll] = var70;
   var75[1ll] = var71;
   var76[1ll] = var72;
