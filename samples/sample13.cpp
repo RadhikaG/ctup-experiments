@@ -233,12 +233,16 @@ builder::dyn_var<int (
     size_t,
     // coarse sph 1
     blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, float,
+    // # of fine sphs 1
+    size_t,
     // fine sph 1
     aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, ctup::vector_t<float>&,
     // geom_id_2, helpful for debug
     size_t,
     // coarse sph 2 
     blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, float,
+    // # of fine sphs 2
+    size_t,
     // fine sph 2
     aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, ctup::vector_t<float>&
         )> 
@@ -247,6 +251,8 @@ builder::dyn_var<int (
 builder::dyn_var<int (
     // coarse sph
     blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, float,
+    // # of fine sphs
+    size_t,
     // fine sphs
     aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, ctup::vector_t<float>&,
     // vamp environment type
@@ -475,6 +481,11 @@ static dyn_var<int> fkcc(
   resize_arr(coarse_z_0, n_coarse_sph);
   resize_arr(coarse_r, n_coarse_sph);
 
+  // storing number of fine sphs per link
+  // indexed as: n_fine_sph_per_link[link_id]
+  dyn_var<size_t[]> n_fine_sph_for_link;
+  resize_arr(n_fine_sph_for_link, n_coarse_sph);
+
   // fine collision geom sphere positions
   dyn_var<aligned_vector_t<blaze_avx256f>> fine_x_0, fine_y_0, fine_z_0;
   dyn_var<ctup::vector_t<float>> fine_r;
@@ -610,6 +621,8 @@ static dyn_var<int> fkcc(
       coarse_r[link_id] = link_spheres[link_id].coarse_r;
 
       static_var<size_t> n_fine_sph = link_spheres[link_id].fine_r.size();
+      n_fine_sph_for_link[link_id] = n_fine_sph;
+
       // for fine grained sphere geoms
       for(static_var<size_t> k = 0; k < n_fine_sph; k = k+1){
         fine_x_0[k] = 
@@ -651,28 +664,38 @@ static dyn_var<int> fkcc(
           // if they're in collision, we CC two sets of fine spheres
           // associated w the cp
           cc_res = runtime::self_collision_link_vs_link(
-              cp.second,
-              // coarse sphere assoc. w cp.second
-              coarse_x_0[cp.second], coarse_y_0[cp.second], coarse_z_0[cp.second], coarse_r[cp.second], 
-              // fine spheres assoc. w cp.second
-              fine_x_0, fine_y_0, fine_z_0, fine_r, 
               cp.first,
               // coarse sphere assoc. w cp.first
               coarse_x_0[cp.first], coarse_y_0[cp.first], coarse_z_0[cp.first], coarse_r[cp.first], 
+              // # of fine spheres assoc. w cp.first
+              n_fine_sph_for_link[cp.first],
               // fine spheres assoc. w cp.first
-              sc_x[cp.first], sc_y[cp.first], sc_z[cp.first], sc_r[cp.first]);
+              sc_x[cp.first], sc_y[cp.first], sc_z[cp.first], sc_r[cp.first],
+              cp.second,
+              // coarse sphere assoc. w cp.second
+              coarse_x_0[cp.second], coarse_y_0[cp.second], coarse_z_0[cp.second], coarse_r[cp.second], 
+              // # of fine spheres assoc. w cp.second
+              n_fine_sph_for_link[cp.second],
+              // fine spheres assoc. w cp.second
+              fine_x_0, fine_y_0, fine_z_0, fine_r
+          );
 
           //if (cc_res)
           //  return 0; // can't do this because static_var bug
         }
       }
-      // if we find no self collision, we do a two-level CC of each link against the environment
-      cc_res = runtime::link_vs_environment_collision(
-              coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id],
-              fine_x_0, fine_y_0, fine_z_0, fine_r,
-              environment);
-      //if (cc_res)
-      //  return 0; // can't do this because static_var bug
+
+      if (i > 0) {
+        // no link vs. environment CC for universe joint
+        // if we find no self collision, we do a two-level CC of each link against the environment
+        cc_res = runtime::link_vs_environment_collision(
+                coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id],
+                n_fine_sph_for_link[link_id],
+                fine_x_0, fine_y_0, fine_z_0, fine_r,
+                environment);
+        //if (cc_res)
+        //  return 0; // can't do this because static_var bug
+      }
 
       // continuing down the chain, we store the current global position of 
       // fine grained spheres corres. to link_id

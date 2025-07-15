@@ -9,7 +9,7 @@ int main(int argc, char ** argv)
 {
   using namespace pinocchio;
   const std::string pin_model_path = argv[1];
-  const std::string urdf_filename = pin_model_path + std::string("ur5_spherized_1.urdf");
+  const std::string urdf_filename = pin_model_path + std::string("ur5_spherized.urdf");
   // You should change here to set up your own SRDF file
   const std::string srdf_filename = pin_model_path + std::string("ur5.srdf");
 
