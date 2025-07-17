@@ -133,10 +133,10 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   var67[1ll] = var67[1ll] + 1.00355899333954f;
   var68[1ll] = 0.0799999982118607f;
   var69[1ll] = 0ll;
-  //int var87;
-  //var87 = ctup_runtime::link_vs_environment_collision(var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var70, var71, var72, var73, arg4);
-  //if (var87)
-  //  return 0;
+  int var87;
+  var87 = ctup_runtime::link_vs_environment_collision(var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var70, var71, var72, var73, arg4);
+  if (var87)
+    return 0;
   var74[1ll] = var70;
   var75[1ll] = var71;
   var76[1ll] = var72;
@@ -292,7 +292,7 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var103;
   var103 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var70, var71, var72, var73);
   if (var103)
-    return 0; //collision pair: 0,2
+    return 0; //collision pair: 0,2 : base_link_0,upper_arm_link_0
   var103 = ctup_runtime::link_vs_environment_collision(var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var70, var71, var72, var73, arg4);
   if (var103)
     return 0;
@@ -458,10 +458,10 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var120;
   var120 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var70, var71, var72, var73);
   if (var120)
-    return 0; //collision pair: 0,3
+    return 0; //collision pair: 0,3 : base_link_0,forearm_link_0
   var120 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var70, var71, var72, var73);
   if (var120)
-    return 0; //collision pair: 1,3
+    return 0; //collision pair: 1,3 : shoulder_link_0,forearm_link_0
   var120 = ctup_runtime::link_vs_environment_collision(var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var70, var71, var72, var73, arg4);
   if (var120)
     return 0;
@@ -613,13 +613,13 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var137;
   var137 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 4ll, var65[4ll], var66[4ll], var67[4ll], var68[4ll], var69[4ll], var70, var71, var72, var73);
   if (var137)
-    return 0; //collision pair: 0,4
+    return 0; //collision pair: 0,4 : base_link_0,wrist_1_link_0
   var137 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 4ll, var65[4ll], var66[4ll], var67[4ll], var68[4ll], var69[4ll], var70, var71, var72, var73);
   if (var137)
-    return 0; //collision pair: 1,4
+    return 0; //collision pair: 1,4 : shoulder_link_0,wrist_1_link_0
   var137 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 4ll, var65[4ll], var66[4ll], var67[4ll], var68[4ll], var69[4ll], var70, var71, var72, var73);
   if (var137)
-    return 0; //collision pair: 2,4
+    return 0; //collision pair: 2,4 : upper_arm_link_0,wrist_1_link_0
   var137 = ctup_runtime::link_vs_environment_collision(var65[4ll], var66[4ll], var67[4ll], var68[4ll], var69[4ll], var70, var71, var72, var73, arg4);
   if (var137)
     return 0;
@@ -778,16 +778,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var155;
   var155 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 5ll, var65[5ll], var66[5ll], var67[5ll], var68[5ll], var69[5ll], var70, var71, var72, var73);
   if (var155)
-    return 0; //collision pair: 0,5
+    return 0; //collision pair: 0,5 : base_link_0,wrist_2_link_0
   var155 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 5ll, var65[5ll], var66[5ll], var67[5ll], var68[5ll], var69[5ll], var70, var71, var72, var73);
   if (var155)
-    return 0; //collision pair: 1,5
+    return 0; //collision pair: 1,5 : shoulder_link_0,wrist_2_link_0
   var155 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 5ll, var65[5ll], var66[5ll], var67[5ll], var68[5ll], var69[5ll], var70, var71, var72, var73);
   if (var155)
-    return 0; //collision pair: 2,5
+    return 0; //collision pair: 2,5 : upper_arm_link_0,wrist_2_link_0
   var155 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 5ll, var65[5ll], var66[5ll], var67[5ll], var68[5ll], var69[5ll], var70, var71, var72, var73);
   if (var155)
-    return 0; //collision pair: 3,5
+    return 0; //collision pair: 3,5 : forearm_link_0,wrist_2_link_0
   var155 = ctup_runtime::link_vs_environment_collision(var65[5ll], var66[5ll], var67[5ll], var68[5ll], var69[5ll], var70, var71, var72, var73, arg4);
   if (var155)
     return 0;
@@ -932,16 +932,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var173;
   var173 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 6ll, var65[6ll], var66[6ll], var67[6ll], var68[6ll], var69[6ll], var70, var71, var72, var73);
   if (var173)
-    return 0; //collision pair: 0,6
+    return 0; //collision pair: 0,6 : base_link_0,wrist_3_link_0
   var173 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 6ll, var65[6ll], var66[6ll], var67[6ll], var68[6ll], var69[6ll], var70, var71, var72, var73);
   if (var173)
-    return 0; //collision pair: 1,6
+    return 0; //collision pair: 1,6 : shoulder_link_0,wrist_3_link_0
   var173 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 6ll, var65[6ll], var66[6ll], var67[6ll], var68[6ll], var69[6ll], var70, var71, var72, var73);
   if (var173)
-    return 0; //collision pair: 2,6
+    return 0; //collision pair: 2,6 : upper_arm_link_0,wrist_3_link_0
   var173 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 6ll, var65[6ll], var66[6ll], var67[6ll], var68[6ll], var69[6ll], var70, var71, var72, var73);
   if (var173)
-    return 0; //collision pair: 3,6
+    return 0; //collision pair: 3,6 : forearm_link_0,wrist_3_link_0
   var173 = ctup_runtime::link_vs_environment_collision(var65[6ll], var66[6ll], var67[6ll], var68[6ll], var69[6ll], var70, var71, var72, var73, arg4);
   if (var173)
     return 0;
@@ -967,22 +967,22 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var174;
   var174 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 7ll, var65[7ll], var66[7ll], var67[7ll], var68[7ll], var69[7ll], var70, var71, var72, var73);
   if (var174)
-    return 0; //collision pair: 0,7
+    return 0; //collision pair: 0,7 : base_link_0,fts_robotside_0
   var174 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 7ll, var65[7ll], var66[7ll], var67[7ll], var68[7ll], var69[7ll], var70, var71, var72, var73);
   if (var174)
-    return 0; //collision pair: 1,7
+    return 0; //collision pair: 1,7 : shoulder_link_0,fts_robotside_0
   var174 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 7ll, var65[7ll], var66[7ll], var67[7ll], var68[7ll], var69[7ll], var70, var71, var72, var73);
   if (var174)
-    return 0; //collision pair: 2,7
+    return 0; //collision pair: 2,7 : upper_arm_link_0,fts_robotside_0
   var174 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 7ll, var65[7ll], var66[7ll], var67[7ll], var68[7ll], var69[7ll], var70, var71, var72, var73);
   if (var174)
-    return 0; //collision pair: 3,7
+    return 0; //collision pair: 3,7 : forearm_link_0,fts_robotside_0
   var174 = ctup_runtime::self_collision_link_vs_link(4ll, var65[4ll], var66[4ll], var67[4ll], var68[4ll], var69[4ll], var74[4ll], var75[4ll], var76[4ll], var77[4ll], 7ll, var65[7ll], var66[7ll], var67[7ll], var68[7ll], var69[7ll], var70, var71, var72, var73);
   if (var174)
-    return 0; //collision pair: 4,7
+    return 0; //collision pair: 4,7 : wrist_1_link_0,fts_robotside_0
   var174 = ctup_runtime::self_collision_link_vs_link(5ll, var65[5ll], var66[5ll], var67[5ll], var68[5ll], var69[5ll], var74[5ll], var75[5ll], var76[5ll], var77[5ll], 7ll, var65[7ll], var66[7ll], var67[7ll], var68[7ll], var69[7ll], var70, var71, var72, var73);
   if (var174)
-    return 0; //collision pair: 5,7
+    return 0; //collision pair: 5,7 : wrist_2_link_0,fts_robotside_0
   var174 = ctup_runtime::link_vs_environment_collision(var65[7ll], var66[7ll], var67[7ll], var68[7ll], var69[7ll], var70, var71, var72, var73, arg4);
   if (var174)
     return 0;
@@ -1015,16 +1015,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var175;
   var175 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 8ll, var65[8ll], var66[8ll], var67[8ll], var68[8ll], var69[8ll], var70, var71, var72, var73);
   if (var175)
-    return 0; //collision pair: 0,8
+    return 0; //collision pair: 0,8 : base_link_0,robotiq_85_base_link_0
   var175 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 8ll, var65[8ll], var66[8ll], var67[8ll], var68[8ll], var69[8ll], var70, var71, var72, var73);
   if (var175)
-    return 0; //collision pair: 1,8
+    return 0; //collision pair: 1,8 : shoulder_link_0,robotiq_85_base_link_0
   var175 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 8ll, var65[8ll], var66[8ll], var67[8ll], var68[8ll], var69[8ll], var70, var71, var72, var73);
   if (var175)
-    return 0; //collision pair: 2,8
+    return 0; //collision pair: 2,8 : upper_arm_link_0,robotiq_85_base_link_0
   var175 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 8ll, var65[8ll], var66[8ll], var67[8ll], var68[8ll], var69[8ll], var70, var71, var72, var73);
   if (var175)
-    return 0; //collision pair: 3,8
+    return 0; //collision pair: 3,8 : forearm_link_0,robotiq_85_base_link_0
   var175 = ctup_runtime::link_vs_environment_collision(var65[8ll], var66[8ll], var67[8ll], var68[8ll], var69[8ll], var70, var71, var72, var73, arg4);
   if (var175)
     return 0;
@@ -1050,16 +1050,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var176;
   var176 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 9ll, var65[9ll], var66[9ll], var67[9ll], var68[9ll], var69[9ll], var70, var71, var72, var73);
   if (var176)
-    return 0; //collision pair: 0,9
+    return 0; //collision pair: 0,9 : base_link_0,robotiq_85_left_inner_knuckle_link_0
   var176 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 9ll, var65[9ll], var66[9ll], var67[9ll], var68[9ll], var69[9ll], var70, var71, var72, var73);
   if (var176)
-    return 0; //collision pair: 1,9
+    return 0; //collision pair: 1,9 : shoulder_link_0,robotiq_85_left_inner_knuckle_link_0
   var176 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 9ll, var65[9ll], var66[9ll], var67[9ll], var68[9ll], var69[9ll], var70, var71, var72, var73);
   if (var176)
-    return 0; //collision pair: 2,9
+    return 0; //collision pair: 2,9 : upper_arm_link_0,robotiq_85_left_inner_knuckle_link_0
   var176 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 9ll, var65[9ll], var66[9ll], var67[9ll], var68[9ll], var69[9ll], var70, var71, var72, var73);
   if (var176)
-    return 0; //collision pair: 3,9
+    return 0; //collision pair: 3,9 : forearm_link_0,robotiq_85_left_inner_knuckle_link_0
   var176 = ctup_runtime::link_vs_environment_collision(var65[9ll], var66[9ll], var67[9ll], var68[9ll], var69[9ll], var70, var71, var72, var73, arg4);
   if (var176)
     return 0;
@@ -1092,16 +1092,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var177;
   var177 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 10ll, var65[10ll], var66[10ll], var67[10ll], var68[10ll], var69[10ll], var70, var71, var72, var73);
   if (var177)
-    return 0; //collision pair: 0,10
+    return 0; //collision pair: 0,10 : base_link_0,robotiq_85_left_finger_tip_link_0
   var177 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 10ll, var65[10ll], var66[10ll], var67[10ll], var68[10ll], var69[10ll], var70, var71, var72, var73);
   if (var177)
-    return 0; //collision pair: 1,10
+    return 0; //collision pair: 1,10 : shoulder_link_0,robotiq_85_left_finger_tip_link_0
   var177 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 10ll, var65[10ll], var66[10ll], var67[10ll], var68[10ll], var69[10ll], var70, var71, var72, var73);
   if (var177)
-    return 0; //collision pair: 2,10
+    return 0; //collision pair: 2,10 : upper_arm_link_0,robotiq_85_left_finger_tip_link_0
   var177 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 10ll, var65[10ll], var66[10ll], var67[10ll], var68[10ll], var69[10ll], var70, var71, var72, var73);
   if (var177)
-    return 0; //collision pair: 3,10
+    return 0; //collision pair: 3,10 : forearm_link_0,robotiq_85_left_finger_tip_link_0
   var177 = ctup_runtime::link_vs_environment_collision(var65[10ll], var66[10ll], var67[10ll], var68[10ll], var69[10ll], var70, var71, var72, var73, arg4);
   if (var177)
     return 0;
@@ -1127,16 +1127,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var178;
   var178 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 11ll, var65[11ll], var66[11ll], var67[11ll], var68[11ll], var69[11ll], var70, var71, var72, var73);
   if (var178)
-    return 0; //collision pair: 0,11
+    return 0; //collision pair: 0,11 : base_link_0,robotiq_85_left_knuckle_link_0
   var178 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 11ll, var65[11ll], var66[11ll], var67[11ll], var68[11ll], var69[11ll], var70, var71, var72, var73);
   if (var178)
-    return 0; //collision pair: 1,11
+    return 0; //collision pair: 1,11 : shoulder_link_0,robotiq_85_left_knuckle_link_0
   var178 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 11ll, var65[11ll], var66[11ll], var67[11ll], var68[11ll], var69[11ll], var70, var71, var72, var73);
   if (var178)
-    return 0; //collision pair: 2,11
+    return 0; //collision pair: 2,11 : upper_arm_link_0,robotiq_85_left_knuckle_link_0
   var178 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 11ll, var65[11ll], var66[11ll], var67[11ll], var68[11ll], var69[11ll], var70, var71, var72, var73);
   if (var178)
-    return 0; //collision pair: 3,11
+    return 0; //collision pair: 3,11 : forearm_link_0,robotiq_85_left_knuckle_link_0
   var178 = ctup_runtime::link_vs_environment_collision(var65[11ll], var66[11ll], var67[11ll], var68[11ll], var69[11ll], var70, var71, var72, var73, arg4);
   if (var178)
     return 0;
@@ -1176,16 +1176,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var179;
   var179 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 12ll, var65[12ll], var66[12ll], var67[12ll], var68[12ll], var69[12ll], var70, var71, var72, var73);
   if (var179)
-    return 0; //collision pair: 0,12
+    return 0; //collision pair: 0,12 : base_link_0,robotiq_85_left_finger_link_0
   var179 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 12ll, var65[12ll], var66[12ll], var67[12ll], var68[12ll], var69[12ll], var70, var71, var72, var73);
   if (var179)
-    return 0; //collision pair: 1,12
+    return 0; //collision pair: 1,12 : shoulder_link_0,robotiq_85_left_finger_link_0
   var179 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 12ll, var65[12ll], var66[12ll], var67[12ll], var68[12ll], var69[12ll], var70, var71, var72, var73);
   if (var179)
-    return 0; //collision pair: 2,12
+    return 0; //collision pair: 2,12 : upper_arm_link_0,robotiq_85_left_finger_link_0
   var179 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 12ll, var65[12ll], var66[12ll], var67[12ll], var68[12ll], var69[12ll], var70, var71, var72, var73);
   if (var179)
-    return 0; //collision pair: 3,12
+    return 0; //collision pair: 3,12 : forearm_link_0,robotiq_85_left_finger_link_0
   var179 = ctup_runtime::link_vs_environment_collision(var65[12ll], var66[12ll], var67[12ll], var68[12ll], var69[12ll], var70, var71, var72, var73, arg4);
   if (var179)
     return 0;
@@ -1211,16 +1211,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var180;
   var180 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 13ll, var65[13ll], var66[13ll], var67[13ll], var68[13ll], var69[13ll], var70, var71, var72, var73);
   if (var180)
-    return 0; //collision pair: 0,13
+    return 0; //collision pair: 0,13 : base_link_0,robotiq_85_right_inner_knuckle_link_0
   var180 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 13ll, var65[13ll], var66[13ll], var67[13ll], var68[13ll], var69[13ll], var70, var71, var72, var73);
   if (var180)
-    return 0; //collision pair: 1,13
+    return 0; //collision pair: 1,13 : shoulder_link_0,robotiq_85_right_inner_knuckle_link_0
   var180 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 13ll, var65[13ll], var66[13ll], var67[13ll], var68[13ll], var69[13ll], var70, var71, var72, var73);
   if (var180)
-    return 0; //collision pair: 2,13
+    return 0; //collision pair: 2,13 : upper_arm_link_0,robotiq_85_right_inner_knuckle_link_0
   var180 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 13ll, var65[13ll], var66[13ll], var67[13ll], var68[13ll], var69[13ll], var70, var71, var72, var73);
   if (var180)
-    return 0; //collision pair: 3,13
+    return 0; //collision pair: 3,13 : forearm_link_0,robotiq_85_right_inner_knuckle_link_0
   var180 = ctup_runtime::link_vs_environment_collision(var65[13ll], var66[13ll], var67[13ll], var68[13ll], var69[13ll], var70, var71, var72, var73, arg4);
   if (var180)
     return 0;
@@ -1253,16 +1253,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var181;
   var181 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 14ll, var65[14ll], var66[14ll], var67[14ll], var68[14ll], var69[14ll], var70, var71, var72, var73);
   if (var181)
-    return 0; //collision pair: 0,14
+    return 0; //collision pair: 0,14 : base_link_0,robotiq_85_right_finger_tip_link_0
   var181 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 14ll, var65[14ll], var66[14ll], var67[14ll], var68[14ll], var69[14ll], var70, var71, var72, var73);
   if (var181)
-    return 0; //collision pair: 1,14
+    return 0; //collision pair: 1,14 : shoulder_link_0,robotiq_85_right_finger_tip_link_0
   var181 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 14ll, var65[14ll], var66[14ll], var67[14ll], var68[14ll], var69[14ll], var70, var71, var72, var73);
   if (var181)
-    return 0; //collision pair: 2,14
+    return 0; //collision pair: 2,14 : upper_arm_link_0,robotiq_85_right_finger_tip_link_0
   var181 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 14ll, var65[14ll], var66[14ll], var67[14ll], var68[14ll], var69[14ll], var70, var71, var72, var73);
   if (var181)
-    return 0; //collision pair: 3,14
+    return 0; //collision pair: 3,14 : forearm_link_0,robotiq_85_right_finger_tip_link_0
   var181 = ctup_runtime::link_vs_environment_collision(var65[14ll], var66[14ll], var67[14ll], var68[14ll], var69[14ll], var70, var71, var72, var73, arg4);
   if (var181)
     return 0;
@@ -1288,16 +1288,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var182;
   var182 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 15ll, var65[15ll], var66[15ll], var67[15ll], var68[15ll], var69[15ll], var70, var71, var72, var73);
   if (var182)
-    return 0; //collision pair: 0,15
+    return 0; //collision pair: 0,15 : base_link_0,robotiq_85_right_knuckle_link_0
   var182 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 15ll, var65[15ll], var66[15ll], var67[15ll], var68[15ll], var69[15ll], var70, var71, var72, var73);
   if (var182)
-    return 0; //collision pair: 1,15
+    return 0; //collision pair: 1,15 : shoulder_link_0,robotiq_85_right_knuckle_link_0
   var182 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 15ll, var65[15ll], var66[15ll], var67[15ll], var68[15ll], var69[15ll], var70, var71, var72, var73);
   if (var182)
-    return 0; //collision pair: 2,15
+    return 0; //collision pair: 2,15 : upper_arm_link_0,robotiq_85_right_knuckle_link_0
   var182 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 15ll, var65[15ll], var66[15ll], var67[15ll], var68[15ll], var69[15ll], var70, var71, var72, var73);
   if (var182)
-    return 0; //collision pair: 3,15
+    return 0; //collision pair: 3,15 : forearm_link_0,robotiq_85_right_knuckle_link_0
   var182 = ctup_runtime::link_vs_environment_collision(var65[15ll], var66[15ll], var67[15ll], var68[15ll], var69[15ll], var70, var71, var72, var73, arg4);
   if (var182)
     return 0;
@@ -1337,16 +1337,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var183;
   var183 = ctup_runtime::self_collision_link_vs_link(0ll, var65[0ll], var66[0ll], var67[0ll], var68[0ll], var69[0ll], var74[0ll], var75[0ll], var76[0ll], var77[0ll], 16ll, var65[16ll], var66[16ll], var67[16ll], var68[16ll], var69[16ll], var70, var71, var72, var73);
   if (var183)
-    return 0; //collision pair: 0,16
+    return 0; //collision pair: 0,16 : base_link_0,robotiq_85_right_finger_link_0
   var183 = ctup_runtime::self_collision_link_vs_link(1ll, var65[1ll], var66[1ll], var67[1ll], var68[1ll], var69[1ll], var74[1ll], var75[1ll], var76[1ll], var77[1ll], 16ll, var65[16ll], var66[16ll], var67[16ll], var68[16ll], var69[16ll], var70, var71, var72, var73);
   if (var183)
-    return 0; //collision pair: 1,16
+    return 0; //collision pair: 1,16 : shoulder_link_0,robotiq_85_right_finger_link_0
   var183 = ctup_runtime::self_collision_link_vs_link(2ll, var65[2ll], var66[2ll], var67[2ll], var68[2ll], var69[2ll], var74[2ll], var75[2ll], var76[2ll], var77[2ll], 16ll, var65[16ll], var66[16ll], var67[16ll], var68[16ll], var69[16ll], var70, var71, var72, var73);
   if (var183)
-    return 0; //collision pair: 2,16
+    return 0; //collision pair: 2,16 : upper_arm_link_0,robotiq_85_right_finger_link_0
   var183 = ctup_runtime::self_collision_link_vs_link(3ll, var65[3ll], var66[3ll], var67[3ll], var68[3ll], var69[3ll], var74[3ll], var75[3ll], var76[3ll], var77[3ll], 16ll, var65[16ll], var66[16ll], var67[16ll], var68[16ll], var69[16ll], var70, var71, var72, var73);
   if (var183)
-    return 0; //collision pair: 3,16
+    return 0; //collision pair: 3,16 : forearm_link_0,robotiq_85_right_finger_link_0
   var183 = ctup_runtime::link_vs_environment_collision(var65[16ll], var66[16ll], var67[16ll], var68[16ll], var69[16ll], var70, var71, var72, var73, arg4);
   if (var183)
     return 0;

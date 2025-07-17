@@ -657,6 +657,7 @@ static dyn_var<int> fkcc(
           //std::cout << "collision pair: " << cp.first << "," << cp.second << std::endl;
           std::string cp_str = "collision pair: ";
           cp_str += std::to_string(cp.first) + "," + std::to_string(cp.second);
+          cp_str += " : " + geom_model_coarse.geometryObjects[cp.first].name + "," + geom_model_coarse.geometryObjects[cp.second].name;
           builder::annotate(cp_str.c_str());
 
           // 2-level self collision checking per link

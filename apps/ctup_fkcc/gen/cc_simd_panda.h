@@ -848,13 +848,13 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var164;
   var164 = ctup_runtime::self_collision_link_vs_link(0ll, var74[0ll], var75[0ll], var76[0ll], var77[0ll], var78[0ll], var83[0ll], var84[0ll], var85[0ll], var86[0ll], 5ll, var74[5ll], var75[5ll], var76[5ll], var77[5ll], var78[5ll], var79, var80, var81, var82);
   if (var164)
-    return 0; //collision pair: 0,5
+    return 0; //collision pair: 0,5 : panda_link0_0,panda_link5_0
   var164 = ctup_runtime::self_collision_link_vs_link(1ll, var74[1ll], var75[1ll], var76[1ll], var77[1ll], var78[1ll], var83[1ll], var84[1ll], var85[1ll], var86[1ll], 5ll, var74[5ll], var75[5ll], var76[5ll], var77[5ll], var78[5ll], var79, var80, var81, var82);
   if (var164)
-    return 0; //collision pair: 1,5
+    return 0; //collision pair: 1,5 : panda_link1_0,panda_link5_0
   var164 = ctup_runtime::self_collision_link_vs_link(2ll, var74[2ll], var75[2ll], var76[2ll], var77[2ll], var78[2ll], var83[2ll], var84[2ll], var85[2ll], var86[2ll], 5ll, var74[5ll], var75[5ll], var76[5ll], var77[5ll], var78[5ll], var79, var80, var81, var82);
   if (var164)
-    return 0; //collision pair: 2,5
+    return 0; //collision pair: 2,5 : panda_link2_0,panda_link5_0
   var164 = ctup_runtime::link_vs_environment_collision(var74[5ll], var75[5ll], var76[5ll], var77[5ll], var78[5ll], var79, var80, var81, var82, arg4);
   if (var164)
     return 0;
@@ -1013,10 +1013,10 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var182;
   var182 = ctup_runtime::self_collision_link_vs_link(0ll, var74[0ll], var75[0ll], var76[0ll], var77[0ll], var78[0ll], var83[0ll], var84[0ll], var85[0ll], var86[0ll], 6ll, var74[6ll], var75[6ll], var76[6ll], var77[6ll], var78[6ll], var79, var80, var81, var82);
   if (var182)
-    return 0; //collision pair: 0,6
+    return 0; //collision pair: 0,6 : panda_link0_0,panda_link6_0
   var182 = ctup_runtime::self_collision_link_vs_link(1ll, var74[1ll], var75[1ll], var76[1ll], var77[1ll], var78[1ll], var83[1ll], var84[1ll], var85[1ll], var86[1ll], 6ll, var74[6ll], var75[6ll], var76[6ll], var77[6ll], var78[6ll], var79, var80, var81, var82);
   if (var182)
-    return 0; //collision pair: 1,6
+    return 0; //collision pair: 1,6 : panda_link1_0,panda_link6_0
   var182 = ctup_runtime::link_vs_environment_collision(var74[6ll], var75[6ll], var76[6ll], var77[6ll], var78[6ll], var79, var80, var81, var82, arg4);
   if (var182)
     return 0;
@@ -1189,16 +1189,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var200;
   var200 = ctup_runtime::self_collision_link_vs_link(0ll, var74[0ll], var75[0ll], var76[0ll], var77[0ll], var78[0ll], var83[0ll], var84[0ll], var85[0ll], var86[0ll], 7ll, var74[7ll], var75[7ll], var76[7ll], var77[7ll], var78[7ll], var79, var80, var81, var82);
   if (var200)
-    return 0; //collision pair: 0,7
+    return 0; //collision pair: 0,7 : panda_link0_0,panda_link7_0
   var200 = ctup_runtime::self_collision_link_vs_link(1ll, var74[1ll], var75[1ll], var76[1ll], var77[1ll], var78[1ll], var83[1ll], var84[1ll], var85[1ll], var86[1ll], 7ll, var74[7ll], var75[7ll], var76[7ll], var77[7ll], var78[7ll], var79, var80, var81, var82);
   if (var200)
-    return 0; //collision pair: 1,7
+    return 0; //collision pair: 1,7 : panda_link1_0,panda_link7_0
   var200 = ctup_runtime::self_collision_link_vs_link(2ll, var74[2ll], var75[2ll], var76[2ll], var77[2ll], var78[2ll], var83[2ll], var84[2ll], var85[2ll], var86[2ll], 7ll, var74[7ll], var75[7ll], var76[7ll], var77[7ll], var78[7ll], var79, var80, var81, var82);
   if (var200)
-    return 0; //collision pair: 2,7
+    return 0; //collision pair: 2,7 : panda_link2_0,panda_link7_0
   var200 = ctup_runtime::self_collision_link_vs_link(5ll, var74[5ll], var75[5ll], var76[5ll], var77[5ll], var78[5ll], var83[5ll], var84[5ll], var85[5ll], var86[5ll], 7ll, var74[7ll], var75[7ll], var76[7ll], var77[7ll], var78[7ll], var79, var80, var81, var82);
   if (var200)
-    return 0; //collision pair: 5,7
+    return 0; //collision pair: 5,7 : panda_link5_0,panda_link7_0
   var200 = ctup_runtime::link_vs_environment_collision(var74[7ll], var75[7ll], var76[7ll], var77[7ll], var78[7ll], var79, var80, var81, var82, arg4);
   if (var200)
     return 0;
@@ -1343,16 +1343,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var201;
   var201 = ctup_runtime::self_collision_link_vs_link(0ll, var74[0ll], var75[0ll], var76[0ll], var77[0ll], var78[0ll], var83[0ll], var84[0ll], var85[0ll], var86[0ll], 8ll, var74[8ll], var75[8ll], var76[8ll], var77[8ll], var78[8ll], var79, var80, var81, var82);
   if (var201)
-    return 0; //collision pair: 0,8
+    return 0; //collision pair: 0,8 : panda_link0_0,panda_hand_0
   var201 = ctup_runtime::self_collision_link_vs_link(1ll, var74[1ll], var75[1ll], var76[1ll], var77[1ll], var78[1ll], var83[1ll], var84[1ll], var85[1ll], var86[1ll], 8ll, var74[8ll], var75[8ll], var76[8ll], var77[8ll], var78[8ll], var79, var80, var81, var82);
   if (var201)
-    return 0; //collision pair: 1,8
+    return 0; //collision pair: 1,8 : panda_link1_0,panda_hand_0
   var201 = ctup_runtime::self_collision_link_vs_link(2ll, var74[2ll], var75[2ll], var76[2ll], var77[2ll], var78[2ll], var83[2ll], var84[2ll], var85[2ll], var86[2ll], 8ll, var74[8ll], var75[8ll], var76[8ll], var77[8ll], var78[8ll], var79, var80, var81, var82);
   if (var201)
-    return 0; //collision pair: 2,8
+    return 0; //collision pair: 2,8 : panda_link2_0,panda_hand_0
   var201 = ctup_runtime::self_collision_link_vs_link(5ll, var74[5ll], var75[5ll], var76[5ll], var77[5ll], var78[5ll], var83[5ll], var84[5ll], var85[5ll], var86[5ll], 8ll, var74[8ll], var75[8ll], var76[8ll], var77[8ll], var78[8ll], var79, var80, var81, var82);
   if (var201)
-    return 0; //collision pair: 5,8
+    return 0; //collision pair: 5,8 : panda_link5_0,panda_hand_0
   var201 = ctup_runtime::link_vs_environment_collision(var74[8ll], var75[8ll], var76[8ll], var77[8ll], var78[8ll], var79, var80, var81, var82, arg4);
   if (var201)
     return 0;
@@ -1385,16 +1385,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var202;
   var202 = ctup_runtime::self_collision_link_vs_link(0ll, var74[0ll], var75[0ll], var76[0ll], var77[0ll], var78[0ll], var83[0ll], var84[0ll], var85[0ll], var86[0ll], 9ll, var74[9ll], var75[9ll], var76[9ll], var77[9ll], var78[9ll], var79, var80, var81, var82);
   if (var202)
-    return 0; //collision pair: 0,9
+    return 0; //collision pair: 0,9 : panda_link0_0,panda_leftfinger_0
   var202 = ctup_runtime::self_collision_link_vs_link(1ll, var74[1ll], var75[1ll], var76[1ll], var77[1ll], var78[1ll], var83[1ll], var84[1ll], var85[1ll], var86[1ll], 9ll, var74[9ll], var75[9ll], var76[9ll], var77[9ll], var78[9ll], var79, var80, var81, var82);
   if (var202)
-    return 0; //collision pair: 1,9
+    return 0; //collision pair: 1,9 : panda_link1_0,panda_leftfinger_0
   var202 = ctup_runtime::self_collision_link_vs_link(2ll, var74[2ll], var75[2ll], var76[2ll], var77[2ll], var78[2ll], var83[2ll], var84[2ll], var85[2ll], var86[2ll], 9ll, var74[9ll], var75[9ll], var76[9ll], var77[9ll], var78[9ll], var79, var80, var81, var82);
   if (var202)
-    return 0; //collision pair: 2,9
+    return 0; //collision pair: 2,9 : panda_link2_0,panda_leftfinger_0
   var202 = ctup_runtime::self_collision_link_vs_link(5ll, var74[5ll], var75[5ll], var76[5ll], var77[5ll], var78[5ll], var83[5ll], var84[5ll], var85[5ll], var86[5ll], 9ll, var74[9ll], var75[9ll], var76[9ll], var77[9ll], var78[9ll], var79, var80, var81, var82);
   if (var202)
-    return 0; //collision pair: 5,9
+    return 0; //collision pair: 5,9 : panda_link5_0,panda_leftfinger_0
   var202 = ctup_runtime::link_vs_environment_collision(var74[9ll], var75[9ll], var76[9ll], var77[9ll], var78[9ll], var79, var80, var81, var82, arg4);
   if (var202)
     return 0;
@@ -1427,16 +1427,16 @@ static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> con
   int var203;
   var203 = ctup_runtime::self_collision_link_vs_link(0ll, var74[0ll], var75[0ll], var76[0ll], var77[0ll], var78[0ll], var83[0ll], var84[0ll], var85[0ll], var86[0ll], 10ll, var74[10ll], var75[10ll], var76[10ll], var77[10ll], var78[10ll], var79, var80, var81, var82);
   if (var203)
-    return 0; //collision pair: 0,10
+    return 0; //collision pair: 0,10 : panda_link0_0,panda_rightfinger_0
   var203 = ctup_runtime::self_collision_link_vs_link(1ll, var74[1ll], var75[1ll], var76[1ll], var77[1ll], var78[1ll], var83[1ll], var84[1ll], var85[1ll], var86[1ll], 10ll, var74[10ll], var75[10ll], var76[10ll], var77[10ll], var78[10ll], var79, var80, var81, var82);
   if (var203)
-    return 0; //collision pair: 1,10
+    return 0; //collision pair: 1,10 : panda_link1_0,panda_rightfinger_0
   var203 = ctup_runtime::self_collision_link_vs_link(2ll, var74[2ll], var75[2ll], var76[2ll], var77[2ll], var78[2ll], var83[2ll], var84[2ll], var85[2ll], var86[2ll], 10ll, var74[10ll], var75[10ll], var76[10ll], var77[10ll], var78[10ll], var79, var80, var81, var82);
   if (var203)
-    return 0; //collision pair: 2,10
+    return 0; //collision pair: 2,10 : panda_link2_0,panda_rightfinger_0
   var203 = ctup_runtime::self_collision_link_vs_link(5ll, var74[5ll], var75[5ll], var76[5ll], var77[5ll], var78[5ll], var83[5ll], var84[5ll], var85[5ll], var86[5ll], 10ll, var74[10ll], var75[10ll], var76[10ll], var77[10ll], var78[10ll], var79, var80, var81, var82);
   if (var203)
-    return 0; //collision pair: 5,10
+    return 0; //collision pair: 5,10 : panda_link5_0,panda_rightfinger_0
   var203 = ctup_runtime::link_vs_environment_collision(var74[10ll], var75[10ll], var76[10ll], var77[10ll], var78[10ll], var79, var80, var81, var82, arg4);
   if (var203)
     return 0;
