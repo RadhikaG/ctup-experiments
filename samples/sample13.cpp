@@ -210,6 +210,7 @@ static void print_Xmat(std::string prefix, Xform<Scalar> &xform) {
 /////////////////////////////////////////////
 
 namespace backend {
+
 template <typename T>
 struct aligned_vector_t: public builder::custom_type<T> {
   static constexpr const char* type_name = "ctup_runtime::AlignedVec";
@@ -218,15 +219,43 @@ struct aligned_vector_t: public builder::custom_type<T> {
   dyn_var<int(void)> resize = builder::with_name("resize");
   dyn_var<T(void)> push_back = builder::with_name("push_back");
 };
+
+template <typename T>
+void set_inner_size_arr(dyn_var<ctup::std_array_t<T>[]> &arr, size_t std_array_size) {
+  auto type_inner = block::to<block::array_type>(arr.block_var->var_type);
+  auto type = block::to<block::named_type>(type_inner->element_type);
+  auto s = std::make_shared<block::named_type>();
+  s->type_name = std::to_string(std_array_size);
+  type->template_args.push_back(s);
 }
 
-using backend::aligned_vector_t;
+}
+
+using ctup::std_array_t;
 
 namespace runtime {
+
+namespace robots {
+constexpr char robots_ur5_name[] = "ctup_runtime::robots::UR5";
+using UR5 = typename builder::name<robots_ur5_name>;
+
+constexpr char robots_panda_name[] = "ctup_runtime::robots::Panda";
+using Panda = typename builder::name<robots_panda_name>;
+
+constexpr char robots_baxter_name[] = "ctup_runtime::robots::Baxter";
+using Baxter = typename builder::name<robots_baxter_name>;
+
+constexpr char robots_fetch_name[] = "ctup_runtime::robots::Fetch";
+using Fetch = typename builder::name<robots_fetch_name>;
+}
 
 constexpr char environment_t_name[] = "vamp::collision::Environment";
 template <typename DataT>
 using environment_t = typename builder::name<environment_t_name, DataT>;
+
+constexpr char configuration_block_robot_name[] = "ctup_runtime::ConfigurationBlockRobot";
+template <typename RobotT>
+using configuration_block_robot_t = typename builder::name<configuration_block_robot_name, RobotT>;
 
 builder::dyn_var<int (
     // geom_id_1, helpful for debug
@@ -236,7 +265,7 @@ builder::dyn_var<int (
     // # of fine sphs 1
     size_t,
     // fine sph 1
-    aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, ctup::vector_t<float>&,
+    std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<float>&,
     // geom_id_2, helpful for debug
     size_t,
     // coarse sph 2 
@@ -244,7 +273,7 @@ builder::dyn_var<int (
     // # of fine sphs 2
     size_t,
     // fine sph 2
-    aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, ctup::vector_t<float>&
+    std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<float>&
         )> 
     self_collision_link_vs_link = builder::as_global("ctup_runtime::self_collision_link_vs_link");
 
@@ -254,7 +283,7 @@ builder::dyn_var<int (
     // # of fine sphs
     size_t,
     // fine sphs
-    aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, aligned_vector_t<blaze_avx256f>&, ctup::vector_t<float>&,
+    std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<float>&,
     // vamp environment type
     environment_t<blaze_avx256f>
         )>
@@ -456,7 +485,9 @@ static dyn_var<int> fkcc(
     const pinocchio::Model &model_fine, 
     const pinocchio::GeometryModel &geom_model_fine,
     dyn_var<const runtime::environment_t<blaze_avx256f>&> environment,
-    dyn_var<const aligned_vector_t<blaze_avx256f>&> q) {
+    // hack: we need to hardcode the robot template type for now
+    dyn_var<const runtime::configuration_block_robot_t<runtime::robots::Panda>&> q) {
+
   typedef typename Model::JointIndex JointIndex;
 
   // joint transforms for FK
@@ -486,32 +517,27 @@ static dyn_var<int> fkcc(
   dyn_var<size_t[]> n_fine_sph_for_link;
   resize_arr(n_fine_sph_for_link, n_coarse_sph);
 
-  // fine collision geom sphere positions
-  dyn_var<aligned_vector_t<blaze_avx256f>> fine_x_0, fine_y_0, fine_z_0;
-  dyn_var<ctup::vector_t<float>> fine_r;
-  // we rewrite to the same array, so we size the array to have
-  // the max number of fine spheres present for a single link
-  // indexed as: fine[sph_id_for_link_id]
-  // within each fine_xyz[sph_id_for_link_id], all the values will be different (since different x,y,zs for each vector of fine sphs)
-  // but fine_r[sph_id_for_link_id] will be a single value, since radius of all the fine sphs will be the same
+  // we know max number of fine sphs for a link at compile-time
   size_t max_n_fine_sph = get_max_n_fine_sph(
           model_coarse, geom_model_coarse, model_fine, geom_model_fine);
-  fine_x_0.resize(max_n_fine_sph);
-  fine_y_0.resize(max_n_fine_sph);
-  fine_z_0.resize(max_n_fine_sph);
-  fine_r.resize(max_n_fine_sph);
 
-  // data structure for storing intermediate self collision fine spheres in forward prop order
-  // storing vector of fine spheres per link
-  // indexed as: sc[sph_id_for_link_id]
-  dyn_var<aligned_vector_t<blaze_avx256f>[]> sc_x, sc_y, sc_z;
-  dyn_var<ctup::vector_t<float>[]> sc_r;
-
-  // n_links = n_coarse_sph
-  resize_arr(sc_x, n_coarse_sph);
-  resize_arr(sc_y, n_coarse_sph);
-  resize_arr(sc_z, n_coarse_sph);
-  resize_arr(sc_r, n_coarse_sph);
+  // fine collision geom sphere positions
+  dyn_var<std_array_t<blaze_avx256f>[]> fine_x_0, fine_y_0, fine_z_0;
+  dyn_var<std_array_t<float>[]> fine_r;
+  // storing info for each fine sph for each link
+  // indexed as: fine[link_id][sph_id_for_link_id]
+  // within each fine_xyz[link_id][sph_id_for_link_id], 
+  // all the values will be different (since different x,y,zs for each vector of fine sphs)
+  // but fine_r[sph_id_for_link_id] will be a single value, 
+  // since radius of all the fine sphs will be the same
+  backend::set_inner_size_arr(fine_x_0, max_n_fine_sph);
+  backend::set_inner_size_arr(fine_y_0, max_n_fine_sph);
+  backend::set_inner_size_arr(fine_z_0, max_n_fine_sph);
+  backend::set_inner_size_arr(fine_r, max_n_fine_sph);
+  resize_arr(fine_x_0, n_coarse_sph);
+  resize_arr(fine_y_0, n_coarse_sph);
+  resize_arr(fine_z_0, n_coarse_sph);
+  resize_arr(fine_r, n_coarse_sph);
 
   static_var<JointIndex> i;
 
@@ -625,26 +651,26 @@ static dyn_var<int> fkcc(
 
       // for fine grained sphere geoms
       for(static_var<size_t> k = 0; k < n_fine_sph; k = k+1){
-        fine_x_0[k] = 
+        fine_x_0[link_id][k] = 
             X_0[i].get_entry(0,0) * link_spheres[link_id].fine_x[k] +
             X_0[i].get_entry(0,1) * link_spheres[link_id].fine_y[k] +
             X_0[i].get_entry(0,2) * link_spheres[link_id].fine_z[k];
 
-        fine_y_0[k] = 
+        fine_y_0[link_id][k] = 
             X_0[i].get_entry(1,0) * link_spheres[link_id].fine_x[k] +
             X_0[i].get_entry(1,1) * link_spheres[link_id].fine_y[k] +
             X_0[i].get_entry(1,2) * link_spheres[link_id].fine_z[k];
 
-        fine_z_0[k] = 
+        fine_z_0[link_id][k] = 
             X_0[i].get_entry(2,0) * link_spheres[link_id].fine_x[k] +
             X_0[i].get_entry(2,1) * link_spheres[link_id].fine_y[k] +
             X_0[i].get_entry(2,2) * link_spheres[link_id].fine_z[k];
 
-        fine_x_0[k] += X_0[i].get_entry(0,3);
-        fine_y_0[k] += X_0[i].get_entry(1,3);
-        fine_z_0[k] += X_0[i].get_entry(2,3);
+        fine_x_0[link_id][k] += X_0[i].get_entry(0,3);
+        fine_y_0[link_id][k] += X_0[i].get_entry(1,3);
+        fine_z_0[link_id][k] += X_0[i].get_entry(2,3);
 
-        fine_r[k] = link_spheres[link_id].fine_r[k];
+        fine_r[link_id][k] = link_spheres[link_id].fine_r[k];
       }
 
       dyn_var<int> cc_res;
@@ -671,14 +697,14 @@ static dyn_var<int> fkcc(
               // # of fine spheres assoc. w cp.first
               n_fine_sph_for_link[cp.first],
               // fine spheres assoc. w cp.first
-              sc_x[cp.first], sc_y[cp.first], sc_z[cp.first], sc_r[cp.first],
+              fine_x_0[cp.first], fine_y_0[cp.first], fine_z_0[cp.first], fine_r[cp.first],
               cp.second,
               // coarse sphere assoc. w cp.second
               coarse_x_0[cp.second], coarse_y_0[cp.second], coarse_z_0[cp.second], coarse_r[cp.second], 
               // # of fine spheres assoc. w cp.second
               n_fine_sph_for_link[cp.second],
               // fine spheres assoc. w cp.second
-              fine_x_0, fine_y_0, fine_z_0, fine_r
+              fine_x_0[cp.second], fine_y_0[cp.second], fine_z_0[cp.second], fine_r[cp.second]
           );
 
           //if (cc_res)
@@ -692,20 +718,11 @@ static dyn_var<int> fkcc(
         cc_res = runtime::link_vs_environment_collision(
                 coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id],
                 n_fine_sph_for_link[link_id],
-                fine_x_0, fine_y_0, fine_z_0, fine_r,
+                fine_x_0[link_id], fine_y_0[link_id], fine_z_0[link_id], fine_r[link_id],
                 environment);
         //if (cc_res)
         //  return 0; // can't do this because static_var bug
       }
-
-      // continuing down the chain, we store the current global position of 
-      // fine grained spheres corres. to link_id
-      // we're exploiting the fact that we don't need to recalculate 
-      // parent link global positions when iterating down the chain in FK
-      sc_x[link_id] = fine_x_0;
-      sc_y[link_id] = fine_y_0;
-      sc_z[link_id] = fine_z_0;
-      sc_r[link_id] = fine_r;
     }
   }
 
@@ -857,6 +874,7 @@ int main(int argc, char* argv[]) {
   of << "// clang-format off\n\n";
   of << "#include \"Eigen/Dense\"\n\n";
   of << "#include \"ctup/typedefs.h\"\n\n";
+  of << "#include \"ctup_fkcc/runtime/typedefs.h\"\n\n";
   of << "#include \"ctup_fkcc/runtime/collision.h\"\n\n";
   of << "#include <iostream>\n\n";
   of << "namespace ctup_gen {\n\n";

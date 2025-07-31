@@ -8,7 +8,7 @@
 
 namespace ctup_gen {
 
-static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> const& arg4, ctup_runtime::AlignedVec<blaze::StaticVector<float, 8>> const& arg5) {
+static int fkcc (vamp::collision::Environment<blaze::StaticVector<float, 8>> const& arg4, ctup_runtime::ConfigurationBlockRobot<ctup_runtime::robots::Sphere> const& arg5) {
   return true;
 }
 
