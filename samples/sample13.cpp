@@ -126,7 +126,7 @@ struct Xform : public matrix_layout<Scalar> {
   static_var<int> joint_type;
   static_var<int> joint_xform_axis;
 
-  Xform() : matrix_layout<Scalar>(4, 4, SPARSE, FLATTENED, COMPRESSED) {
+  Xform() : matrix_layout<Scalar>(4, 4, SPARSE, UNROLLED, UNCOMPRESSED) {
     matrix_layout<Scalar>::set_identity();
   }
 
