@@ -4,7 +4,6 @@
 #include "ctup/typedefs.h"
 #include "ctup_fkcc/runtime/typedefs.h"
 #include "blaze/Math.h"
-#include <vector>
 
 #include <vamp/collision/environment.hh>
 #include <vamp/collision/validity.hh>
