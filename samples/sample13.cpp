@@ -229,6 +229,14 @@ void set_inner_size_arr(dyn_var<ctup::std_array_t<T>[]> &arr, size_t std_array_s
   type->template_args.push_back(s);
 }
 
+template <typename T>
+void set_std_array_size(dyn_var<ctup::std_array_t<T>> &arr, size_t std_array_size) {
+  auto type = block::to<block::named_type>(arr.block_var->var_type);
+  auto s = std::make_shared<block::named_type>();
+  s->type_name = std::to_string(std_array_size);
+  type->template_args.push_back(s);
+}
+
 }
 
 using ctup::std_array_t;
@@ -518,28 +526,42 @@ static dyn_var<int> fkcc(
   resize_arr(n_fine_sph_for_link, n_coarse_sph);
 
   // we know max number of fine sphs for a link at compile-time
-  size_t max_n_fine_sph = get_max_n_fine_sph(
-          model_coarse, geom_model_coarse, model_fine, geom_model_fine);
+  //size_t max_n_fine_sph = get_max_n_fine_sph(
+  //        model_coarse, geom_model_coarse, model_fine, geom_model_fine);
+
+  static_var<JointIndex> i;
 
   // fine collision geom sphere positions
-  dyn_var<std_array_t<blaze_avx256f>[]> fine_x_0, fine_y_0, fine_z_0;
-  dyn_var<std_array_t<float>[]> fine_r;
+  builder::array<dyn_var<std_array_t<blaze_avx256f>>> fine_x_0, fine_y_0, fine_z_0;
+  builder::array<dyn_var<std_array_t<float>>> fine_r;
   // storing info for each fine sph for each link
   // indexed as: fine[link_id][sph_id_for_link_id]
   // within each fine_xyz[link_id][sph_id_for_link_id], 
   // all the values will be different (since different x,y,zs for each vector of fine sphs)
   // but fine_r[sph_id_for_link_id] will be a single value, 
   // since radius of all the fine sphs will be the same
-  backend::set_inner_size_arr(fine_x_0, max_n_fine_sph);
-  backend::set_inner_size_arr(fine_y_0, max_n_fine_sph);
-  backend::set_inner_size_arr(fine_z_0, max_n_fine_sph);
-  backend::set_inner_size_arr(fine_r, max_n_fine_sph);
-  resize_arr(fine_x_0, n_coarse_sph);
-  resize_arr(fine_y_0, n_coarse_sph);
-  resize_arr(fine_z_0, n_coarse_sph);
-  resize_arr(fine_r, n_coarse_sph);
+  fine_x_0.set_size(n_coarse_sph);
+  fine_y_0.set_size(n_coarse_sph);
+  fine_z_0.set_size(n_coarse_sph);
+  fine_r.set_size(n_coarse_sph);
 
-  static_var<JointIndex> i;
+  for (i = 0; i < (JointIndex)model_coarse.njoints; i = i+1) {
+    std::string joint_name = model_coarse.names[i];
+    std::map<size_t, LinkSpheres> link_spheres = joint_to_child_spheres(
+            model_coarse, geom_model_coarse,
+            model_fine, geom_model_fine,
+            joint_name);
+    // each joint may have multiple links associated with it
+    for (const auto &pair : link_spheres) {
+      size_t link_id = pair.first; 
+      // number of fine sph for link_id
+      size_t curr_n_fine_sph = link_spheres[link_id].fine_r.size();
+      backend::set_std_array_size(fine_x_0[link_id], curr_n_fine_sph);
+      backend::set_std_array_size(fine_y_0[link_id], curr_n_fine_sph);
+      backend::set_std_array_size(fine_z_0[link_id], curr_n_fine_sph);
+      backend::set_std_array_size(fine_r[link_id], curr_n_fine_sph);
+    }
+  }
 
   set_X_T(X_T, model_coarse);
 
