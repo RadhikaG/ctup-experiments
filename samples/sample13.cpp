@@ -672,7 +672,7 @@ static dyn_var<int> fkcc(
       n_fine_sph_for_link[link_id] = n_fine_sph;
 
       // for fine grained sphere geoms
-      for(static_var<size_t> k = 0; k < n_fine_sph; k = k+1){
+      for(static_var<size_t> k = 0; k < n_fine_sph; k = k+1) {
         fine_x_0[link_id][k] = 
             X_0[i].get_entry(0,0) * link_spheres[link_id].fine_x[k] +
             X_0[i].get_entry(0,1) * link_spheres[link_id].fine_y[k] +

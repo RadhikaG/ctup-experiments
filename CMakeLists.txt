@@ -84,8 +84,7 @@ set(SAMPLES_SOURCES
     samples/sample11.cpp
     samples/sample12.cpp
     samples/sample13.cpp
-    samples/deprecated/sample15.cpp
-    samples/deprecated/sample17.cpp
+    samples/sample14.cpp
 )
 
 
@@ -146,6 +145,11 @@ add_custom_target(
 # Compiling experiment scripts for comparing baselines with generated code.
 # Experiment scripts are located in the scripts/ dir.
 ################################################
+
+list(APPEND CTUP_RUNTIME_INCLUDES
+    ${CMAKE_SOURCE_DIR}/apps
+    ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/runtime
+)
 
 #SCRIPTS
 set(SCRIPT_SOURCES
