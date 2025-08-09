@@ -33,9 +33,23 @@ int main(int argc, char ** argv)
 
   std::cout << J << "\n";
 
+  typedef Eigen::Matrix<double, 4, 4> EigenHomogXform;
+  EigenHomogXform X_0;
+
+  std::cout << "forward kin:" << "\n";
+  for (size_t i = 1; i < (size_t)model.njoints; i++) {
+    if (i <= 4) {
+      X_0 = data.oMi[i].toHomogeneousMatrix();
+      std::cout << i << ":\n";
+      std::cout << data.oMi[i].toHomogeneousMatrix() << "\n";
+      std::cout << "-------------------\n";
+    }
+  }
+
   std::cout << "-------------------\n";
 
   //=======================================
+
   Eigen::MatrixXd ctup_res(6, model.nv);
 
   std::cout << "--- CTUP DEBUG---\n";

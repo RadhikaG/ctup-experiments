@@ -3,29 +3,17 @@
 
 #include "backend.h"
 #include "matrix_layout_composite.h"
-#include "spatial_algebra.h"
-
-#include "blocks/block_visitor.h"
-#include "blocks/c_code_generator.h"
-#include "builder/builder_base.h"
-#include "builder/builder_context.h"
 #include "builder/dyn_var.h"
 #include "builder/forward_declarations.h"
 #include "Eigen/Dense"
 #include "builder/static_var.h"
 
-// ignore unused header warning in IDE, this is needed
-#include "pinocchio/multibody/joint/joint-collection.hpp"
-#include "pinocchio/multibody/model.hpp"
-#include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
 #include <memory>
-#include <string>
 
 using builder::dyn_var;
 using builder::static_var;
 
-using pinocchio::Model;
 
 namespace ctup {
 

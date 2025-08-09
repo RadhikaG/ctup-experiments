@@ -38,22 +38,46 @@ struct Rotation : public matrix_layout<Scalar> {
     sinq = backend::sin<Scalar>(q_i);
     cosq = backend::cos<Scalar>(q_i);
 
+    // feath
+    //if (joint_xform_axis == 'X') {
+    //  set_entry_to_nonconstant(1, 1, cosq);
+    //  set_entry_to_nonconstant(1, 2, sinq);
+    //  set_entry_to_nonconstant(2, 1, -sinq);
+    //  set_entry_to_nonconstant(2, 2, cosq);
+    //}
+    //else if (joint_xform_axis == 'Y') {
+    //  set_entry_to_nonconstant(0, 0, cosq);
+    //  set_entry_to_nonconstant(0, 2, -sinq);
+    //  set_entry_to_nonconstant(2, 0, sinq);
+    //  set_entry_to_nonconstant(2, 2, cosq);
+    //}
+    //else if (joint_xform_axis == 'Z') {
+    //  set_entry_to_nonconstant(0, 0, cosq);
+    //  set_entry_to_nonconstant(0, 1, sinq);
+    //  set_entry_to_nonconstant(1, 0, -sinq);
+    //  set_entry_to_nonconstant(1, 1, cosq);
+    //}
+    //else {
+    //  assert(false && "jcalc called on non joint xform or joint unset");
+    //}
+
+    // pin
     if (joint_xform_axis == 'X') {
       set_entry_to_nonconstant(1, 1, cosq);
-      set_entry_to_nonconstant(1, 2, sinq);
-      set_entry_to_nonconstant(2, 1, -sinq);
+      set_entry_to_nonconstant(1, 2, -sinq);
+      set_entry_to_nonconstant(2, 1, sinq);
       set_entry_to_nonconstant(2, 2, cosq);
     }
     else if (joint_xform_axis == 'Y') {
       set_entry_to_nonconstant(0, 0, cosq);
-      set_entry_to_nonconstant(0, 2, -sinq);
-      set_entry_to_nonconstant(2, 0, sinq);
+      set_entry_to_nonconstant(0, 2, sinq);
+      set_entry_to_nonconstant(2, 0, -sinq);
       set_entry_to_nonconstant(2, 2, cosq);
     }
     else if (joint_xform_axis == 'Z') {
       set_entry_to_nonconstant(0, 0, cosq);
-      set_entry_to_nonconstant(0, 1, sinq);
-      set_entry_to_nonconstant(1, 0, -sinq);
+      set_entry_to_nonconstant(0, 1, -sinq);
+      set_entry_to_nonconstant(1, 0, sinq);
       set_entry_to_nonconstant(1, 1, cosq);
     }
     else {

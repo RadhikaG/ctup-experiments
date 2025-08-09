@@ -120,30 +120,56 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
   }
 }
 
+//template <typename Scalar>
+//static void set_X_T(builder::array<Xform<Scalar>> &X_T, const Model &model) {
+//  typedef typename Model::JointIndex JointIndex;
+//
+//  static_var<int> r;
+//  static_var<int> c;
+//
+//  for (static_var<size_t> i = 1; i < (JointIndex)model.njoints; i = i+1) {
+//    Eigen::Matrix<double, 3, 3> pin_R_T = model.jointPlacements[i].rotation();
+//    Eigen::Matrix<double, 3, 1> pin_p_T = model.jointPlacements[i].translation();
+//
+//    for (r = 0; r < 3; r = r + 1) {
+//      for (c = 0; c < 3; c = c + 1) {
+//        double entry = pin_R_T.coeffRef(r, c);
+//        X_T[i].set_entry_to_constant(r, c, entry);
+//      }
+//    }
+//
+//    c = 3;
+//    for (r = 0; r < 3; r = r + 1) {
+//      double entry = pin_R_T.coeffRef(r, c-3);
+//      X_T[i].set_entry_to_constant(r, c, entry);
+//    }
+//    // X_T[i] is set as identity as default, so 4th row is in place
+//  }
+//}
+
 template <typename Scalar>
-static void set_X_T(builder::array<Xform<Scalar>> &X_T, const Model &model) {
+static void set_X_T(builder::array<Xform<Scalar>>& X_T, const Model &model) {
   typedef typename Model::JointIndex JointIndex;
+  static_var<JointIndex> i;
 
-  static_var<int> r;
-  static_var<int> c;
+  static_var<size_t> r;
+  static_var<size_t> c;
 
-  for (static_var<size_t> i = 1; i < (JointIndex)model.njoints; i = i+1) {
-    Eigen::Matrix<double, 3, 3> pin_R_T = model.jointPlacements[i].rotation();
-    Eigen::Matrix<double, 3, 1> pin_p_T = model.jointPlacements[i].translation();
+  for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
+    // todo: understand what the heck is this outputing
+    // for homogeneous transforms
+    Eigen::Matrix<double, 4, 4> pin_X_T = model.jointPlacements[i].toHomogeneousMatrix();
 
-    for (r = 0; r < 3; r = r + 1) {
-      for (c = 0; c < 3; c = c + 1) {
-        double entry = pin_R_T.coeffRef(r, c);
-        X_T[i].set_entry_to_constant(r, c, entry);
+    // setting E
+    for (r = 0; r < 4; r = r + 1) {
+      for (c = 0; c < 4; c = c + 1) {
+        float entry = pin_X_T.coeffRef(r, c);
+        if (std::abs(entry) < 1e-5)
+          X_T[i].set_entry_to_constant(r, c, 0);
+        else
+          X_T[i].set_entry_to_constant(r, c, entry);
       }
     }
-
-    c = 3;
-    for (r = 0; r < 3; r = r + 1) {
-      double entry = pin_R_T.coeffRef(r, c-3);
-      X_T[i].set_entry_to_constant(r, c, entry);
-    }
-    // X_T[i] is set as identity as default, so 4th row is in place
   }
 }
 
@@ -223,13 +249,20 @@ static dyn_var<int> get_eef_world_jacobian(
     // FK calculatiion
     X_J[i].jcalc(q(i-1));
 
-    X_pi = X_J[i] * X_T[i];
+    //X_pi = X_J[i] * X_T[i]; // feath
+    X_pi = X_T[i] * X_J[i]; // pin
     parent = model.parents[i];
     if (parent > 0) {
-      X_0[i] = X_pi * X_0[parent];
+      //X_0[i] = X_pi * X_0[parent]; // feath
+      X_0[i] = X_0[parent] * X_pi; // pin
     }
     else {
       X_0[i] = ctup::blocked_layout_expr_leaf<double>(X_pi);
+    }
+
+    if (i <= 4) {
+      print_Xmat(std::to_string(i) + ":", X_0[i]);
+      print_string("-------------");
     }
 
     // generating jacobian matrix for joint i
