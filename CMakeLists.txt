@@ -156,11 +156,13 @@ set(SCRIPT_SOURCES
     scripts/eval_fk.cpp
     scripts/debug_fk.cpp
     scripts/debug_fkcc.cpp
+    scripts/debug_eef_jac.cpp
     scripts/eval_fkcc.cpp
     scripts/debug_rnea.cpp
     scripts/eval_rnea.cpp
     scripts/pin_fk.cpp
     scripts/pin_fk_codegen.cpp
+    scripts/pin_eef_jac_codegen.cpp
     scripts/pin_fk_codegen_vectorized_comp.cpp
     scripts/pin_rnea_codegen.cpp
     scripts/eval_fk_batched.cpp

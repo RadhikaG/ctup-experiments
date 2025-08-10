@@ -186,6 +186,7 @@ struct SkewTranslation : public matrix_layout<Scalar> {
 
   void set_from_xyz(const matrix_layout<Scalar> &trans) {
     assert(trans.get_n_rows() == 3 && trans.get_n_cols() == 1 && "trans must be 3x1");
+    // feath
     // x
     if (trans.is_nonconstant(0, 0)) {
       set_entry_to_nonconstant(1, 2, -trans.get_entry(0, 0));
@@ -238,7 +239,7 @@ struct Adjoint : public blocked_layout<Scalar> {
     set_partitions({0, 3}, {0, 3});
     set_new_block(0, 0, rot);
     set_new_block(1, 1, rot);
-    set_new_block(1, 0, t_cross_R);
+    set_new_block(1, 0, t_cross_R); // feath
   }
 
   void set_rotation_and_translation(matrix_layout<Scalar> &_rot, matrix_layout<Scalar> &_trans) {
@@ -277,6 +278,8 @@ struct SingletonSpatialVector : public matrix_layout<Scalar> {
 
   void set_revolute_axis(char axis) {
     motion_subspace_axis = axis;
+
+    // feath
     if (motion_subspace_axis == 'X')
       set_entry_to_constant(0, 0, 1);
     else if (motion_subspace_axis == 'Y')
@@ -287,6 +290,8 @@ struct SingletonSpatialVector : public matrix_layout<Scalar> {
 
   void set_prismatic_axis(char axis) {
     motion_subspace_axis = axis;
+
+    // feath
     if (motion_subspace_axis == 'X')
       set_entry_to_constant(3, 0, 1);
     else if (motion_subspace_axis == 'Y')

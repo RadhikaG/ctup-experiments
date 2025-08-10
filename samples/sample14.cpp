@@ -58,10 +58,10 @@ using ctup::Adjoint;
 builder::dyn_var<void(ctup::BlazeStaticMatrix<float> &)> print_matrix = builder::as_global("print_matrix");
 builder::dyn_var<void(char *)> print_string = builder::as_global("print_string");
 
-template <typename Scalar>
-static void print_Xmat(std::string prefix, Xform<Scalar> &xform) {
+template <typename MatType>
+static void print_mat(std::string prefix, MatType &mat) {
   print_string(prefix.c_str());
-  print_matrix(xform.denseify());
+  print_matrix(mat.denseify());
 }
 
 /////////////////////////////////////////////
@@ -120,33 +120,6 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
   }
 }
 
-//template <typename Scalar>
-//static void set_X_T(builder::array<Xform<Scalar>> &X_T, const Model &model) {
-//  typedef typename Model::JointIndex JointIndex;
-//
-//  static_var<int> r;
-//  static_var<int> c;
-//
-//  for (static_var<size_t> i = 1; i < (JointIndex)model.njoints; i = i+1) {
-//    Eigen::Matrix<double, 3, 3> pin_R_T = model.jointPlacements[i].rotation();
-//    Eigen::Matrix<double, 3, 1> pin_p_T = model.jointPlacements[i].translation();
-//
-//    for (r = 0; r < 3; r = r + 1) {
-//      for (c = 0; c < 3; c = c + 1) {
-//        double entry = pin_R_T.coeffRef(r, c);
-//        X_T[i].set_entry_to_constant(r, c, entry);
-//      }
-//    }
-//
-//    c = 3;
-//    for (r = 0; r < 3; r = r + 1) {
-//      double entry = pin_R_T.coeffRef(r, c-3);
-//      X_T[i].set_entry_to_constant(r, c, entry);
-//    }
-//    // X_T[i] is set as identity as default, so 4th row is in place
-//  }
-//}
-
 template <typename Scalar>
 static void set_X_T(builder::array<Xform<Scalar>>& X_T, const Model &model) {
   typedef typename Model::JointIndex JointIndex;
@@ -160,7 +133,6 @@ static void set_X_T(builder::array<Xform<Scalar>>& X_T, const Model &model) {
     // for homogeneous transforms
     Eigen::Matrix<double, 4, 4> pin_X_T = model.jointPlacements[i].toHomogeneousMatrix();
 
-    // setting E
     for (r = 0; r < 4; r = r + 1) {
       for (c = 0; c < 4; c = c + 1) {
         float entry = pin_X_T.coeffRef(r, c);
@@ -261,31 +233,47 @@ static dyn_var<int> get_eef_world_jacobian(
     }
 
     if (i <= 4) {
-      print_Xmat(std::to_string(i) + ":", X_0[i]);
+      print_mat(std::to_string(i) + ":", X_0[i]);
       print_string("-------------");
     }
 
-    // generating jacobian matrix for joint i
-    for (j = 1; j < njoints; j = j+1) {
-      if (!is_joint_ancestor(model, j, i)) {
-        continue;
+    // generating jacobian matrix for last joint
+    // todo: add joint name as arg
+    if (i == njoints-1) {
+      matrix_layout<double> t_cross_R(3, 3, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED);
+
+      for (j = 1; j < njoints; j = j+1) {
+        if (!is_joint_ancestor(model, j, i)) {
+          continue;
+        }
+        // since we know j is ancestor of i,
+        // X_0[j] is guaranteed to have been
+        // calculated already.
+
+        // performs the t_cross_R calc
+        // when refreshing rot and trans values
+        Adj.set_rotation_and_translation(X_0[j].get_rotation(), X_0[j].get_translation());
+
+        if (j <= 4) {
+          print_mat(std::to_string(j) + " rot:", *(Adj.rot));
+          print_mat(std::to_string(j) + " sk-trans:", *(Adj.skew_trans));
+          t_cross_R = (*Adj.skew_trans) * (*Adj.rot);
+          print_mat(std::to_string(j) + " prod:", t_cross_R);
+          print_mat(std::to_string(j) + " adj:", Adj);
+          print_string("-------------");
+        }
+
+        // later for all joint jacobians
+        //set_col_of_jacobian_matrix_idx(J, j, i, S_world);
+
+        S_world = Adj * S[j];
+
+        for (static_var<size_t> r = 0; r < 6; r = r + 1) {
+          // j-1 because j=0 is universe joint
+          J.set_entry_to_nonconstant(r, j-1, S_world.get_entry(r, 0));
+        }
       }
-      // since we know j is ancestor of i,
-      // X_0[j] is guaranteed to have been
-      // calculated already.
-
-      // performs the t_cross_R calc
-      // when refreshing rot and trans values
-      Adj.set_rotation_and_translation(X_0[j].get_rotation(), X_0[j].get_translation());
-
-      // later for all joint jacobians
-      //set_col_of_jacobian_matrix_idx(J, j, i, S_world);
-
-      S_world = Adj * S[j];
-
-      for (static_var<size_t> r = 0; r < 6; r = r + 1) {
-        J.set_entry_to_nonconstant(r, j, S_world.get_entry(r, 0));
-      }
+      break;
     }
   }
 

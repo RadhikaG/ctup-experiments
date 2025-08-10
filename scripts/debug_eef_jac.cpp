@@ -34,7 +34,10 @@ int main(int argc, char ** argv)
   std::cout << J << "\n";
 
   typedef Eigen::Matrix<double, 4, 4> EigenHomogXform;
+  typedef Eigen::Matrix<double, 6, 6> AdjMat;
+
   EigenHomogXform X_0;
+  AdjMat adj;
 
   std::cout << "forward kin:" << "\n";
   for (size_t i = 1; i < (size_t)model.njoints; i++) {
@@ -42,6 +45,16 @@ int main(int argc, char ** argv)
       X_0 = data.oMi[i].toHomogeneousMatrix();
       std::cout << i << ":\n";
       std::cout << data.oMi[i].toHomogeneousMatrix() << "\n";
+
+      Eigen::Matrix3d rot = data.oMi[i].rotation();
+      Eigen::Matrix3d skew_trans = skew(data.oMi[i].translation());
+      adj = data.oMi[i].toActionMatrix();
+
+      std::cout << "rot:\n" << rot << "\n";
+      std::cout << "skew-trans:\n" << skew_trans << "\n";
+      std::cout << "prod:\n" << skew_trans * rot << "\n";
+
+      std::cout << "adj:\n" << adj << "\n";
       std::cout << "-------------------\n";
     }
   }
