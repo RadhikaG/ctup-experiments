@@ -5,7 +5,6 @@
 #include "pinocchio/multibody/joint/joint-collection.hpp"
 #include "pinocchio/multibody/model.hpp"
 #include "pinocchio/algorithm/geometry.hpp"
-#include "pinocchio/collision/collision.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
 #include <hpp/fcl/collision_object.h>
@@ -18,7 +17,6 @@
 #include "pinocchio/parsers/srdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include <iostream>
-#include <yaml-cpp/yaml.h>
 #include <map>
 
 #include "blocks/block_visitor.h"
@@ -48,9 +46,8 @@ using ctup::backend::blaze_avx256f;
 /////////////////////////////////////////////
 
 using ctup::Xform;
-using ctup::SpatialVector;
-using ctup::SingletonSpatialVector;
-using ctup::Adjoint;
+using ctup::Vec3;
+using ctup::SingletonMotionSubspaceVec3;
 
 /////////////////////////////////////////////
 ///// DEBUG HELPERS
@@ -175,7 +172,7 @@ static dyn_var<int> get_eef_world_jacobian(
   X_J.set_size(model.njoints);
   X_0.set_size(model.njoints);
 
-  builder::array<SingletonSpatialVector<double>> S;
+  builder::array<SingletonMotionSubspaceVec3<double>> S;
   S.set_size(model.njoints);
 
   // if desired output: all jacobians
@@ -211,8 +208,8 @@ static dyn_var<int> get_eef_world_jacobian(
   }
 
   Xform<double> X_pi;
-  Adjoint<double> Adj;
-  SpatialVector<double> S_world;
+  Vec3<double> S_world, p_i_rel;
+  Vec3<double> Jv, Jw;
 
   static_var<JointIndex> parent;
   std::string joint_name;
@@ -232,16 +229,9 @@ static dyn_var<int> get_eef_world_jacobian(
       X_0[i] = ctup::blocked_layout_expr_leaf<double>(X_pi);
     }
 
-    if (i <= 4) {
-      print_mat(std::to_string(i) + ":", X_0[i]);
-      print_string("-------------");
-    }
-
     // generating jacobian matrix for last joint
     // todo: add joint name as arg
     if (i == njoints-1) {
-      matrix_layout<double> t_cross_R(3, 3, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED);
-
       for (j = 1; j < njoints; j = j+1) {
         if (!is_joint_ancestor(model, j, i)) {
           continue;
@@ -249,28 +239,36 @@ static dyn_var<int> get_eef_world_jacobian(
         // since we know j is ancestor of i,
         // X_0[j] is guaranteed to have been
         // calculated already.
+        S_world = X_0[j].get_rotation() * S[j];
 
-        // performs the t_cross_R calc
-        // when refreshing rot and trans values
-        Adj.set_rotation_and_translation(X_0[j].get_rotation(), X_0[j].get_translation());
+        if (S[j].axis_type == 'R') {
+          p_i_rel = X_0[i].get_translation() - X_0[j].get_translation();
+          // lazy cross product, todo turn into operator
+          Jv.set_entry_to_nonconstant(0, 0, 
+                  S_world.get_entry(1,0) * p_i_rel.get_entry(2,0) - S_world.get_entry(2,0) * p_i_rel.get_entry(1,0));
 
-        if (j <= 4) {
-          print_mat(std::to_string(j) + " rot:", *(Adj.rot));
-          print_mat(std::to_string(j) + " sk-trans:", *(Adj.skew_trans));
-          t_cross_R = (*Adj.skew_trans) * (*Adj.rot);
-          print_mat(std::to_string(j) + " prod:", t_cross_R);
-          print_mat(std::to_string(j) + " adj:", Adj);
-          print_string("-------------");
+          Jv.set_entry_to_nonconstant(1, 0, 
+                  S_world.get_entry(2,0) * p_i_rel.get_entry(0,0) - S_world.get_entry(0,0) * p_i_rel.get_entry(2,0));
+
+          Jv.set_entry_to_nonconstant(2, 0, 
+                  S_world.get_entry(0,0) * p_i_rel.get_entry(1,0) - S_world.get_entry(1,0) * p_i_rel.get_entry(0,0));
+
+          Jw = ctup::matrix_layout_expr_leaf<double>(S_world);
         }
-
-        // later for all joint jacobians
-        //set_col_of_jacobian_matrix_idx(J, j, i, S_world);
-
-        S_world = Adj * S[j];
+        else if (S[j].axis_type == 'R') {
+          Jv = ctup::matrix_layout_expr_leaf<double>(S_world);
+          Jw.set_zero();
+        }
+        else {
+          assert(false && "joint must be revolute or prismatic");
+        }
 
         for (static_var<size_t> r = 0; r < 6; r = r + 1) {
           // j-1 because j=0 is universe joint
-          J.set_entry_to_nonconstant(r, j-1, S_world.get_entry(r, 0));
+          if (r < 3)
+            J.set_entry_to_nonconstant(r, j-1, Jw.get_entry(r, 0));
+          else
+            J.set_entry_to_nonconstant(r, j-1, Jv.get_entry(r-3, 0));
         }
       }
       break;

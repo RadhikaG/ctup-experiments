@@ -265,6 +265,17 @@ struct SpatialVector : public matrix_layout<Scalar> {
 };
 
 template <typename Scalar>
+struct Vec3 : public matrix_layout<Scalar> {
+  using matrix_layout<Scalar>::set_entry_to_constant;
+  using matrix_layout<Scalar>::set_entry_to_nonconstant;
+  using matrix_layout<Scalar>::operator=;
+
+  Vec3() : matrix_layout<Scalar>(3, 1, DENSE, FLATTENED, UNCOMPRESSED) {
+    matrix_layout<Scalar>::set_zero();
+  }
+};
+
+template <typename Scalar>
 struct SingletonSpatialVector : public matrix_layout<Scalar> {
   using matrix_layout<Scalar>::set_entry_to_constant;
   using matrix_layout<Scalar>::set_entry_to_nonconstant;
@@ -301,6 +312,43 @@ struct SingletonSpatialVector : public matrix_layout<Scalar> {
   }
 };
 
+template <typename Scalar>
+struct SingletonMotionSubspaceVec3 : public matrix_layout<Scalar> {
+  using matrix_layout<Scalar>::set_entry_to_constant;
+  using matrix_layout<Scalar>::set_entry_to_nonconstant;
+  using matrix_layout<Scalar>::operator=;
+
+  static_var<int> axis_type;
+  static_var<int> motion_subspace_axis;
+
+  SingletonMotionSubspaceVec3() : matrix_layout<Scalar>(3, 1, SPARSE, FLATTENED, SINGLETON) {
+    matrix_layout<Scalar>::set_zero();
+  }
+
+  void set_revolute_axis(char axis) {
+    axis_type = 'R';
+    motion_subspace_axis = axis;
+
+    if (motion_subspace_axis == 'X')
+      set_entry_to_constant(0, 0, 1);
+    else if (motion_subspace_axis == 'Y')
+      set_entry_to_constant(1, 0, 1);
+    else if (motion_subspace_axis == 'Z')
+      set_entry_to_constant(2, 0, 1);
+  }
+
+  void set_prismatic_axis(char axis) {
+    axis_type = 'P';
+    motion_subspace_axis = axis;
+
+    if (motion_subspace_axis == 'X')
+      set_entry_to_constant(0, 0, 1);
+    else if (motion_subspace_axis == 'Y')
+      set_entry_to_constant(1, 0, 1);
+    else if (motion_subspace_axis == 'Z')
+      set_entry_to_constant(2, 0, 1);
+  }
+};
 
 }
 
