@@ -17,7 +17,17 @@ using ConfigurationBlockDimEigen = std::array<Eigen::Matrix<float, ndim, 1>, 8>;
 struct PinFKCC {
 
   PinFKCC(std::string robot_name, const vamp::collision::Environment<float> &vamp_env);
+
   ~PinFKCC();
+
+  // Delete copy semantics
+  PinFKCC(const PinFKCC&) = delete;
+  PinFKCC& operator=(const PinFKCC&) = delete;
+
+  // Default move semantics
+  PinFKCC(PinFKCC&&) noexcept;
+  PinFKCC& operator=(PinFKCC&&) noexcept;
+
   
   template <size_t ndim>
   bool fkcc_pin(const ConfigurationBlockDimEigen<ndim> &q_block);

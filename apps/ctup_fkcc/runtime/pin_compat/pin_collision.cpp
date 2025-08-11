@@ -101,6 +101,12 @@ PinFKCC::Impl::Impl(std::string robot_name, const vamp::collision::Environment<f
     pin_env.push_back(to_fcl_box(b));
   }
 
+  // vamp just skips certain math when cuboids are z-aligned
+  // the objects themselves are still cuboids
+  for (auto &b : vamp_env.z_aligned_cuboids) {
+    pin_env.push_back(to_fcl_box(b));
+  }
+
   // cylinders
   for (auto &cyl : vamp_env.cylinders) {
     pin_env.push_back(to_fcl_cylinder(cyl));
@@ -111,8 +117,10 @@ PinFKCC::Impl::Impl(std::string robot_name, const vamp::collision::Environment<f
     pin_env.push_back(to_fcl_capsule(cap));
   }
 
-  assert(vamp_env.z_aligned_capsules.size() == 0 && "pin fkcc doesn't support z aligned capsules");
-  assert(vamp_env.z_aligned_cuboids.size() == 0 && "pin fkcc doesn't support z aligned cuboids");
+  for (auto &cap : vamp_env.z_aligned_capsules) {
+    pin_env.push_back(to_fcl_capsule(cap));
+  }
+
   assert(vamp_env.heightfields.size() == 0 && "pin fkcc doesn't support heightfields");
 }
 
@@ -192,9 +200,17 @@ bool PinFKCC::fkcc_pin(const ConfigurationBlockDimEigen<ndim> &q_block) {
 
 PinFKCC::~PinFKCC() = default;
 
+// Default move semantics
+PinFKCC::PinFKCC(PinFKCC &&other) noexcept = default;
+PinFKCC& PinFKCC::operator=(PinFKCC &&other) noexcept = default;
+
 // explicit template instantiation because we defined template function
 // in cpp
+template bool PinFKCC::fkcc_pin<3>(const ConfigurationBlockDimEigen<3>&);
+template bool PinFKCC::fkcc_pin<6>(const ConfigurationBlockDimEigen<6>&);
 template bool PinFKCC::fkcc_pin<7>(const ConfigurationBlockDimEigen<7>&);
+template bool PinFKCC::fkcc_pin<8>(const ConfigurationBlockDimEigen<8>&);
+template bool PinFKCC::fkcc_pin<14>(const ConfigurationBlockDimEigen<14>&);
  
 }
 
