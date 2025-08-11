@@ -1,4 +1,5 @@
 #include <memory>
+#include <pinocchio/multibody/geometry-object.hpp>
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/parsers/srdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
@@ -6,6 +7,7 @@
 #include "pinocchio/collision/collision.hpp"
 #include "pin_collision.h"
 #include "pin_shapes.h"
+#include <iostream>
 
 namespace ctup_runtime {
 
@@ -29,11 +31,18 @@ struct PinFKCC::Impl {
   // environment
   std::vector<std::shared_ptr<hpp::fcl::CollisionObject>> pin_env;
 
+  Impl();
   Impl(std::string robot_name, const vamp::collision::Environment<float> &vamp_env);
 
   template <size_t ndim>
   bool fkcc_pin(const ConfigurationBlockDimEigen<ndim> &q_block);
+
+  std::map<size_t, std::vector<size_t>> coarse_geom_id_to_fine_geom_ids;
+
+  void map_coarse_to_fine();
 };
+
+PinFKCC::Impl::Impl() {}
 
 PinFKCC::Impl::Impl(std::string robot_name, const vamp::collision::Environment<float> &vamp_env) {
   ////////////// setting URDF and SRDF filepaths ////
@@ -89,6 +98,8 @@ PinFKCC::Impl::Impl(std::string robot_name, const vamp::collision::Environment<f
 
   pin_geom_data_fine = pinocchio::GeometryData(pin_geom_model_fine);
 
+  map_coarse_to_fine();
+
   ////////////// environment setup /////////////////
 
   // spheres
@@ -122,6 +133,38 @@ PinFKCC::Impl::Impl(std::string robot_name, const vamp::collision::Environment<f
   }
 
   assert(vamp_env.heightfields.size() == 0 && "pin fkcc doesn't support heightfields");
+}
+
+void PinFKCC::Impl::map_coarse_to_fine() {
+  for (size_t c_i = 0; c_i < pin_geom_model_coarse.geometryObjects.size(); c_i++ ) {
+    const pinocchio::GeometryObject &c_obj = pin_geom_model_coarse.geometryObjects[c_i];
+
+    const pinocchio::FrameIndex c_par_jid = c_obj.parentJoint;
+    const pinocchio::FrameIndex c_par_fid = c_obj.parentFrame;
+
+    std::string c_par_fname = pin_model_coarse.frames[c_par_fid].name;
+
+    for (size_t f_i = 0; f_i < pin_geom_model_fine.geometryObjects.size(); f_i++) {
+      const pinocchio::GeometryObject &f_obj = pin_geom_model_fine.geometryObjects[f_i];
+
+      const pinocchio::FrameIndex f_par_jid = f_obj.parentJoint;
+      const pinocchio::FrameIndex f_par_fid = f_obj.parentFrame;
+
+      std::string f_par_fname = pin_model_fine.frames[f_par_fid].name;
+
+      if (f_par_fname == c_par_fname) {
+        assert(f_par_fid == c_par_fid && "should be same number of links in coarse and fine models");
+        assert(f_par_jid == c_par_jid && "joint ids should match up");
+        coarse_geom_id_to_fine_geom_ids[c_i].push_back(f_i);
+      }
+    }
+
+    //std::cout << c_i << ": [";
+    //for (size_t f_i : coarse_geom_id_to_fine_geom_ids[c_i]) {
+    //  std::cout << f_i << ",";
+    //}
+    //std::cout << "]\n";
+  }
 }
 
 template <size_t ndim>
@@ -164,21 +207,38 @@ bool PinFKCC::Impl::fkcc_pin(const ConfigurationBlockDimEigen<ndim> &q_block) {
     if (is_fine_collide)
       return false;
 
-    pinocchio::updateGeometryPlacements(pin_model_fine, pin_data_fine,
-        pin_geom_model_fine, pin_geom_data_fine);
+    //pinocchio::updateGeometryPlacements(pin_model_fine, pin_data_fine,
+    //    pin_geom_model_fine, pin_geom_data_fine);
 
-    // fine environment check
-    for (size_t r_i = 0; r_i < pin_geom_model_fine.geometryObjects.size(); r_i++) {
-      const auto &geom = pin_geom_model_fine.geometryObjects[r_i];
-      const auto &pose = pin_geom_data_fine.oMg[r_i];
-      pinocchio::CollisionObject r_obj(geom.geometry, pose);
+    // coarse environment check
+    for (size_t c_i = 0; c_i < pin_geom_model_coarse.geometryObjects.size(); c_i++) {
+      const auto &c_sph = pin_geom_model_coarse.geometryObjects[c_i];
+      const auto &c_pose = pin_geom_data_coarse.oMg[c_i];
+      hpp::fcl::CollisionRequest c_req;
+      hpp::fcl::CollisionResult c_res;
 
-      for (const auto &obj : pin_env) {
-        hpp::fcl::CollisionRequest req;
-        hpp::fcl::CollisionResult res;
-        hpp::fcl::collide(&r_obj, obj.get(), req, res);
-        if (res.isCollision())
-          return false;
+      pinocchio::CollisionObject c_obj(c_sph.geometry, c_pose);
+
+      for (const auto &e_obj : pin_env) {
+        hpp::fcl::collide(&c_obj, e_obj.get(), c_req, c_res);
+
+        if (c_res.isCollision()) {
+          // coarse collision, now check fine
+          // fine check for each collision sphere corres. to coarse
+          for (size_t f_i : coarse_geom_id_to_fine_geom_ids[c_i]) {
+            const auto &f_sph = pin_geom_model_fine.geometryObjects[f_i];
+            const auto &f_pose = pin_geom_data_fine.oMg[f_i];
+            pinocchio::CollisionObject f_obj(f_sph.geometry, f_pose);
+
+            hpp::fcl::CollisionRequest f_req;
+            hpp::fcl::CollisionResult f_res;
+
+            hpp::fcl::collide(&f_obj, e_obj.get(), f_req, f_res);
+
+            if (f_res.isCollision())
+              return false;
+          }
+        }
       }
     }
   }
@@ -188,6 +248,9 @@ bool PinFKCC::Impl::fkcc_pin(const ConfigurationBlockDimEigen<ndim> &q_block) {
 }
 
 /////////// Interface ////////////////
+
+PinFKCC::PinFKCC()
+	: impl_(std::make_unique<Impl>()) {}
 
 PinFKCC::PinFKCC(std::string robot_name,
                  const vamp::collision::Environment<float>& vamp_env)

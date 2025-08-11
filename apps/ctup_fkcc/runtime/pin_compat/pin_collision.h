@@ -16,6 +16,8 @@ using ConfigurationBlockDimEigen = std::array<Eigen::Matrix<float, ndim, 1>, 8>;
 
 struct PinFKCC {
 
+  PinFKCC();
+
   PinFKCC(std::string robot_name, const vamp::collision::Environment<float> &vamp_env);
 
   ~PinFKCC();

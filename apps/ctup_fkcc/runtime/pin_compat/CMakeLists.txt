@@ -6,6 +6,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Build flags: safe for linking into AVX2 downstream
 add_compile_options(-O2)
+add_compile_options(-g)
 
 # Dependencies
 
