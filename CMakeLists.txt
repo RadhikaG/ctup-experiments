@@ -157,6 +157,7 @@ set(SCRIPT_SOURCES
     scripts/debug_fk.cpp
     scripts/debug_fkcc.cpp
     scripts/debug_eef_jac.cpp
+    scripts/debug_sd_grad.cpp
     scripts/eval_fkcc.cpp
     scripts/debug_rnea.cpp
     scripts/eval_rnea.cpp
