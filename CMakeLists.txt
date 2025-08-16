@@ -158,6 +158,7 @@ set(SCRIPT_SOURCES
     scripts/debug_fkcc.cpp
     scripts/debug_eef_jac.cpp
     scripts/debug_sd_grad.cpp
+    scripts/debug_jacobian.cpp
     scripts/eval_fkcc.cpp
     scripts/debug_rnea.cpp
     scripts/eval_rnea.cpp
@@ -195,7 +196,7 @@ foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
         ${BLAZE_INCLUDE_DIR}
     )
     target_compile_options(${SCRIPT_NAME} PRIVATE 
-        -O3 -g -DNDEBUG
+        -O3 -g #-DNDEBUG
         -ffast-math
         ${CFLAGS_PEDANTIC}
     )
