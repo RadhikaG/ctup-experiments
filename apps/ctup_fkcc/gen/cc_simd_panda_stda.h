@@ -1,6 +1,6 @@
 // clang-format off
 
-#include "Eigen/Dense"
+#include <vamp/vector.hh>
 
 #include "ctup/typedefs.h"
 
