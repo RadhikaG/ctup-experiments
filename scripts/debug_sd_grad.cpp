@@ -140,6 +140,7 @@ static CollisionGradient computeDistanceAndGradientForPair(
   std::cout << "===============\n";
   std::cout << "J1: \n" << J1 << "\n";
   std::cout << "pin frame jac: \n" << getFrameJacobian(model, data, obj1.parentFrame, WORLD).topRows<3>() << "\n";
+  J1 = getFrameJacobian(model, data, obj1.parentFrame, WORLD).topRows<3>();
 
   ////// Jacobian for obj2
 
@@ -171,7 +172,7 @@ static CollisionGradient computeDistanceAndGradientForPair(
   std::cout << "===============\n";
   std::cout << "J2: \n" << J2 << "\n";
   std::cout << "pin frame jac: \n" << getFrameJacobian(model, data, obj2.parentFrame, WORLD).topRows<3>() << "\n";
-
+  J2 = getFrameJacobian(model, data, obj2.parentFrame, WORLD).topRows<3>();
 
   ////// Gradient calc
 
@@ -226,7 +227,7 @@ static Eigen::Matrix<double, 6, 1> get_spatial_twist_fd(
   updateGeometryPlacements(model, data, geom_model, geom_data, q_minus);
   T_minus = geom_data.oMg[g_id].toHomogeneousMatrix();
 
-  T_dot = (T_plus - T_minus) / 2 * EPSILON;
+  T_dot = (T_plus - T_minus) / (2 * EPSILON);
 
   Eigen::Matrix4d spatial_twist_hom;
   //spatial_twist_hom = T_dot * T.inverse();
@@ -237,6 +238,7 @@ static Eigen::Matrix<double, 6, 1> get_spatial_twist_fd(
 
   //spatial_twist.block<3, 1>(0, 0) = omega_s;
   //spatial_twist.block<3, 1>(3, 0) = v_s;
+  //
   // pin order
   spatial_twist.block<3, 1>(0, 0) = v_s;
   spatial_twist.block<3, 1>(3, 0) = omega_s;
@@ -311,10 +313,13 @@ static void finiteDifferenceCheck(
   std::cout << "===============================\n";
 
   updateGeometryPlacements(model, data, geom_model, geom_data, q);
+
   Eigen::Vector3d p1 = geom_data.oMg[g1].translation();
   Eigen::Vector3d p2 = geom_data.oMg[g2].translation();
+
   Eigen::Vector3d n = (p1 - p2).normalized();
-  Eigen::VectorXd grad_fd = n.transpose() * (J1_fd.bottomRows<3>() - J2_fd.bottomRows<3>());
+
+  Eigen::VectorXd grad_fd = n.transpose() * (J1_fd.topRows<3>() - J2_fd.topRows<3>());
 
 
   std::cout << "pair: " << "(" << g1 << ", " << g2 << ")\n";
