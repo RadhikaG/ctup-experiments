@@ -8,6 +8,7 @@
 
 #include <hpp/fcl/shape/geometric_shapes.h>  // for hpp::fcl::Sphere
 
+#include <cassert>
 #include <iostream>
 #include <cmath>
 
@@ -27,6 +28,46 @@ static Eigen::Matrix3d skew(const Eigen::Vector3d &v) {
         v.z(),     0, -v.x(),
        -v.y(),  v.x(),    0;
   return m;
+}
+
+static inline Eigen::Vector3d vee_skew(const Eigen::Matrix3d &S) {
+  return Eigen::Vector3d( S(2,1),
+                          S(0,2),
+                          S(1,0));
+}
+
+static double computeDistance(
+    const Model &model,
+    Data &data,
+    const GeometryModel &geom_model,
+    GeometryData &geom_data,
+    const Eigen::VectorXd &q,
+    GeomIndex g1,
+    GeomIndex g2) {
+
+  updateGeometryPlacements(model, data, geom_model, geom_data, q);
+
+  const auto &obj1 = geom_model.geometryObjects[g1];
+  const auto &obj2 = geom_model.geometryObjects[g2];
+
+  auto sph1 = std::dynamic_pointer_cast<hpp::fcl::Sphere>(obj1.geometry);
+  auto sph2 = std::dynamic_pointer_cast<hpp::fcl::Sphere>(obj2.geometry);
+  if (!sph1 || !sph2) {
+    throw std::runtime_error("Non-sphere geometry detected in collision model.");
+  }
+
+  double r1 = sph1->radius;
+  double r2 = sph2->radius;
+
+  // World positions of sphere centers
+  // oMg is placement of object in world frame
+  Eigen::Vector3d p1 = geom_data.oMg[g1].translation();
+  Eigen::Vector3d p2 = geom_data.oMg[g2].translation();
+  Eigen::Vector3d delta = p1 - p2;
+  double dist = delta.norm();
+  double signed_dist = dist - (r1 + r2);
+
+  return signed_dist;
 }
 
 static CollisionGradient computeDistanceAndGradientForPair(
@@ -55,7 +96,7 @@ static CollisionGradient computeDistanceAndGradientForPair(
   double r2 = sph2->radius;
 
   // World positions of sphere centers
-  // oMg is placement of object in world frame
+  // oMg is placement of object wrt world frame expressed in world frame
   Eigen::Vector3d p1 = geom_data.oMg[g1].translation();
   Eigen::Vector3d p2 = geom_data.oMg[g2].translation();
   Eigen::Vector3d delta = p1 - p2;
@@ -86,10 +127,19 @@ static CollisionGradient computeDistanceAndGradientForPair(
   // obj1 wrt j1 expressed in world frame
   Eigen::Vector3d p1_world = R1_world * p1_local;
 
-  Eigen::MatrixXd J1 = J1_linear + skew(p1_world) * J1_angular;
+  //Eigen::MatrixXd J1 = J1_linear + skew(p1_world) * J1_angular;
+  Eigen::Matrix<double, 3, Eigen::Dynamic> J1;
+  J1.resize(3, model.nq);
+
+  for (size_t i = 0; i < (size_t)model.nq; i++) {
+    Eigen::Vector3d w_1i = J1_angular.col(i);
+    Eigen::Vector3d v_1i = J1_linear.col(i);
+    J1.col(i) = w_1i.cross(p1_world) + v_1i;
+  }
 
   std::cout << "===============\n";
   std::cout << "J1: \n" << J1 << "\n";
+  std::cout << "pin frame jac: \n" << getFrameJacobian(model, data, obj1.parentFrame, WORLD).topRows<3>() << "\n";
 
   ////// Jacobian for obj2
 
@@ -109,50 +159,163 @@ static CollisionGradient computeDistanceAndGradientForPair(
   // obj1 wrt j1 expressed in world frame
   Eigen::Vector3d p2_world = R2_world * p2_local;
 
-  Eigen::MatrixXd J2 = J2_linear + skew(p2_world) * J2_angular;
+  //Eigen::MatrixXd J2 = J2_linear + skew(p2_world) * J2_angular;
+  Eigen::Matrix<double, 3, Eigen::Dynamic> J2;
+  J2.resize(3, model.nq);
+  for (size_t i = 0; i < (size_t)model.nq; i++) {
+    Eigen::Vector3d w_2i = J2_angular.col(i);
+    Eigen::Vector3d v_2i = J2_linear.col(i);
+    J2.col(i) = w_2i.cross(p2_world) + v_2i;
+  }
 
   std::cout << "===============\n";
   std::cout << "J2: \n" << J2 << "\n";
+  std::cout << "pin frame jac: \n" << getFrameJacobian(model, data, obj2.parentFrame, WORLD).topRows<3>() << "\n";
+
 
   ////// Gradient calc
 
   Eigen::VectorXd grad = Eigen::VectorXd::Zero(model.nv);
   std::cout << "===============\n";
   std::cout << "grad_norm: " << (delta/dist).transpose() << "\n";
-  std::cout << "grad: " << (delta/dist).transpose() * (J1 - J2) << "\n";
+  std::cout << "grad: " << (delta/2*dist).transpose() * (J1 - J2) << "\n";
   std::cout << "===============\n";
   if (dist > 1e-8) {
-    grad = (delta / dist).transpose() * (J1 - J2);
+    grad = (delta / 2 * dist).transpose() * (J1 - J2);
   }
 
   return {signed_dist, grad, {g1, g2}};
 }
 
-static void finiteDifferenceCheck(
-    const Model &model,
-    const GeometryModel &geom_model,
-    const Eigen::VectorXd &q,
-    const CollisionGradient &result)
+static void printAllGeoms(
+    Model &model,
+    Data &data,
+    GeometryModel &geom_model,
+    GeometryData &geom_data)
 {
-  std::cout << "========= Finite Diff check =======\n";
-  const auto &[g1, g2] = result.geom_pair;
-  Eigen::VectorXd q_plus = q, q_minus = q;
-  Eigen::VectorXd grad_fd(model.nv);
-
-  for (int i = 0; i < model.nv; ++i) {
-    q_plus = q;
-    q_minus = q;
-    q_plus(i) += EPSILON;
-    q_minus(i) -= EPSILON;
-
-    Data data_plus(model), data_minus(model);
-    GeometryData geom_plus(geom_model), geom_minus(geom_model);
-
-    double d_plus = computeDistanceAndGradientForPair(model, data_plus, geom_model, geom_plus, q_plus, g1, g2).signed_distance;
-    double d_minus = computeDistanceAndGradientForPair(model, data_minus, geom_model, geom_minus, q_minus, g1, g2).signed_distance;
-
-    grad_fd(i) = (d_plus - d_minus) / (2 * EPSILON);
+  std::cout << "===============================\n";
+  for (size_t i = 0; i < geom_model.geometryObjects.size(); i++) {
+    Eigen::Matrix4d go_xform = geom_data.oMg[i].toHomogeneousMatrix();
+    std::cout << geom_model.geometryObjects[i].name << ":\n";
+    std::cout << go_xform << "\n";
   }
+  std::cout << "===============================\n";
+}
+
+static Eigen::Matrix<double, 6, 1> get_spatial_twist_fd(
+    Model &model,
+    Data &data,
+    GeometryModel &geom_model,
+    GeometryData &geom_data,
+    GeomIndex g_id,
+    Eigen::VectorXd &q_minus,
+    Eigen::VectorXd &q,
+    Eigen::VectorXd &q_plus) {
+  Eigen::Matrix<double, 6, 1> spatial_twist;
+
+  Eigen::Matrix4d T_dot, T, T_plus, T_minus;
+
+  Eigen::Vector3d omega_s, v_s;
+
+  updateGeometryPlacements(model, data, geom_model, geom_data, q);
+  T = geom_data.oMg[g_id].inverse().toHomogeneousMatrix();
+
+  updateGeometryPlacements(model, data, geom_model, geom_data, q_plus);
+  T_plus = geom_data.oMg[g_id].toHomogeneousMatrix();
+
+  updateGeometryPlacements(model, data, geom_model, geom_data, q_minus);
+  T_minus = geom_data.oMg[g_id].toHomogeneousMatrix();
+
+  T_dot = (T_plus - T_minus) / 2 * EPSILON;
+
+  Eigen::Matrix4d spatial_twist_hom;
+  //spatial_twist_hom = T_dot * T.inverse();
+  spatial_twist_hom = T_dot * T;
+
+  omega_s = vee_skew(spatial_twist_hom.block<3, 3>(0, 0));
+  v_s = spatial_twist_hom.block<3, 1>(0, 3);
+
+  //spatial_twist.block<3, 1>(0, 0) = omega_s;
+  //spatial_twist.block<3, 1>(3, 0) = v_s;
+  // pin order
+  spatial_twist.block<3, 1>(0, 0) = v_s;
+  spatial_twist.block<3, 1>(3, 0) = omega_s;
+
+  return spatial_twist;
+}
+
+static void finiteDifferenceCheck(
+    Model &model,
+    Data &data,
+    GeometryModel &geom_model,
+    GeometryData &geom_data,
+    Eigen::VectorXd &q,
+    CollisionGradient &result)
+{
+  const auto &[g1, g2] = result.geom_pair;
+
+  const auto &obj1 = geom_model.geometryObjects[g1];
+  const auto &obj2 = geom_model.geometryObjects[g2];
+
+  auto sph1 = std::dynamic_pointer_cast<hpp::fcl::Sphere>(obj1.geometry);
+  auto sph2 = std::dynamic_pointer_cast<hpp::fcl::Sphere>(obj2.geometry);
+  if (!sph1 || !sph2) {
+    throw std::runtime_error("Non-sphere geometry detected in collision model.");
+  }
+
+  double r1 = sph1->radius;
+  double r2 = sph2->radius;
+
+  std::cout << "========= Finite Diff check =======\n";
+
+  Eigen::VectorXd q_plus(q), q_minus(q);
+
+  Eigen::MatrixXd J1_fd(6, model.nq);
+  Eigen::MatrixXd J2_fd(6, model.nq);
+
+  for (size_t i = 0; i < (size_t)model.nq; i++) {
+    //std::cout << "pair: " << "(" << g1 << ", " << g2 << "), " << "i = " << i << "\n";
+    q_plus = q; q_minus = q;
+    //q_plus(i) += EPSILON;
+    //q_minus(i) -= EPSILON;
+    Eigen::VectorXd v(model.nv);
+    v.setZero();
+    v[i] = EPSILON;
+    q_plus = integrate(model, q, v);
+    q_minus = integrate(model, q, -v);
+
+    Eigen::Matrix<double, 6, 1> v1 = get_spatial_twist_fd(model, data, geom_model, geom_data, g1, q_minus, q, q_plus);
+    Eigen::Matrix<double, 6, 1> v2 = get_spatial_twist_fd(model, data, geom_model, geom_data, g2, q_minus, q, q_plus);
+
+    J1_fd.col(i) = v1;
+    J2_fd.col(i) = v2;
+  }
+
+  //const double threshold = 1e-15;
+  //J1_fd = (threshold < J1_fd.array().abs()).select(J1_fd, 0.0f);
+  //J2_fd = (threshold < J2_fd.array().abs()).select(J2_fd, 0.0f);
+
+  Eigen::Matrix<double, 6, Eigen::Dynamic> J_pin(6, model.nv);
+
+  std::cout << "====== Finite diff jacobians =========\n";
+  std::cout << "J1: \n" << J1_fd << "\n";
+  std::cout << "J2: \n" << J2_fd << "\n";
+  std::cout << "===============================\n";
+
+  std::cout << "====== getFrameJacobian =========\n";
+  computeJointJacobians(model, data, q);
+  getFrameJacobian(model, data, obj1.parentFrame, WORLD, J_pin);
+  std::cout << "J1: \n" <<  J_pin << "\n";
+  getFrameJacobian(model, data, obj2.parentFrame, WORLD, J_pin);
+  std::cout << "J2: \n" << J_pin << "\n";
+  std::cout << "===============================\n";
+
+  updateGeometryPlacements(model, data, geom_model, geom_data, q);
+  Eigen::Vector3d p1 = geom_data.oMg[g1].translation();
+  Eigen::Vector3d p2 = geom_data.oMg[g2].translation();
+  Eigen::Vector3d n = (p1 - p2).normalized();
+  Eigen::VectorXd grad_fd = n.transpose() * (J1_fd.bottomRows<3>() - J2_fd.bottomRows<3>());
+
 
   std::cout << "pair: " << "(" << g1 << ", " << g2 << ")\n";
   std::cout << "Analytical Gradient:\n" << result.gradient.transpose() << "\n";
@@ -193,12 +356,13 @@ int main(int argc, char **argv) {
   Eigen::Matrix<double, 6, Eigen::Dynamic> J;
   J.resize(6, model.nv);
 
-  // Use reference configuration if available
-  Eigen::VectorXd q = model.referenceConfigurations["ready"];
-  std::cout << q << "\n";
-  computeJointJacobians(model, data, q);
-  getJointJacobian(model, data, model.njoints-1, WORLD, J);
-  std::cout << J << "\n";
+  Eigen::VectorXd q;
+  //// Use reference configuration if available
+  //q = model.referenceConfigurations["ready"];
+  //std::cout << q << "\n";
+  //computeJointJacobians(model, data, q);
+  //getJointJacobian(model, data, model.njoints-1, WORLD, J);
+  //std::cout << J << "\n";
   std::cout << "======== random config =========\n";
   q = randomConfiguration(model);
   std::cout << q << "\n";
@@ -208,15 +372,15 @@ int main(int argc, char **argv) {
   std::cout << "=============================\n";
   // test jac
 
-  // Compute distance + gradient for all valid collision pairs
   updateGeometryPlacements(model, data, geom_model, geom_data, q);
 
+  // Compute distance + gradient for all valid collision pairs
   for (const auto &cp : geom_model.collisionPairs) {
     auto result = computeDistanceAndGradientForPair(model, data, geom_model, geom_data, q, cp.first, cp.second);
     std::cout << "Collision Pair (" << cp.first << ", " << cp.second << ") -> Signed Distance: "
               << result.signed_distance << "\n";
 
-    finiteDifferenceCheck(model, geom_model, q, result);
+    finiteDifferenceCheck(model, data, geom_model, geom_data, q, result);
     std::cout << "----------------------------------------\n";
   }
 

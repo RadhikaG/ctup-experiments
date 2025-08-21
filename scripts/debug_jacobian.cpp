@@ -96,8 +96,10 @@ analytic_world_jacobian_for_joint(const pin::Model &model,
   Eigen::Matrix<double,6,Eigen::Dynamic> J(6, model.nv);
   J.setZero();
   pin::computeFrameJacobian(model, data, q, fid, pin::WORLD, J);
+
   Eigen::Matrix<double, 6, Eigen::Dynamic> J_conv(6, model.nv);
   J_conv.setZero();
+
   // swapping because pin flips linear and angular part
   J_conv.topRows<3>() = J.bottomRows<3>();
   J_conv.bottomRows<3>() = J.topRows<3>();
