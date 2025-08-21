@@ -51,12 +51,28 @@ PinFKCC::Impl::Impl(std::string robot_name, const vamp::collision::Environment<f
   std::string srdf_filename;
   std::string pin_model_path;
 
+  std::string CTUP_ROOT = "/home/ubuntu/ctup_stuff/ctup-experiments/";
+
   if (robot_name == "panda") {
     // todo: change to relative paths later
-    urdf_filename_coarse = "/home/ubuntu/ctup_stuff/ctup-experiments/models/panda/panda_spherized_1.urdf";
-    urdf_filename_fine = "/home/ubuntu/ctup_stuff/ctup-experiments/models/panda/panda_spherized.urdf";
-    srdf_filename = "/home/ubuntu/ctup_stuff/ctup-experiments/models/panda/panda.srdf";
-    pin_model_path = "/home/ubuntu/ctup_stuff/ctup-experiments/models/panda/";
+    urdf_filename_coarse = CTUP_ROOT + "models/panda/panda_spherized_1.urdf";
+    urdf_filename_fine = CTUP_ROOT + "models/panda/panda_spherized.urdf";
+    srdf_filename = CTUP_ROOT + "models/panda/panda.srdf";
+    pin_model_path = CTUP_ROOT + "models/panda/";
+  }
+  else if (robot_name == "baxter") {
+    // todo: change to relative paths later
+    urdf_filename_coarse = CTUP_ROOT + "models/baxter/baxter_spherized_1.urdf";
+    urdf_filename_fine = CTUP_ROOT + "models/baxter/baxter_spherized.urdf";
+    srdf_filename = CTUP_ROOT + "models/baxter/baxter.srdf";
+    pin_model_path = CTUP_ROOT + "models/baxter/";
+  }
+  else if (robot_name == "fetch") {
+    // todo: change to relative paths later
+    urdf_filename_coarse = CTUP_ROOT + "models/fetch/fetch_spherized_1.urdf";
+    urdf_filename_fine = CTUP_ROOT + "models/fetch/fetch_spherized.urdf";
+    srdf_filename = CTUP_ROOT + "models/fetch/fetch.srdf";
+    pin_model_path = CTUP_ROOT + "models/fetch/";
   }
   else {
     assert(false && "unimplemented for non-panda robots");
