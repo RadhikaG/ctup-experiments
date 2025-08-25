@@ -31,6 +31,14 @@ static pin::SE3 fk_frame_placement(const pin::Model &model,
   return data.oMf[fid];
 }
 
+static Eigen::Matrix3d skew(const Eigen::Vector3d &v) {
+  Eigen::Matrix3d m;
+  m <<     0, -v.z(),  v.y(),
+        v.z(),     0, -v.x(),
+       -v.y(),  v.x(),    0;
+  return m;
+}
+
 static inline Eigen::Vector3d vee_skew(const Eigen::Matrix3d &S) {
   return Eigen::Vector3d( S(2,1),
                           S(0,2),
@@ -106,6 +114,112 @@ analytic_world_jacobian_for_joint(const pin::Model &model,
   return J_conv;
 }
 
+static int get_jtype(const pin::Model &model, pin::JointIndex i) {
+  std::string joint_name = model.joints[i].shortname();
+
+  bool is_revolute = joint_name.find("JointModelR") != std::string::npos;
+  bool is_prismatic = joint_name.find("JointModelP") != std::string::npos;
+
+  if (is_revolute)
+    return 'R';
+  if (is_prismatic)
+    return 'P';
+  else
+    return 'N';
+}
+
+static int get_joint_axis(const pin::Model &model, pin::JointIndex i) {
+  std::string joint_name = model.joints[i].shortname();
+  char axis = joint_name.back();
+
+  switch(axis) {
+    case 'X': return 'X';
+    case 'Y': return 'Y';
+    case 'Z': return 'Z';
+    default: assert(false && "should never happen"); return -1;
+  }
+}
+
+static bool is_joint_ancestor(
+    const pinocchio::Model &model, 
+    size_t ancestor, size_t descendant) {
+  size_t parent = descendant;
+  // joint 0 is "universe"
+  while (parent != 0) {
+    if (parent == ancestor)
+      return true;
+    parent = model.parents[parent];
+  }
+  return false;
+}
+
+static Eigen::Matrix<double, 6, Eigen::Dynamic>
+manual_world_jacobian_for_joint(const pin::Model &model,
+        const Eigen::VectorXd &q,
+        pin::FrameIndex fid) {
+  pin::JointIndex jid = model.frames[fid].parentJoint;
+  pin::Data data(model);
+  // don't want to calculate FK from scratch
+  pin::forwardKinematics(model, data, q);
+
+  Eigen::Matrix<double, 6, Eigen::Dynamic> J(6, model.nv);
+  J.setZero();
+
+  Eigen::Matrix<double, 6, 1> S_world, S;
+  S.setZero();
+  S_world.setZero();
+
+  Eigen::Matrix<double, 3, 3> adj_par_R;
+  Eigen::Matrix<double, 3, 3> adj_par_p;
+  Eigen::Matrix<double, 6, 6> adj_par;
+
+  Eigen::Matrix<double, 3, 3> adj_curr_R;
+  Eigen::Matrix<double, 3, 3> adj_curr_p;
+  Eigen::Matrix<double, 6, 6> adj_curr;
+
+  for (size_t i = 1; i < (size_t)model.njoints; i++) {
+    S.setZero();
+    S_world.setZero();
+    adj_par_R.setZero();
+    adj_par_p.setZero();
+    adj_par.setZero();
+    adj_curr_R.setZero();
+    adj_curr_p.setZero();
+    adj_curr.setZero();
+
+    if (!is_joint_ancestor(model, i, jid)) {
+      // 0th joint is universe
+      J.col(i-1).setZero();
+      continue;
+    }
+
+    if (get_jtype(model, i) == 'P') {
+      // linear v bottom
+      if (get_joint_axis(model, i) == 'X') S(3) = 1;
+      if (get_joint_axis(model, i) == 'Y') S(4) = 1;
+      if (get_joint_axis(model, i) == 'Z') S(5) = 1;
+    }
+    else if (get_jtype(model, i) == 'R') {
+      // rotational omega top
+      if (get_joint_axis(model, i) == 'X') S(0) = 1;
+      if (get_joint_axis(model, i) == 'Y') S(1) = 1;
+      if (get_joint_axis(model, i) == 'Z') S(2) = 1;
+    }
+
+    adj_curr_R = data.oMi[i].rotation();
+    adj_curr_p = skew(data.oMi[i].translation());
+    adj_curr.block<3, 3>(0, 0) = adj_curr_R;
+    adj_curr.block<3, 3>(3, 3) = adj_curr_R;
+    adj_curr.block<3, 3>(3, 0) = adj_curr_p * adj_curr_R;
+
+    S_world = adj_curr * S;
+
+    J.col(i-1) = S_world;
+  }
+
+  return J;
+}
+
 int main(int argc, char** argv) {
   if (argc < 3) {
     std::cerr << "Usage: " << argv[0] << " path/to/robot.urdf path/to/robot.srdf\n";
@@ -145,6 +259,7 @@ int main(int argc, char** argv) {
 
   const auto J_an = analytic_world_jacobian_for_joint(model, q, last_fid);
   const auto J_fd = fd_world_jacobian_for_joint(model, q, last_fid);
+  const auto J_man = manual_world_jacobian_for_joint(model, q, last_fid);
   const Eigen::MatrixXd err = J_an - J_fd;
 
   double max_abs = err.cwiseAbs().maxCoeff();
@@ -172,6 +287,7 @@ int main(int argc, char** argv) {
   std::cout << "\nAnalytic WORLD Jacobian:\n" << J_an.format(fmt) << "\n";
   std::cout << "\nFinite-difference WORLD Jacobian:\n" << J_fd.format(fmt) << "\n";
   std::cout << "\nError (analytic - FD):\n" << err.format(fmt) << "\n";
+  std::cout << "\nManual calc WORLD Jacobian:\n" << J_man.format(fmt) << "\n";
 
   return 0;
 }
