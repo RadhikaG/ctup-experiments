@@ -46,8 +46,8 @@ using ctup::backend::blaze_avx256f;
 /////////////////////////////////////////////
 
 using ctup::Xform;
-using ctup::Vec3;
-using ctup::SingletonMotionSubspaceVec3;
+using ctup::SingletonSpatialVector;
+using ctup::SpatialVector;
 
 /////////////////////////////////////////////
 ///// DEBUG HELPERS
@@ -172,7 +172,7 @@ static dyn_var<int> get_eef_world_jacobian(
   X_J.set_size(model.njoints);
   X_0.set_size(model.njoints);
 
-  builder::array<SingletonMotionSubspaceVec3<double>> S;
+  builder::array<SingletonSpatialVector<double>> S;
   S.set_size(model.njoints);
 
   // if desired output: all jacobians
@@ -208,8 +208,10 @@ static dyn_var<int> get_eef_world_jacobian(
   }
 
   Xform<double> X_pi;
-  Vec3<double> S_world, p_i_rel;
-  Vec3<double> Jv, Jw;
+
+  ctup::Adjoint<double> adj;
+  SpatialVector<double> S_world;
+  SpatialVector<double> twist_col;
 
   static_var<JointIndex> parent;
   std::string joint_name;
@@ -236,39 +238,17 @@ static dyn_var<int> get_eef_world_jacobian(
         if (!is_joint_ancestor(model, j, i)) {
           continue;
         }
+
         // since we know j is ancestor of i,
         // X_0[j] is guaranteed to have been
         // calculated already.
-        S_world = X_0[j].get_rotation() * S[j];
+        adj.set_rotation_and_translation(X_0[j].get_rotation(), X_0[j].get_translation());
 
-        if (S[j].axis_type == 'R') {
-          p_i_rel = X_0[i].get_translation() - X_0[j].get_translation();
-          // lazy cross product, todo turn into operator
-          Jv.set_entry_to_nonconstant(0, 0, 
-                  S_world.get_entry(1,0) * p_i_rel.get_entry(2,0) - S_world.get_entry(2,0) * p_i_rel.get_entry(1,0));
-
-          Jv.set_entry_to_nonconstant(1, 0, 
-                  S_world.get_entry(2,0) * p_i_rel.get_entry(0,0) - S_world.get_entry(0,0) * p_i_rel.get_entry(2,0));
-
-          Jv.set_entry_to_nonconstant(2, 0, 
-                  S_world.get_entry(0,0) * p_i_rel.get_entry(1,0) - S_world.get_entry(1,0) * p_i_rel.get_entry(0,0));
-
-          Jw = ctup::matrix_layout_expr_leaf<double>(S_world);
-        }
-        else if (S[j].axis_type == 'R') {
-          Jv = ctup::matrix_layout_expr_leaf<double>(S_world);
-          Jw.set_zero();
-        }
-        else {
-          assert(false && "joint must be revolute or prismatic");
-        }
+        S_world = adj * S[j];
 
         for (static_var<size_t> r = 0; r < 6; r = r + 1) {
           // j-1 because j=0 is universe joint
-          if (r < 3)
-            J.set_entry_to_nonconstant(r, j-1, Jw.get_entry(r, 0));
-          else
-            J.set_entry_to_nonconstant(r, j-1, Jv.get_entry(r-3, 0));
+          J.set_entry_to_nonconstant(r, j-1, S_world.get_entry(r, 0));
         }
       }
       break;

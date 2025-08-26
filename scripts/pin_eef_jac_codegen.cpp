@@ -8,8 +8,8 @@
 
 int main(int argc, char ** argv)
 {
-  //const int N_ITER = 1000000;
-  const int N_ITER = 1;
+  const int N_ITER = 100000;
+  //const int N_ITER = 1;
 
   using namespace CppAD;
   using namespace CppAD::cg;
@@ -45,14 +45,15 @@ int main(int argc, char ** argv)
 
   computeJointJacobians(ad_model, ad_data, ad_X);
   // last joint jac
-  getJointJacobian(ad_model, ad_data, model.njoints-1, WORLD, ad_J);
+  ad_J = getJointJacobian(ad_model, ad_data, model.njoints-1, WORLD);
 
   // flatten to output vector
   ADVectorXs ad_Y_flat(6 * model.nv);
 
-  for (int i = 0; i < 6; i++) {
-    for (int jv = 0; jv < model.nv; jv++) {
-      ad_Y_flat[i*model.nv + jv] = ad_J(i, jv);
+  // col major storage so Eigen::Map can deserialize correctly
+  for (int jv = 0; jv < model.nv; jv++) {
+    for (int i = 0; i < 6; i++) {
+      ad_Y_flat[jv * 6 + i] = ad_J.coeffRef(i, jv);
     }
   }
 
@@ -82,7 +83,10 @@ int main(int argc, char ** argv)
   auto elapsed =
       std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
 
+  std::cout << "y: " << y << "\n";
+
   Eigen::Matrix<double, 6, Eigen::Dynamic> final_jac_res;
+  final_jac_res.resize(6, model.nv);
   final_jac_res = Eigen::Map<const Eigen::MatrixXd>(y.data(), 6, model.nv);
 
   std::cout << final_jac_res << "\n";

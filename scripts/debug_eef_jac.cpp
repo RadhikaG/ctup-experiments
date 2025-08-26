@@ -1,5 +1,6 @@
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/jacobian.hpp"
+#include "pinocchio/algorithm/frames.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include <Eigen/src/Core/Matrix.h>
 #include <Eigen/src/Core/util/Constants.h>
@@ -9,6 +10,8 @@
 int main(int argc, char ** argv)
 {
   using namespace pinocchio;
+
+  size_t N_IT = 10000;
 
   const std::string urdf_filename = (argc<=1) ? PINOCCHIO_MODEL_DIR + std::string("/others/robots/ur_description/urdf/ur5_robot.urdf") : argv[1];
   std::cout << urdf_filename << "\n";
@@ -20,18 +23,33 @@ int main(int argc, char ** argv)
 
   Data data(model);
 
-  Eigen::VectorXd q = randomConfiguration(model);
+  Eigen::VectorXd q(model.nq);
+  q = randomConfiguration(model);
+  //q << 2.01874, -0.387108, 1.67997, -0.563517, 2.4428, 0.685047, -0.977821;
   std::cout << "q: " << q.transpose() << std::endl;
 
   Eigen::Matrix<double, 6, Eigen::Dynamic> J;
   J.resize(6, model.nv);
+  J.setZero();
 
-  computeJointJacobians(model, data, q);
-  getJointJacobian(model, data, model.njoints-1, WORLD, J);
+  {
+    auto start = std::chrono::steady_clock::now();
+    for (size_t i = 0; i < N_IT; ++i) {
+      computeJointJacobians(model, data, q);
+      J = getJointJacobian(model, data, model.njoints-1, WORLD);
+    }
+    auto end = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    std::cout << "PIN NONCG JAC (ns): \t\t\t\t" << elapsed.count()/(N_IT)<<std::endl;
+  }
 
   std::cout << "---PINOCCHIO DEBUG---\n";
 
-  std::cout << J << "\n";
+  Eigen::Matrix<double, 6, Eigen::Dynamic> J_reord;
+  J_reord.resize(6, model.nv);
+  J_reord.bottomRows<3>() = J.topRows<3>();
+  J_reord.topRows<3>() = J.bottomRows<3>();
+  std::cout << J_reord << "\n";
 
   typedef Eigen::Matrix<double, 4, 4> EigenHomogXform;
   typedef Eigen::Matrix<double, 6, 6> AdjMat;
@@ -67,7 +85,17 @@ int main(int argc, char ** argv)
 
   std::cout << "--- CTUP DEBUG---\n";
 
-  ctup_res = ctup_gen::get_eef_world_jacobian(q);
+
+  {
+    auto start = std::chrono::steady_clock::now();
+    for (size_t i = 0; i < N_IT; ++i) {
+      ctup_res = ctup_gen::get_eef_world_jacobian(q);
+    }
+    auto end = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    std::cout << "CTUP JAC (ns): \t\t\t\t" << elapsed.count()/(N_IT)<<std::endl;
+  }
+
 
   std::cout << ctup_res << "\n";
 
