@@ -1,15 +1,15 @@
 // ignore unused header warning in IDE, this is needed
 #include "matrix_layout.h"
-#include "jacobian_layouts.h"
-
 #include "pinocchio/multibody/joint/joint-collection.hpp"
 #include "pinocchio/multibody/model.hpp"
 #include "pinocchio/algorithm/geometry.hpp"
+#include "pinocchio/collision/collision.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
 #include <hpp/fcl/collision_object.h>
 #include <hpp/fcl/shape/geometric_shapes.h>
 #include <memory>
+#include <ostream>
 #include <pinocchio/multibody/fwd.hpp>
 #include <pinocchio/multibody/geometry.hpp>
 #include <pinocchio/spatial/fwd.hpp>
@@ -17,7 +17,6 @@
 #include "pinocchio/parsers/srdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include <iostream>
-#include <map>
 
 #include "blocks/block_visitor.h"
 #include "blocks/c_code_generator.h"
@@ -31,15 +30,13 @@
 
 #include "matrix_layout_composite.h"
 #include "matrix_operators.h"
+#include "jacobian_layouts.h"
 #include "backend.h"
 
 using builder::dyn_var;
 using builder::static_var;
 
 using pinocchio::Model;
-
-using ctup::EigenMatrix;
-using ctup::matrix_layout;
 
 using ctup::backend::blaze_avx256f;
 
@@ -55,10 +52,10 @@ using ctup::SpatialVector;
 builder::dyn_var<void(ctup::BlazeStaticMatrix<float> &)> print_matrix = builder::as_global("print_matrix");
 builder::dyn_var<void(char *)> print_string = builder::as_global("print_string");
 
-template <typename MatType>
-static void print_mat(std::string prefix, MatType &mat) {
+template <typename Scalar>
+static void print_Xmat(std::string prefix, Xform<Scalar> &xform) {
   print_string(prefix.c_str());
-  print_matrix(mat.denseify());
+  print_matrix(xform.denseify());
 }
 
 /////////////////////////////////////////////
@@ -66,27 +63,18 @@ static void print_mat(std::string prefix, MatType &mat) {
 namespace runtime {
 
 namespace robots {
-constexpr char robots_ur5_name[] = "ctup_runtime::robots::UR5";
-using UR5 = typename builder::name<robots_ur5_name>;
-
-constexpr char robots_panda_name[] = "ctup_runtime::robots::Panda";
+constexpr char robots_panda_name[] = "cg_sd_runtime::robots::Panda";
 using Panda = typename builder::name<robots_panda_name>;
-
-constexpr char robots_baxter_name[] = "ctup_runtime::robots::Baxter";
-using Baxter = typename builder::name<robots_baxter_name>;
-
-constexpr char robots_fetch_name[] = "ctup_runtime::robots::Fetch";
-using Fetch = typename builder::name<robots_fetch_name>;
 }
 
-constexpr char environment_t_name[] = "vamp::collision::Environment";
-template <typename DataT>
-using environment_t = typename builder::name<environment_t_name, DataT>;
-
-constexpr char configuration_block_robot_name[] = "ctup_runtime::ConfigurationBlockRobot";
+constexpr char configuration_block_robot_name[] = "cg_sd_runtime::ConfigurationBlockRobot";
 template <typename RobotT>
 using configuration_block_robot_t = typename builder::name<configuration_block_robot_name, RobotT>;
 
+builder::dyn_var<void (
+    size_t flattened_idx,
+    blaze_avx256f&, ctup::EigenMatrix<float, 8, -1>&
+        )> map_blaze_avxtype_to_eigen_batch_dim = builder::as_global("cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim");
 }
 
 /////////////////////////////////////////////
@@ -117,8 +105,7 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
   }
 }
 
-template <typename Scalar>
-static void set_X_T(builder::array<Xform<Scalar>>& X_T, const Model &model) {
+static void set_X_T(builder::array<Xform<blaze_avx256f>>& X_T, const Model &model) {
   typedef typename Model::JointIndex JointIndex;
   static_var<JointIndex> i;
 
@@ -130,6 +117,7 @@ static void set_X_T(builder::array<Xform<Scalar>>& X_T, const Model &model) {
     // for homogeneous transforms
     Eigen::Matrix<double, 4, 4> pin_X_T = model.jointPlacements[i].toHomogeneousMatrix();
 
+    // setting E
     for (r = 0; r < 4; r = r + 1) {
       for (c = 0; c < 4; c = c + 1) {
         float entry = pin_X_T.coeffRef(r, c);
@@ -156,35 +144,36 @@ static bool is_joint_ancestor(
 }
 
 
-static dyn_var<int> get_eef_world_jacobian(
+// computes EEF jacobian for 8 robot configurations at once (batch size = 8)
+// returns:
+// jacobian: shape: (batch_size, 6 * njoints)
+static void batched_jac(
     const pinocchio::Model &model, 
-    dyn_var<builder::eigen_vectorXd_t &> q) {
+    // hack: we need to hardcode the robot template type for now
+    dyn_var<const runtime::configuration_block_robot_t<runtime::robots::Panda>&> q,
+    // modifies jac by reference
+    dyn_var<ctup::EigenMatrix<float, 8, -1>&> jac) 
+{
 
   typedef typename Model::JointIndex JointIndex;
-  const JointIndex njoints = (JointIndex)model.njoints;
 
   // joint transforms for FK
-  builder::array<Xform<double>> X_T;
-  builder::array<Xform<double>> X_J;
-  builder::array<Xform<double>> X_0;
+  builder::array<Xform<blaze_avx256f>> X_T;
+  builder::array<Xform<blaze_avx256f>> X_J;
+  builder::array<Xform<blaze_avx256f>> X_0;
 
   X_T.set_size(model.njoints);
   X_J.set_size(model.njoints);
   X_0.set_size(model.njoints);
 
-  builder::array<SingletonSpatialVector<double>> S;
+  ////////// for spatial jacobian /////////////////
+  builder::array<SingletonSpatialVector<blaze_avx256f>> S;
   S.set_size(model.njoints);
 
-  // if desired output: all jacobians
-  // logical layout:
-  // [ ] : 6 rows (i), njoints cols (j)
-  // ... njoints matrices (k)
-  // storage layout:
-  // i*k rows, j cols
-  //matrix_layout<double> J(6 * model.njoints, model.njoints, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED);
+  ctup::Adjoint<blaze_avx256f> adj;
+  SpatialVector<blaze_avx256f> S_world;
+  ///////////////////////////////////////////////
 
-  // joint 0 is "universe"
-  matrix_layout<double> J(6, model.njoints-1, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED);
 
   static_var<JointIndex> i, j;
 
@@ -207,18 +196,16 @@ static dyn_var<int> get_eef_world_jacobian(
     }
   }
 
-  Xform<double> X_pi;
-
-  ctup::Adjoint<double> adj;
-  SpatialVector<double> S_world;
+  Xform<blaze_avx256f> X_pi;
 
   static_var<JointIndex> parent;
   std::string joint_name;
 
-  for (i = 1; i < njoints; i = i+1) {
-    // FK calculatiion
-    X_J[i].jcalc(q(i-1));
+  for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
+    X_J[i].jcalc(q[i-1]);
 
+    // todo: figure out why standard featherstone matmul
+    // ordering not working with X_T from pinocchio
     //X_pi = X_J[i] * X_T[i]; // feath
     X_pi = X_T[i] * X_J[i]; // pin
     parent = model.parents[i];
@@ -227,17 +214,15 @@ static dyn_var<int> get_eef_world_jacobian(
       X_0[i] = X_0[parent] * X_pi; // pin
     }
     else {
-      X_0[i] = ctup::blocked_layout_expr_leaf<double>(X_pi);
+      X_0[i] = ctup::blocked_layout_expr_leaf<blaze_avx256f>(X_pi);
     }
 
-    // generating jacobian matrix for last joint
-    // todo: add joint name as arg
-    if (i == njoints-1) {
-      for (j = 1; j < njoints; j = j+1) {
+    //////////// Spatial jacobian for last joint ///////////
+    if (i == (size_t)model.njoints-1) {
+      for (j = 1; j < (JointIndex)model.njoints; j = j+1) {
         if (!is_joint_ancestor(model, j, i)) {
-          continue;
+            continue;
         }
-
         // since we know j is ancestor of i,
         // X_0[j] is guaranteed to have been
         // calculated already.
@@ -247,21 +232,31 @@ static dyn_var<int> get_eef_world_jacobian(
 
         for (static_var<size_t> r = 0; r < 6; r = r + 1) {
           // j-1 because j=0 is universe joint
-          J.set_entry_to_nonconstant(r, j-1, S_world.get_entry(r, 0));
+          // jac storage convention is:
+          // jac(batch_dim, r * model.nv + c), where (r,c) are the 2D indices of
+          // a vanilla jacobian matrix.
+          // r * model.nv + c is a flattened index
+          runtime::map_blaze_avxtype_to_eigen_batch_dim((size_t)(r * (size_t)model.nv + j-1), 
+                  S_world.get_entry(r, 0), jac);
         }
       }
-      break;
     }
+    ////////////////////////////////////////////////
   }
-
-  return J.denseify();
 }
 
 int main(int argc, char* argv[]) {
-  const std::string urdf_filename = argv[1];
+  //--------------------------
+  //LOAD URDF FILE
+  //--------------------------
+  const char* urdf_filename = argv[1];
   std::cout << urdf_filename << "\n";
 
-  const std::string header_filename = (argc <= 2) ? "./jac_gen.h" : argv[2];
+  //--------------------------
+  //END LOAD URDF FILE
+  //--------------------------
+
+  const std::string header_filename = (argc <= 2) ? "./fk_gen.h" : argv[2];
   std::cout << header_filename << "\n";
 
   Model model;
@@ -270,12 +265,22 @@ int main(int argc, char* argv[]) {
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
 
+  of << "// clang-format off\n\n";
+  of << "#pragma once\n\n";
   of << "#include \"Eigen/Dense\"\n\n";
+  of << "#include \"blaze/Math.h\"\n\n";
+  of << "#include \"ctup/typedefs.h\"\n\n";
+  of << "#include \"ctup_sd/runtime/utils.h\"\n\n";
   of << "#include <iostream>\n\n";
-  of << "namespace ctup_gen {\n\n";
+  of << "namespace cg_sd_gen {\n\n";
 
   of << "static void print_string(const char* str) {\n";
   of << "  std::cout << str << \"\\n\";\n";
+  of << "}\n\n";
+
+  of << "template<typename MT>\n";
+  of << "static void print_matrix(const blaze::DenseMatrix<MT, blaze::rowMajor>& matrix) {\n";
+  of << "  std::cout << matrix << \"\\n\";\n";
   of << "}\n\n";
 
   of << "template<typename Derived>\n";
@@ -286,8 +291,11 @@ int main(int argc, char* argv[]) {
   builder::builder_context context;
   context.run_rce = true;
 
-  auto ast = context.extract_function_ast(get_eef_world_jacobian, "get_eef_world_jacobian", model);
   of << "static ";
+  auto ast = context.extract_function_ast(
+          batched_jac, 
+          "batched_jac", 
+          model);
   block::c_code_generator::generate_code(ast, of, 0);
 
   of << "}\n";

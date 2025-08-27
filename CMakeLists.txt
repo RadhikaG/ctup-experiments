@@ -85,6 +85,7 @@ set(SAMPLES_SOURCES
     samples/sample12.cpp
     samples/sample13.cpp
     samples/sample14.cpp
+    samples/sample16.cpp
 )
 
 
@@ -115,31 +116,31 @@ endforeach()
 # Generated code dumped in gen/ directory.
 ################################################
 
-add_custom_command(
-  OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
-  COMMAND ${CMAKE_BINARY_DIR}/sample8 ${CMAKE_SOURCE_DIR}/deps/pinocchio/models/baxter_simple.urdf ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
-  DEPENDS ${CMAKE_BINARY_DIR}/sample8
-  COMMENT "Executing sample8"
-  VERBATIM
-)
-
-add_custom_target(
-  FK_GEN_DENSE ALL
-  DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
-)
-
-add_custom_command(
-  OUTPUT ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
-  COMMAND ${CMAKE_BINARY_DIR}/sample17 ${CMAKE_SOURCE_DIR}/models/ur5_spherized_1.urdf ${CMAKE_SOURCE_DIR}/models/ur5_spherized.urdf  ${CMAKE_SOURCE_DIR}/environment/scene001.yaml ${CMAKE_SOURCE_DIR}/models/ur5.srdf  ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
-  DEPENDS ${CMAKE_BINARY_DIR}/sample17
-  COMMENT "Executing sample17"
-  VERBATIM
-)
-
-add_custom_target(
-  CC_SIMD ALL
-  DEPENDS ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
-)
+#add_custom_command(
+#  OUTPUT ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
+#  COMMAND ${CMAKE_BINARY_DIR}/sample8 ${CMAKE_SOURCE_DIR}/deps/pinocchio/models/baxter_simple.urdf ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
+#  DEPENDS ${CMAKE_BINARY_DIR}/sample8
+#  COMMENT "Executing sample8"
+#  VERBATIM
+#)
+#
+#add_custom_target(
+#  FK_GEN_DENSE ALL
+#  DEPENDS ${CMAKE_SOURCE_DIR}/gen/fk_gen_dense.h
+#)
+#
+#add_custom_command(
+#  OUTPUT ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
+#  COMMAND ${CMAKE_BINARY_DIR}/sample17 ${CMAKE_SOURCE_DIR}/models/ur5_spherized_1.urdf ${CMAKE_SOURCE_DIR}/models/ur5_spherized.urdf  ${CMAKE_SOURCE_DIR}/environment/scene001.yaml ${CMAKE_SOURCE_DIR}/models/ur5.srdf  ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
+#  DEPENDS ${CMAKE_BINARY_DIR}/sample17
+#  COMMENT "Executing sample17"
+#  VERBATIM
+#)
+#
+#add_custom_target(
+#  CC_SIMD ALL
+#  DEPENDS ${CMAKE_SOURCE_DIR}/gen/cc_simd_ur5_2.h
+#)
 
 ################################################
 # Compiling experiment scripts for comparing baselines with generated code.
@@ -194,9 +195,10 @@ foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
         ${CMAKE_BINARY_DIR}/install/pinocchio/include
         ${EIGEN3_INCLUDE_DIR}
         ${BLAZE_INCLUDE_DIR}
+        ${CTUP_RUNTIME_INCLUDES}
     )
     target_compile_options(${SCRIPT_NAME} PRIVATE 
-        -O3 -g #-DNDEBUG
+        -O3 -g -DNDEBUG
         -ffast-math
         ${CFLAGS_PEDANTIC}
     )

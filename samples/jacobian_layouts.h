@@ -136,6 +136,8 @@ struct Xform : public blocked_layout<Scalar> {
     set_new_block(0, 0, rot);
     set_new_block(0, 1, trans);
     set_new_block(1, 1, one);
+
+    blocked_layout<Scalar>::set_identity();
   }
 
   void set_revolute_axis(char axis) {
