@@ -32,6 +32,7 @@
 
 #include "matrix_layout_composite.h"
 #include "matrix_operators.h"
+#include "jacobian_layouts.h"
 #include "backend.h"
 
 using builder::dyn_var;
@@ -51,85 +52,11 @@ struct LinkSpheres {
   std::vector<float> r;
 };
 
-namespace ctup {
-template <typename Scalar>
-struct Xform : public matrix_layout<Scalar> {
-  using matrix_layout<Scalar>::set_entry_to_constant;
-  using matrix_layout<Scalar>::set_entry_to_nonconstant;
-  dyn_var<Scalar> sinq;
-  dyn_var<Scalar> cosq;
+/////////////////////////////////////////////
 
-  static_var<int> joint_type;
-  static_var<int> joint_xform_axis;
-
-  Xform() : matrix_layout<Scalar>(4, 4, SPARSE, UNROLLED, UNCOMPRESSED) {
-    matrix_layout<Scalar>::set_identity();
-  }
-
-  void set_revolute_axis(char axis) {
-    assert((axis == 'X' || axis == 'Y' || axis == 'Z') && "axis must be X,Y,Z");
-    joint_xform_axis = axis;
-    joint_type = 'R';
-  }
-
-  void set_prismatic_axis(char axis) {
-    assert((axis == 'X' || axis == 'Y' || axis == 'Z') && "axis must be X,Y,Z");
-    joint_xform_axis = axis;
-    joint_type = 'P';
-  }
-
-  void jcalc(const dyn_var<Scalar> &q_i) {
-    sinq = backend::sin<Scalar>(q_i);
-    cosq = backend::cos<Scalar>(q_i);
-
-    if (joint_type == 'R') {
-      // switching to pinocchio transpose repr because
-      // regular featherstone notation isn't working with
-      // homogeneous transforms for some godforesaken reason.
-      // suspect it has sth to do with the X_T that pinocchio
-      // is spitting out.
-      // reverse the signs of the sines for feath (hah)
-      if (joint_xform_axis == 'X') {
-        set_entry_to_nonconstant(1, 1, cosq);
-        set_entry_to_nonconstant(1, 2, -sinq);
-        set_entry_to_nonconstant(2, 1, sinq);
-        set_entry_to_nonconstant(2, 2, cosq);
-      }
-      else if (joint_xform_axis == 'Y') {
-        set_entry_to_nonconstant(0, 0, cosq);
-        set_entry_to_nonconstant(0, 2, sinq);
-        set_entry_to_nonconstant(2, 0, -sinq);
-        set_entry_to_nonconstant(2, 2, cosq);
-      }
-      else if (joint_xform_axis == 'Z') {
-        set_entry_to_nonconstant(0, 0, cosq);
-        set_entry_to_nonconstant(0, 1, -sinq);
-        set_entry_to_nonconstant(1, 0, sinq);
-        set_entry_to_nonconstant(1, 1, cosq);
-      }
-    }
-    else if (joint_type == 'P') {
-      if (joint_xform_axis == 'X') {
-        set_entry_to_nonconstant(0, 3, q_i);
-      }
-      else if (joint_xform_axis == 'Y') {
-        set_entry_to_nonconstant(1, 3, q_i);
-      }
-      else if (joint_xform_axis == 'Z') {
-        set_entry_to_nonconstant(2, 3, q_i);
-      }
-    }
-    else {
-      assert(false && "jcalc called on non joint xform or joint unset");
-    }
-  }
-
-  using matrix_layout<Scalar>::operator=;
-};
-}
-
-template <typename Scalar>
-using Xform = ctup::Xform<Scalar>;
+using ctup::Xform;
+using ctup::SingletonSpatialVector;
+using ctup::SpatialVector;
 
 /////////////////////////////////////////////
 ///// DEBUG HELPERS
@@ -180,66 +107,32 @@ using ctup::std_array_t;
 namespace runtime {
 
 namespace robots {
-constexpr char robots_ur5_name[] = "ctup_runtime::robots::UR5";
-using UR5 = typename builder::name<robots_ur5_name>;
-
-constexpr char robots_panda_name[] = "ctup_runtime::robots::Panda";
+constexpr char robots_panda_name[] = "cg_sd_runtime::robots::Panda";
 using Panda = typename builder::name<robots_panda_name>;
-
-constexpr char robots_baxter_name[] = "ctup_runtime::robots::Baxter";
-using Baxter = typename builder::name<robots_baxter_name>;
-
-constexpr char robots_fetch_name[] = "ctup_runtime::robots::Fetch";
-using Fetch = typename builder::name<robots_fetch_name>;
 }
 
-constexpr char environment_t_name[] = "vamp::collision::Environment";
-template <typename DataT>
-using environment_t = typename builder::name<environment_t_name, DataT>;
-
-constexpr char configuration_block_robot_name[] = "ctup_runtime::ConfigurationBlockRobot";
+constexpr char configuration_block_robot_name[] = "cg_sd_runtime::ConfigurationBlockRobot";
 template <typename RobotT>
 using configuration_block_robot_t = typename builder::name<configuration_block_robot_name, RobotT>;
 
-builder::dyn_var<int (
-    // geom_id_1, helpful for debug
-    size_t,
-    // coarse sph 1
-    blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, float,
-    // # of fine sphs 1
-    size_t,
-    // fine sph 1
-    std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<float>&,
-    // geom_id_2, helpful for debug
-    size_t,
-    // coarse sph 2 
-    blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, float,
-    // # of fine sphs 2
-    size_t,
-    // fine sph 2
-    std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<float>&
-        )> 
-    self_collision_link_vs_link = builder::as_global("ctup_runtime::self_collision_link_vs_link");
+builder::dyn_var<void (
+    size_t flattened_idx,
+    blaze_avx256f&, ctup::EigenMatrix<float, 8, -1>&
+        )> map_blaze_avxtype_to_eigen_batch_dim = builder::as_global("cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim");
 
-builder::dyn_var<int (
-    // coarse sph
-    blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, float,
-    // # of fine sphs
-    size_t,
-    // fine sphs
-    std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<blaze_avx256f>&, std_array_t<float>&,
-    // vamp environment type
-    environment_t<blaze_avx256f>
-        )>
-    link_vs_environment_collision = builder::as_global("ctup_runtime::link_vs_environment_collision");
+// NV: dim velocity vector
+// NCP: number of collision pairs
+template <size_t NV, size_t NCP>
+builder::dyn_var<void (
+    size_t collision_pair_id, // we write-out to this index in sd and grad_sd
+    ctup::BlazeStaticMatrix<blaze_avx256f, 6, NV>&, // jac1
+    ctup::BlazeStaticMatrix<blaze_avx256f, 6, NV>&, // jac2
+    blaze_avx256f &, blaze_avx256f &, blaze_avx256f &, float, // sph_[x,y,z,r]1
+    blaze_avx256f &, blaze_avx256f &, blaze_avx256f &, float, // sph_[x,y,z,r]2
+    ctup::BlazeStaticVector<blaze_avx256f, NCP> &, // signed_distance (modified in-place)
+    ctup::BlazeStaticMatrix<blaze_avx256f, NCP, NV> & // sd_jac (modified in-place); left rest of template params unspecified
+        )> compute_sph_sph_cp_sd_grad = builder::as_global("cg_sd_runtime::compute_sph_sph_cp_sd_grad");
 
-builder::dyn_var<blaze_avx256f (
-    // sph 1 x,y,z,r
-    blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, blaze_avx256f&,
-    // sph 2 x,y,z,r
-    blaze_avx256f&, blaze_avx256f&, blaze_avx256f&, blaze_avx256f&
-    )>
-    sphere_sphere_sql2 = builder::as_global("ctup_runtime::sphere_sphere_sql2");
 }
 
 /////////////////////////////////////////////
@@ -347,10 +240,24 @@ static void set_X_T(builder::array<Xform<blaze_avx256f>>& X_T, const Model &mode
   }
 }
 
+static bool is_joint_ancestor(
+    const pinocchio::Model &model, 
+    size_t ancestor, size_t descendant) {
+  size_t parent = descendant;
+  // joint 0 is "universe"
+  while (parent != 0) {
+    if (parent == ancestor)
+      return true;
+    parent = model.parents[parent];
+  }
+  return false;
+}
+
+
 // computes signed distances and jacobians for 8 robot configurations at once (batch size = 8)
 // returns:
-// distances: shape: (batch_size, n_collision_pairs, 1)
-// jacobians: shape: (batch_size, n_collision_pairs, n_dof)
+// distances: shape: (batch_size, n_collision_pairs)
+// jacobians: shape: (batch_size * n_collision_pairs, n_dof)
 static void self_collision_signed_distances_and_jacobians(
     const pinocchio::Model &model, 
     const pinocchio::GeometryModel &geom_model, 
@@ -358,9 +265,13 @@ static void self_collision_signed_distances_and_jacobians(
     dyn_var<const runtime::configuration_block_robot_t<runtime::robots::Panda>&> q
     // Eigen::VectorXd distances
     // Eigen::MatrixXd jacobians
-    ) {
-
+    ) 
+{
   typedef typename Model::JointIndex JointIndex;
+
+  static_var<JointIndex> i, j;
+
+  ////////// for forward kinematics /////////////////
 
   // joint transforms for FK
   builder::array<Xform<blaze_avx256f>> X_T;
@@ -371,8 +282,26 @@ static void self_collision_signed_distances_and_jacobians(
   X_J.set_size(model.njoints);
   X_0.set_size(model.njoints);
 
-  static_var<JointIndex> i;
+  ///////////////////////////////////////////////
 
+  ////////// for spatial jacobian /////////////////
+  builder::array<SingletonSpatialVector<blaze_avx256f>> S;
+  S.set_size(model.njoints);
+
+  ctup::Adjoint<blaze_avx256f> adj;
+  SpatialVector<blaze_avx256f> S_world;
+
+  // no sparsity in Jacobian for now
+  builder::array<dyn_var<ctup::BlazeStaticMatrix<blaze_avx256f, 8, -1>>> J_joints;
+  J_joints.set_size(model.njoints);
+
+  for (i = 0; i < (JointIndex)model.njoints; i = i+1) {
+    J_joints[i].set_matrix_fixed_size(6, model.nv);
+  }
+
+  ///////////////////////////////////////////////
+
+  ////////// for child sph FK /////////////////
   // 0th link is root
   size_t n_links = model.nbodies-1;
 
@@ -413,6 +342,7 @@ static void self_collision_signed_distances_and_jacobians(
       backend::set_std_array_size(r[link_id], curr_n_sph);
     }
   }
+  ///////////////////////////////////////////////
 
   set_X_T(X_T, model);
 
@@ -425,9 +355,11 @@ static void self_collision_signed_distances_and_jacobians(
 
     if (jtype == 'R') {
       X_J[i].set_revolute_axis(axis);
+      S[i].set_revolute_axis(axis);
     }
     if (jtype == 'P') {
       X_J[i].set_prismatic_axis(axis);
+      S[i].set_prismatic_axis(axis);
     }
   }
 
@@ -436,16 +368,12 @@ static void self_collision_signed_distances_and_jacobians(
   static_var<JointIndex> parent;
   std::string joint_name;
 
-  for (i = 0; i < (JointIndex)model.njoints; i = i+1) {
-    if (i == 0) {
-      // special case different from generic FK
-      // the "universe" joint has child spheres associated with it, that we
-      // must process prior to running self collision checks for
-      // collision pairs assoc. with child sphs of joint 1 against
-      // child sphs of "universe"/joint 0
-      X_0[i].set_identity();
-    }
-    else {
+  for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
+    if (i > 0) {
+      // run FK and Jacobian calcs for non-universe joints
+      // we do want to calc frame offsets for child geoms of the universe joint
+      // which is why we don't skip them altogether
+
       X_J[i].jcalc(q[i-1]);
 
       // todo: figure out why standard featherstone matmul
@@ -458,9 +386,35 @@ static void self_collision_signed_distances_and_jacobians(
         X_0[i] = X_0[parent] * X_pi; // pin
       }
       else {
-        X_0[i] = ctup::matrix_layout_expr_leaf<blaze_avx256f>(X_pi);
+        X_0[i] = ctup::blocked_layout_expr_leaf<blaze_avx256f>(X_pi);
       }
+
+      // loop for spatial jacobian calculation
+      for (j = 1; j < (JointIndex)model.njoints; j = j+1) {
+        if (!is_joint_ancestor(model, j, i)) {
+            continue;
+        }
+        // since we know j is ancestor of i,
+        // X_0[j] is guaranteed to have been
+        // calculated already.
+        adj.set_rotation_and_translation(X_0[j].get_rotation(), X_0[j].get_translation());
+
+        S_world = adj * S[j];
+
+        for (static_var<size_t> r = 0; r < 6; r = r + 1) {
+          // j-1 because j=0 is universe joint
+          // jac storage convention is:
+          // jac(batch_dim, r * model.nv + c), where (r,c) are the 2D indices of
+          // a vanilla jacobian matrix.
+          // r * model.nv + c is a flattened index
+          runtime::map_blaze_avxtype_to_eigen_batch_dim((size_t)(r * (size_t)model.nv + j-1), 
+                  S_world.get_entry(r, 0), J_joints[i]);
+        }
+      }
+      ////////////////////////////////////////////////
     }
+
+    //////////// Frame offset for child links + SD calc ///////////
 
     joint_name = model.names[i];
 
@@ -496,9 +450,10 @@ static void self_collision_signed_distances_and_jacobians(
       //      link_spheres[link_id].y << " " <<
       //      link_spheres[link_id].z << "\n";
 
+      // each link in the URDF may have many sphs associated with it
       static_var<size_t> n_sph = link_spheres[link_id].r.size();
 
-      for(static_var<size_t> k = 0; k < n_sph; k = k+1) {
+      for (static_var<size_t> k = 0; k < n_sph; k = k+1) {
         x_0[link_id][k] = 
             X_0[i].get_entry(0,0) * link_spheres[link_id].x[k] +
             X_0[i].get_entry(0,1) * link_spheres[link_id].y[k] +
@@ -524,24 +479,32 @@ static void self_collision_signed_distances_and_jacobians(
 
       // for each child link of joint_name, we perform self collision checks
       // against previously cached FK geometries higher up the kinematic chain
-      for (static_var<size_t> cp_it = 0; cp_it < geom_model.collisionPairs.size(); cp_it = cp_it+1) {
-        const pinocchio::CollisionPair & cp = geom_model.collisionPairs[cp_it];
-        if (cp.second == link_id) {
-          std::string cp_str = "collision pair: ";
-          cp_str += std::to_string(cp.first) + "," + std::to_string(cp.second);
-          cp_str += " : " + geom_model.geometryObjects[cp.first].name + "," + geom_model.geometryObjects[cp.second].name;
-          builder::annotate(cp_str.c_str());
+      //for (static_var<size_t> cp_it = 0; cp_it < geom_model.collisionPairs.size(); cp_it = cp_it+1) {
+      //  const pinocchio::CollisionPair & cp = geom_model.collisionPairs[cp_it];
+      //  if (cp.second == link_id) {
+      //    std::string cp_str = "collision pair: ";
+      //    cp_str += std::to_string(cp.first) + "," + std::to_string(cp.second);
+      //    cp_str += " : " + geom_model.geometryObjects[cp.first].name + "," + geom_model.geometryObjects[cp.second].name;
+      //    builder::annotate(cp_str.c_str());
 
-          // x_0[link_id] is a std::array of all the sphs in the link
-          // todo: calc jacobians of each sph-sph pair
-          // ask about format
-          distances[cp_it] = runtime::sphere_sphere_sql2(
-                  x_0[cp.first], y_0[cp.first], z_0[cp.first], r[cp.first],
-                  x_0[cp.second], y_0[cp.second], z_0[cp.second], r[cp.second]
-          );
-        }
-      }
+      //    static_var<size_t> par_first = geom_model.geometryObjects[cp.first].parentJoint;
+      //    static_var<size_t> par_second = geom_model.geometryObjects[cp.second].parentJoint;
+
+      //    // [x|y|z|r]_0[link_id] is a std::array of all the sphs in the link
+
+      //    runtime::compute_sph_sph_cp_sd_grad(
+      //        cp_it,
+      //        J_joints[par_first], J_joints[par_second],
+      //        x_0[cp.first], y_0[cp.first], z_0[cp.first], r[cp.first],
+      //        x_0[cp.second], y_0[cp.second], z_0[cp.second], r[cp.second],
+      //        signed_distances,
+      //        sd_jacs
+      //    );
+      //  }
+      //}
     }
+    
+    ////////////////////////////////////////////////
   }
 }
 
@@ -582,7 +545,7 @@ int main(int argc, char* argv[]) {
   //////
 
   geom_model.addAllCollisionPairs();
-  const std::string srdf_filename = argv[4];
+  const std::string srdf_filename = argv[2];
   pinocchio::srdf::removeCollisionPairs(model, geom_model, srdf_filename);
 
   std::ofstream of(header_filename);

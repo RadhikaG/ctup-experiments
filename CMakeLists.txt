@@ -85,6 +85,7 @@ set(SAMPLES_SOURCES
     samples/sample12.cpp
     samples/sample13.cpp
     samples/sample14.cpp
+    samples/sample15.cpp
     samples/sample16.cpp
 )
 
