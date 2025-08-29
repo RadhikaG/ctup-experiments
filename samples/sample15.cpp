@@ -374,12 +374,7 @@ static void self_collision_signed_distances_and_jacobians(
 
         for (static_var<size_t> r = 0; r < 6; r = r + 1) {
           // j-1 because j=0 is universe joint
-          // jac storage convention is:
-          // jac(batch_dim, r * model.nv + c), where (r,c) are the 2D indices of
-          // a vanilla jacobian matrix.
-          // r * model.nv + c is a flattened index
-          runtime::map_blaze_avxtype_to_eigen_batch_dim((size_t)(r * (size_t)model.nv + j-1), 
-                  S_world.get_entry(r, 0), J_joints[i]);
+          J_joints[i](r, j-1) = S_world.get_entry(r, 0);
         }
       }
       ////////////////////////////////////////////////
@@ -517,10 +512,9 @@ int main(int argc, char* argv[]) {
   of << "// clang-format off\n\n";
   of << "#include \"Eigen/Dense\"\n\n";
   of << "#include \"ctup/typedefs.h\"\n\n";
-  of << "#include \"ctup_fkcc/runtime/typedefs.h\"\n\n";
-  of << "#include \"ctup_fkcc/runtime/collision.h\"\n\n";
+  of << "#include \"ctup_sd/runtime/utils.h\"\n\n";
   of << "#include <iostream>\n\n";
-  of << "namespace ctup_gen {\n\n";
+  of << "namespace cg_sd_gen {\n\n";
 
   of << "static void print_string(const char* str) {\n";
   of << "  std::cout << str << \"\\n\";\n";

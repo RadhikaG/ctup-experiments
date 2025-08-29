@@ -4,13 +4,15 @@
 #include <pinocchio/algorithm/kinematics.hpp>
 #include <pinocchio/algorithm/geometry.hpp>
 #include <pinocchio/algorithm/jacobian.hpp>
-#include "pinocchio/algorithm/frames.hpp"
 
 #include <hpp/fcl/shape/geometric_shapes.h>  // for hpp::fcl::Sphere
 
 #include <cassert>
 #include <iostream>
 #include <cmath>
+
+#include "ctup_sd/runtime/utils.h"
+#include "ctup_sd/gen/batched_sd_jac_panda.h"
 
 using namespace pinocchio;
 
@@ -81,6 +83,7 @@ static CollisionGradient computeDistanceAndGradientForPair(
 {
   std::cout << "pair: " << "(" << g1 << ", " << g2 << ")\n";
 
+  computeJointJacobians(model, data, q);
   updateGeometryPlacements(model, data, geom_model, geom_data, q);
 
   const auto &obj1 = geom_model.geometryObjects[g1];
@@ -103,104 +106,42 @@ static CollisionGradient computeDistanceAndGradientForPair(
   double dist = delta.norm();
   double signed_dist = dist - (r1 + r2);
 
-  // Get world Jacobians of the sphere centers
-  JointIndex j1 = obj1.parentJoint;
-  JointIndex j2 = obj2.parentJoint;
+  // get witness points
+  Eigen::Vector3d normal = delta / dist;
+  Eigen::Vector3d witness_pt1 = p1 + r1 * normal;
+  Eigen::Vector3d witness_pt2 = p2 - r2 * normal;
 
-  computeJointJacobians(model, data, q);
+  Eigen::MatrixXd jac1(6, model.nv);
+  Eigen::MatrixXd jac2(6, model.nv);
+  jac1 = getJointJacobian(model, data, obj1.parentJoint, WORLD);
+  jac2 = getJointJacobian(model, data, obj2.parentJoint, WORLD);
 
-  ////// Jacobian for obj1
+  Eigen::MatrixXd jac1_w(3, model.nv);
+  Eigen::MatrixXd jac1_v(3, model.nv);
+  Eigen::MatrixXd jac2_w(3, model.nv);
+  Eigen::MatrixXd jac2_v(3, model.nv);
 
-  Eigen::Matrix<double, 6, Eigen::Dynamic> J1_spatial;
-  J1_spatial.resize(6, model.nv);
-  J1_spatial.setZero();
-  getJointJacobian(model, data, j1, WORLD, J1_spatial);
+  jac1_w = jac1.bottomRows<3>();
+  jac1_v = jac1.topRows<3>();
+  jac2_w = jac2.bottomRows<3>();
+  jac2_v = jac2.topRows<3>();
 
-  Eigen::MatrixXd J1_linear = J1_spatial.topRows<3>();
-  Eigen::MatrixXd J1_angular = J1_spatial.bottomRows<3>();
+  // compute twist at witness_pt wrt world frame expressed in world frame
+  Eigen::MatrixXd ptJac1(3, model.nv);
+  Eigen::MatrixXd ptJac2(3, model.nv);
 
-  // adding offset for obj1 position
-
-  // obj1 placement wrt parent joint j1, expressed in j1 frame
-  Eigen::Vector3d p1_local = obj1.placement.translation();
-  Eigen::Matrix3d R1_world = data.oMi[j1].rotation();
-  // obj1 wrt j1 expressed in world frame
-  Eigen::Vector3d p1_world = R1_world * p1_local;
-
-  //Eigen::MatrixXd J1 = J1_linear + skew(p1_world) * J1_angular;
-  Eigen::Matrix<double, 3, Eigen::Dynamic> J1;
-  J1.resize(3, model.nq);
-
-  for (size_t i = 0; i < (size_t)model.nq; i++) {
-    Eigen::Vector3d w_1i = J1_angular.col(i);
-    Eigen::Vector3d v_1i = J1_linear.col(i);
-    J1.col(i) = w_1i.cross(p1_world) + v_1i;
-  }
-
-  std::cout << "===============\n";
-  std::cout << "J1: \n" << J1 << "\n";
-  std::cout << "pin frame jac: \n" << getFrameJacobian(model, data, obj1.parentFrame, WORLD).topRows<3>() << "\n";
-  J1 = getFrameJacobian(model, data, obj1.parentFrame, WORLD).topRows<3>();
-
-  ////// Jacobian for obj2
-
-  Eigen::Matrix<double, 6, Eigen::Dynamic> J2_spatial;
-  J2_spatial.resize(6, model.nv);
-  J2_spatial.setZero();
-  getJointJacobian(model, data, j2, WORLD, J2_spatial);
-
-  Eigen::MatrixXd J2_linear = J2_spatial.topRows<3>();
-  Eigen::MatrixXd J2_angular = J2_spatial.bottomRows<3>();
-
-  // adding offset for obj2 position
-
-  // obj1 placement wrt parent joint j1, expressed in j1 frame
-  Eigen::Vector3d p2_local = obj2.placement.translation();
-  Eigen::Matrix3d R2_world = data.oMi[j2].rotation();
-  // obj1 wrt j1 expressed in world frame
-  Eigen::Vector3d p2_world = R2_world * p2_local;
-
-  //Eigen::MatrixXd J2 = J2_linear + skew(p2_world) * J2_angular;
-  Eigen::Matrix<double, 3, Eigen::Dynamic> J2;
-  J2.resize(3, model.nq);
-  for (size_t i = 0; i < (size_t)model.nq; i++) {
-    Eigen::Vector3d w_2i = J2_angular.col(i);
-    Eigen::Vector3d v_2i = J2_linear.col(i);
-    J2.col(i) = w_2i.cross(p2_world) + v_2i;
-  }
-
-  std::cout << "===============\n";
-  std::cout << "J2: \n" << J2 << "\n";
-  std::cout << "pin frame jac: \n" << getFrameJacobian(model, data, obj2.parentFrame, WORLD).topRows<3>() << "\n";
-  J2 = getFrameJacobian(model, data, obj2.parentFrame, WORLD).topRows<3>();
+  ptJac1 = jac1_v - skew(witness_pt1) * jac1_w;
+  ptJac2 = jac2_v - skew(witness_pt2) * jac2_w;
 
   ////// Gradient calc
 
   Eigen::VectorXd grad = Eigen::VectorXd::Zero(model.nv);
+  grad = normal.transpose() * (ptJac1 - ptJac2);
   std::cout << "===============\n";
-  std::cout << "grad_norm: " << (delta/dist).transpose() << "\n";
-  std::cout << "grad: " << (delta/2*dist).transpose() * (J1 - J2) << "\n";
+  std::cout << "grad: " << grad << "\n";
   std::cout << "===============\n";
-  if (dist > 1e-8) {
-    grad = (delta / 2 * dist).transpose() * (J1 - J2);
-  }
 
   return {signed_dist, grad, {g1, g2}};
-}
-
-static void printAllGeoms(
-    Model &model,
-    Data &data,
-    GeometryModel &geom_model,
-    GeometryData &geom_data)
-{
-  std::cout << "===============================\n";
-  for (size_t i = 0; i < geom_model.geometryObjects.size(); i++) {
-    Eigen::Matrix4d go_xform = geom_data.oMg[i].toHomogeneousMatrix();
-    std::cout << geom_model.geometryObjects[i].name << ":\n";
-    std::cout << go_xform << "\n";
-  }
-  std::cout << "===============================\n";
 }
 
 static Eigen::Matrix<double, 6, 1> get_spatial_twist_fd(
@@ -304,23 +245,19 @@ static void finiteDifferenceCheck(
   std::cout << "J2: \n" << J2_fd << "\n";
   std::cout << "===============================\n";
 
-  std::cout << "====== getFrameJacobian =========\n";
-  computeJointJacobians(model, data, q);
-  getFrameJacobian(model, data, obj1.parentFrame, WORLD, J_pin);
-  std::cout << "J1: \n" <<  J_pin << "\n";
-  getFrameJacobian(model, data, obj2.parentFrame, WORLD, J_pin);
-  std::cout << "J2: \n" << J_pin << "\n";
-  std::cout << "===============================\n";
-
   updateGeometryPlacements(model, data, geom_model, geom_data, q);
 
+  // trans of objs wrt world frame expressed in world frame
   Eigen::Vector3d p1 = geom_data.oMg[g1].translation();
   Eigen::Vector3d p2 = geom_data.oMg[g2].translation();
 
   Eigen::Vector3d n = (p1 - p2).normalized();
 
+  // todo: this calc is incorrect because this doesn't
+  // account for frame shift to witness point.
+  // haven't fixed it since we aren't using finite diff for
+  // correctness checks atm
   Eigen::VectorXd grad_fd = n.transpose() * (J1_fd.topRows<3>() - J2_fd.topRows<3>());
-
 
   std::cout << "pair: " << "(" << g1 << ", " << g2 << ")\n";
   std::cout << "Analytical Gradient:\n" << result.gradient.transpose() << "\n";
@@ -332,6 +269,36 @@ static void finiteDifferenceCheck(
     std::cout << "Joint " << i << ": " << err << "\n";
   }
   std::cout << "===============\n";
+}
+
+static void run_cg_grad_sd(
+    Model &model,
+    Data &data,
+    GeometryModel &geom_model,
+    GeometryData &geom_data,
+    Eigen::VectorXd &q)
+{
+  if (cg_sd_runtime::robots::Panda::ndim != q.size()) {
+    std::cout << "robot dims don't match, check URDF input\n";
+  }
+
+  cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::robots::Panda> q_batched;
+  for (size_t i = 0; i < cg_sd_runtime::robots::Panda::ndim; i++) {
+    q_batched[i] = q(i);
+  }
+
+  // expected shapes:
+  // signed_distances: (batch_dim, n_collision_pairs)
+  // constraint_jacobian: (batch_dim * n_collision_pairs, n_dof)
+  const size_t SIMD_WIDTH = 8;
+  size_t N_CP = geom_model.collisionPairs.size();
+
+  Eigen::MatrixXd signed_distances(SIMD_WIDTH, N_CP);
+  Eigen::MatrixXd constraint_jacobian(SIMD_WIDTH * N_CP, model.nv);
+
+  cg_sd_gen::self_collision_signed_distances_and_jacobians(q_batched, signed_distances, constraint_jacobian);
+
+  std::cout << "cg_grad_sd SD: " << signed_distances.row(0) << "\n";
 }
 
 int main(int argc, char **argv) {
@@ -357,25 +324,14 @@ int main(int argc, char **argv) {
   Data data(model);
   GeometryData geom_data(geom_model);
 
-  // test jac
-  Eigen::Matrix<double, 6, Eigen::Dynamic> J;
-  J.resize(6, model.nv);
-
   Eigen::VectorXd q;
-  //// Use reference configuration if available
-  //q = model.referenceConfigurations["ready"];
-  //std::cout << q << "\n";
-  //computeJointJacobians(model, data, q);
-  //getJointJacobian(model, data, model.njoints-1, WORLD, J);
-  //std::cout << J << "\n";
-  std::cout << "======== random config =========\n";
-  q = randomConfiguration(model);
+  // Use reference configuration if available
+  q = model.referenceConfigurations["ready"];
+  //q = randomConfiguration(model);
+
+  std::cout << "======== config =========\n";
   std::cout << q << "\n";
-  computeJointJacobians(model, data, q);
-  getJointJacobian(model, data, model.njoints-1, WORLD, J);
-  std::cout << J << "\n";
   std::cout << "=============================\n";
-  // test jac
 
   updateGeometryPlacements(model, data, geom_model, geom_data, q);
 
@@ -385,9 +341,14 @@ int main(int argc, char **argv) {
     std::cout << "Collision Pair (" << cp.first << ", " << cp.second << ") -> Signed Distance: "
               << result.signed_distance << "\n";
 
-    finiteDifferenceCheck(model, data, geom_model, geom_data, q, result);
+    // skipping finite diff check since there's no way
+    // to actually check the cross product for the offset calc
+    // and already verified spatial jacobian
+    //finiteDifferenceCheck(model, data, geom_model, geom_data, q, result);
     std::cout << "----------------------------------------\n";
   }
+
+  run_cg_grad_sd(model, data, geom_model, geom_data, q);
 
   return 0;
 }
