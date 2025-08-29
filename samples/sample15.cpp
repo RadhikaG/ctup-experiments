@@ -339,7 +339,7 @@ static void self_collision_signed_distances_and_jacobians(
   static_var<JointIndex> parent;
   std::string joint_name;
 
-  for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
+  for (i = 0; i < (JointIndex)model.njoints; i = i+1) {
     if (i > 0) {
       // run FK and Jacobian calcs for non-universe joints
       // we do want to calc frame offsets for child geoms of the universe joint
