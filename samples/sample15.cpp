@@ -45,7 +45,8 @@ using ctup::backend::blaze_avx256f;
 
 /////////////////////////////////////////////
 
-struct LinkSpheres {
+struct JointChildSpheres {
+  std::vector<size_t> geom_id;
   std::vector<float> x;
   std::vector<float> y;
   std::vector<float> z;
@@ -122,22 +123,21 @@ builder::dyn_var<void (
 
 // NV: dim velocity vector
 // NCP: number of collision pairs
-template <size_t NV, size_t NCP>
 builder::dyn_var<void (
     size_t collision_pair_id, // we write-out to this index in sd and grad_sd
-    ctup::BlazeStaticMatrix<blaze_avx256f, 6, NV>&, // jac1
-    ctup::BlazeStaticMatrix<blaze_avx256f, 6, NV>&, // jac2
+    ctup::BlazeStaticMatrix<blaze_avx256f>&, // jac1
+    ctup::BlazeStaticMatrix<blaze_avx256f>&, // jac2
     blaze_avx256f &, blaze_avx256f &, blaze_avx256f &, float, // sph_[x,y,z,r]1
     blaze_avx256f &, blaze_avx256f &, blaze_avx256f &, float, // sph_[x,y,z,r]2
-    ctup::BlazeStaticVector<blaze_avx256f, NCP> &, // signed_distance (modified in-place)
-    ctup::BlazeStaticMatrix<blaze_avx256f, NCP, NV> & // sd_jac (modified in-place); left rest of template params unspecified
+    ctup::EigenMatrixXd &, // signed_distances (modified in-place)
+    ctup::EigenMatrixXd & // constraint_jacobian (modified in-place)
         )> compute_sph_sph_cp_sd_grad = builder::as_global("cg_sd_runtime::compute_sph_sph_cp_sd_grad");
 
 }
 
 /////////////////////////////////////////////
 
-static std::map<size_t, LinkSpheres> joint_to_child_spheres(
+static JointChildSpheres joint_to_child_spheres(
     const pinocchio::Model &model, 
     const pinocchio::GeometryModel &geom_model,
     const std::string joint_name) {
@@ -145,21 +145,7 @@ static std::map<size_t, LinkSpheres> joint_to_child_spheres(
 
   JointIndex jid = model.getJointId(joint_name);
 
-  std::map<size_t, LinkSpheres> link_spheres;
-  std::map<std::string, size_t> rel_link_num;
-
-  for (size_t i = 0; i < model.frames.size(); i++) {
-    const JointIndex parent_joint_id = model.frames[i].parentJoint;
-
-    if (parent_joint_id != jid)
-      continue;
-
-    // link_name to idx mapping
-    rel_link_num[model.frames[i].name] = i;
-
-    LinkSpheres ls;
-    link_spheres[i] = ls;
-  }
+  JointChildSpheres joint_child_spheres;
 
   for (size_t i = 0; i < geom_model.geometryObjects.size(); i++) {
     const GeometryObject &geom_obj = geom_model.geometryObjects[i];
@@ -178,15 +164,14 @@ static std::map<size_t, LinkSpheres> joint_to_child_spheres(
     float sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(
             geom_obj.geometry)->radius;
 
-    size_t link_id = rel_link_num[(model.frames[geom_obj.parentFrame].name)];
-
-    link_spheres[link_id].x.push_back(sphere_xyz[0]);
-    link_spheres[link_id].y.push_back(sphere_xyz[1]);
-    link_spheres[link_id].z.push_back(sphere_xyz[2]);
-    link_spheres[link_id].r.push_back(sphere_radius);
+    joint_child_spheres.geom_id.push_back(i);
+    joint_child_spheres.x.push_back(sphere_xyz[0]);
+    joint_child_spheres.y.push_back(sphere_xyz[1]);
+    joint_child_spheres.z.push_back(sphere_xyz[2]);
+    joint_child_spheres.r.push_back(sphere_radius);
   }
 
-  return link_spheres;
+  return joint_child_spheres;
 }
 
 static int get_jtype(const Model &model, Model::JointIndex i) {
@@ -258,14 +243,24 @@ static bool is_joint_ancestor(
 // returns:
 // distances: shape: (batch_size, n_collision_pairs)
 // jacobians: shape: (batch_size * n_collision_pairs, n_dof)
+// jacobian format:
+//  |------- n_dof ---------|
+//  |cp 0
+//  |cp 1
+// B0
+//  |cp n
+//  |-----------------------|
+//  |
+// B1
+//  |-----------------------|
+// Bn-----------------------|
 static void self_collision_signed_distances_and_jacobians(
     const pinocchio::Model &model, 
     const pinocchio::GeometryModel &geom_model, 
     // hack: we need to hardcode the robot template type for now
-    dyn_var<const runtime::configuration_block_robot_t<runtime::robots::Panda>&> q
-    // Eigen::VectorXd distances
-    // Eigen::MatrixXd jacobians
-    ) 
+    dyn_var<const runtime::configuration_block_robot_t<runtime::robots::Panda>&> q,
+    dyn_var<ctup::EigenMatrixXd&> signed_distances,
+    dyn_var<ctup::EigenMatrixXd&> constraint_jacobian) 
 {
   typedef typename Model::JointIndex JointIndex;
 
@@ -302,46 +297,22 @@ static void self_collision_signed_distances_and_jacobians(
   ///////////////////////////////////////////////
 
   ////////// for child sph FK /////////////////
-  // 0th link is root
-  size_t n_links = model.nbodies-1;
+  size_t n_sphs = geom_model.geometryObjects.size();
 
   // fine collision geom sphere positions
-  builder::array<dyn_var<std_array_t<blaze_avx256f>>> x_0, y_0, z_0;
-  builder::array<dyn_var<std_array_t<float>>> r;
-  // storing info for each fine sph for each link
-  // indexed as: fine[link_id][sph_id_for_link_id]
-  // within each xyz[link_id][sph_id_for_link_id], 
-  // all the values will be different (since different x,y,zs for each vector of fine sphs)
-  // but r[sph_id_for_link_id] will be a single value, 
+  dyn_var<std_array_t<blaze_avx256f>> x_0, y_0, z_0;
+  dyn_var<std_array_t<float>> r;
+  // storing info for each collision sph
+  // indexed as:
+  // xyz[geom_id] = vector of 8 configs
+  // all the values within xyz[geom_id] will be different (since different x,y,zs within each vector of sphs)
+  // but r[geom_id] will be a single value, 
   // since radius of all the fine sphs in the vector will be the same
-  x_0.set_size(n_links);
-  y_0.set_size(n_links);
-  z_0.set_size(n_links);
-  r.set_size(n_links);
+  backend::set_std_array_size(x_0, n_sphs);
+  backend::set_std_array_size(y_0, n_sphs);
+  backend::set_std_array_size(z_0, n_sphs);
+  backend::set_std_array_size(r, n_sphs);
 
-  for (i = 0; i < (JointIndex)model.njoints; i = i+1) {
-    std::string joint_name = model.names[i];
-    std::map<size_t, LinkSpheres> link_spheres = joint_to_child_spheres(
-            model, geom_model,
-            joint_name);
-
-    // roundabout way of iterating to ensure static_var is used correctly in
-    // control flow
-    std::map<size_t, LinkSpheres>::iterator outerIt;
-    // each joint may have multiple links associated with it
-    for (static_var<size_t> pair_idx = 0; pair_idx < link_spheres.size(); pair_idx = pair_idx+1) {
-      outerIt = link_spheres.begin();
-      std::advance(outerIt, pair_idx);
-      static_var<size_t> link_id = outerIt->first;
-
-      // number of fine sph for link_id
-      size_t curr_n_sph = link_spheres[link_id].r.size();
-      backend::set_std_array_size(x_0[link_id], curr_n_sph);
-      backend::set_std_array_size(y_0[link_id], curr_n_sph);
-      backend::set_std_array_size(z_0[link_id], curr_n_sph);
-      backend::set_std_array_size(r[link_id], curr_n_sph);
-    }
-  }
   ///////////////////////////////////////////////
 
   set_X_T(X_T, model);
@@ -422,11 +393,9 @@ static void self_collision_signed_distances_and_jacobians(
 
     // joint_to_child_spheres returns a map:
     // link_spheres[link_id] = {list of sphs}
-    std::map<size_t, LinkSpheres> link_spheres = joint_to_child_spheres(
+    JointChildSpheres joint_child_spheres = joint_to_child_spheres(
             model, geom_model,
             joint_name);
-
-    std::map<size_t, LinkSpheres>::iterator outerIt;
 
     // we now transform the nominal transform of each sphere wrt its joint by X_0
     // to get the global transform of each sphere wrt the world
@@ -437,71 +406,65 @@ static void self_collision_signed_distances_and_jacobians(
     // But, we only care about the translation component so:
     // 0[link_id].trans = X_0.rot * link_spheres[link_id].trans + X_0.trans
 
-    for (static_var<size_t> pair_idx = 0; pair_idx < link_spheres.size(); pair_idx = pair_idx+1) {
-      outerIt = link_spheres.begin();
-      std::advance(outerIt, pair_idx);
-      static_var<size_t> link_id = outerIt->first;
-      // child link of joint_name
-      // joint_name is always a true actuated joint, child links can be 
-      // connected via fixed joints to joint_name as well.
-      //std::cout << "child link: " << link_id << std::endl;
+    static_var<size_t> curr_geom_id;
+    for (static_var<size_t> cs_i = 0; cs_i < joint_child_spheres.r.size(); cs_i = cs_i+1) {
+      curr_geom_id = joint_child_spheres.geom_id[cs_i];
 
-      //std::cout << link_spheres[link_id].x << " " <<
-      //      link_spheres[link_id].y << " " <<
-      //      link_spheres[link_id].z << "\n";
+      x_0[curr_geom_id] = 
+          X_0[i].get_entry(0,0) * joint_child_spheres.x[cs_i] +
+          X_0[i].get_entry(0,1) * joint_child_spheres.y[cs_i] +
+          X_0[i].get_entry(0,2) * joint_child_spheres.z[cs_i];
 
-      // each link in the URDF may have many sphs associated with it
-      static_var<size_t> n_sph = link_spheres[link_id].r.size();
+      y_0[curr_geom_id] = 
+          X_0[i].get_entry(1,0) * joint_child_spheres.x[cs_i] +
+          X_0[i].get_entry(1,1) * joint_child_spheres.y[cs_i] +
+          X_0[i].get_entry(1,2) * joint_child_spheres.z[cs_i];
 
-      for (static_var<size_t> k = 0; k < n_sph; k = k+1) {
-        x_0[link_id][k] = 
-            X_0[i].get_entry(0,0) * link_spheres[link_id].x[k] +
-            X_0[i].get_entry(0,1) * link_spheres[link_id].y[k] +
-            X_0[i].get_entry(0,2) * link_spheres[link_id].z[k];
+      z_0[curr_geom_id] = 
+          X_0[i].get_entry(2,0) * joint_child_spheres.x[cs_i] +
+          X_0[i].get_entry(2,1) * joint_child_spheres.y[cs_i] +
+          X_0[i].get_entry(2,2) * joint_child_spheres.z[cs_i];
 
-        y_0[link_id][k] = 
-            X_0[i].get_entry(1,0) * link_spheres[link_id].x[k] +
-            X_0[i].get_entry(1,1) * link_spheres[link_id].y[k] +
-            X_0[i].get_entry(1,2) * link_spheres[link_id].z[k];
+      // translation component
+      x_0[curr_geom_id] += X_0[i].get_entry(0,3);
+      y_0[curr_geom_id] += X_0[i].get_entry(1,3);
+      z_0[curr_geom_id] += X_0[i].get_entry(2,3);
 
-        z_0[link_id][k] = 
-            X_0[i].get_entry(2,0) * link_spheres[link_id].x[k] +
-            X_0[i].get_entry(2,1) * link_spheres[link_id].y[k] +
-            X_0[i].get_entry(2,2) * link_spheres[link_id].z[k];
-
-        // translation component
-        x_0[link_id][k] += X_0[i].get_entry(0,3);
-        y_0[link_id][k] += X_0[i].get_entry(1,3);
-        z_0[link_id][k] += X_0[i].get_entry(2,3);
-
-        r[link_id][k] = link_spheres[link_id].r[k];
-      }
+      r[curr_geom_id] = joint_child_spheres.r[cs_i];
 
       // for each child link of joint_name, we perform self collision checks
       // against previously cached FK geometries higher up the kinematic chain
-      //for (static_var<size_t> cp_it = 0; cp_it < geom_model.collisionPairs.size(); cp_it = cp_it+1) {
-      //  const pinocchio::CollisionPair & cp = geom_model.collisionPairs[cp_it];
-      //  if (cp.second == link_id) {
-      //    std::string cp_str = "collision pair: ";
-      //    cp_str += std::to_string(cp.first) + "," + std::to_string(cp.second);
-      //    cp_str += " : " + geom_model.geometryObjects[cp.first].name + "," + geom_model.geometryObjects[cp.second].name;
-      //    builder::annotate(cp_str.c_str());
+      for (static_var<size_t> cp_it = 0; cp_it < geom_model.collisionPairs.size(); cp_it = cp_it+1) {
+        const pinocchio::CollisionPair & cp = geom_model.collisionPairs[cp_it];
+        if (cp.second == curr_geom_id) {
+          std::string cp_str = "collision pair: ";
+          cp_str += std::to_string(cp.first) + "," + std::to_string(cp.second);
+          cp_str += " : " + geom_model.geometryObjects[cp.first].name + "," + geom_model.geometryObjects[cp.second].name;
+          builder::annotate(cp_str.c_str());
 
-      //    static_var<size_t> par_first = geom_model.geometryObjects[cp.first].parentJoint;
-      //    static_var<size_t> par_second = geom_model.geometryObjects[cp.second].parentJoint;
+          static_var<size_t> par_first = geom_model.geometryObjects[cp.first].parentJoint;
+          static_var<size_t> par_second = geom_model.geometryObjects[cp.second].parentJoint;
 
-      //    // [x|y|z|r]_0[link_id] is a std::array of all the sphs in the link
+          assert(par_second == i && "parent joint of curr_geom_id should be joint under consideration in current iteration");
 
-      //    runtime::compute_sph_sph_cp_sd_grad(
-      //        cp_it,
-      //        J_joints[par_first], J_joints[par_second],
-      //        x_0[cp.first], y_0[cp.first], z_0[cp.first], r[cp.first],
-      //        x_0[cp.second], y_0[cp.second], z_0[cp.second], r[cp.second],
-      //        signed_distances,
-      //        sd_jacs
-      //    );
-      //  }
-      //}
+          // for 8 joint configurations at once, for a single collision pair,
+          // this function:
+          // 1. calculates the signed distance (SD) for the collision pair
+          // 2. calculates d(SD)/dq for the pair
+          // 3. Slots the 8 SD values generated back into the appropriate spot in the 
+          //    `signed_distances` array modified in-place.
+          // 4. Slots the 8 d(SD)/dq arrays generated back into the appropriate spot in the 
+          //    `jacobian`matrix modified in-place.
+          runtime::compute_sph_sph_cp_sd_grad(
+              cp_it,
+              J_joints[par_first], J_joints[par_second],
+              x_0[cp.first], y_0[cp.first], z_0[cp.first], r[cp.first],
+              x_0[cp.second], y_0[cp.second], z_0[cp.second], r[cp.second],
+              signed_distances,
+              constraint_jacobian
+          );
+        }
+      }
     }
     
     ////////////////////////////////////////////////

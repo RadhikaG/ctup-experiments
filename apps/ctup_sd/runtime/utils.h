@@ -42,28 +42,42 @@ static blaze::StaticMatrix<Scalar, 3, 3> hat(const blaze::StaticVector<Scalar, 3
 
 template <size_t NV>
 static void compute_sph_sph_cp_sd_grad(
+    size_t cp_it,
     const blaze::StaticMatrix<avx256f, 6, NV> &jac1,
     const blaze::StaticMatrix<avx256f, 6, NV> &jac2,
-    const blaze::StaticVector<avx256f, 3> &sph_c1,
-    const blaze::StaticVector<avx256f, 3> &sph_c2,
-    float sph_radius1, float sph_radius2,
-    avx256f &signed_distance,
-    blaze::StaticVector<avx256f, NV> &sd_jac) {
+    const avx256f &sph_x1, const avx256f &sph_y1, const avx256f &sph_z1,
+    float sph_radius1,
+    const avx256f &sph_x2, const avx256f &sph_y2, const avx256f &sph_z2,
+    float sph_radius2,
+    // these are modified in-place
+    Eigen::MatrixXd &signed_distances, // shape: (batch_dim, n_collision_pairs)
+    Eigen::MatrixXd &constraint_jacobian) // shape: (batch_dim * n_collision_pairs, NV)
+{
 
-  blaze::StaticVector<avx256f, 3> &delta = sph_c2 - sph_c1;
+  blaze::StaticVector<avx256f, 3> delta;
+  delta[0] = sph_x1 - sph_x2;
+  delta[1] = sph_y1 - sph_y2;
+  delta[2] = sph_z1 - sph_z2;
 
   avx256f &dist = blaze::sqrt(delta[0]*delta[0] + delta[1]*delta[1] + delta[2]*delta[2]);
 
   // signed distance
-  signed_distance = dist - (sph_radius1 + sph_radius2);
+  avvx256f &signed_distance = dist - (sph_radius1 + sph_radius2);
 
   blaze::StaticVector<avx256f, 3> normal;
   normal[0] = delta[0] / dist;
   normal[1] = delta[1] / dist;
   normal[2] = delta[2] / dist;
 
-  blaze::StaticVector<avx256f, 3> &witness_pt1 = sph_c1 + sph_radius1 * normal;
-  blaze::StaticVector<avx256f, 3> &witness_pt2 = sph_c2 - sph_radius2 * normal;
+  blaze::StaticVector<avx256f, 3> witness_pt1;
+  witness_pt1[0] = sph_x1 + sph_radius1 * normal;
+  witness_pt1[1] = sph_y1 + sph_radius1 * normal;
+  witness_pt1[2] = sph_z1 + sph_radius1 * normal;
+
+  blaze::StaticVector<avx256f, 3> witness_pt2;
+  witness_pt2[0] = sph_x2 + sph_radius2 * normal;
+  witness_pt2[1] = sph_y2 + sph_radius2 * normal;
+  witness_pt2[2] = sph_z2 + sph_radius2 * normal;
 
   blaze::StaticMatrix<avx256f, 3, NV> &jac1_w = blaze::rows<0UL, 1UL, 2UL>(jac1);
   blaze::StaticMatrix<avx256f, 3, NV> &jac1_v = blaze::rows<3UL, 4UL, 5UL>(jac1);
@@ -79,7 +93,23 @@ static void compute_sph_sph_cp_sd_grad(
 
   // gradient of signed distance
   //sd_jac = blaze::transpose(normal) * (ptJac1 - ptJac2);
-  sd_jac = normal * (ptJac1 - ptJac2);
+  blaze::StaticVector<avx256f, NV> &sd_jac = normal * (ptJac1 - ptJac2);
+
+  // signed_distances and the constraint_jacobian need to be populated in
+  // a particular order for batched outputs
+  // signed_distances is of shape: (batch_dim, n_collision_pairs)
+  // constraint_jacobian is of shape: (batch_dim * n_collision_pairs, NV)
+
+  const size_t SIMD_WIDTH = 8;
+  size_t N_CP = signed_distances.cols();
+
+  // todo: find a more efficient way to do this
+  for (size_t i = 0; i < SIMD_WIDTH; i++) {
+    signed_distances(i, cp_it) = (double)signed_distance[i];
+    for (size_t v = 0; n < NV; v++) {
+      constraint_jacobian(i * N_CP + cp_it, v) = (double)sd_jac[v][i];
+    }
+  }
 }
 
 }
