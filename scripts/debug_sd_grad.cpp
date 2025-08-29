@@ -296,9 +296,19 @@ static void run_cg_grad_sd(
   Eigen::MatrixXd signed_distances(SIMD_WIDTH, N_CP);
   Eigen::MatrixXd constraint_jacobian(SIMD_WIDTH * N_CP, model.nv);
 
-  cg_sd_gen::self_collision_signed_distances_and_jacobians(q_batched, signed_distances, constraint_jacobian);
+  {
+    auto start = std::chrono::steady_clock::now();
+    size_t N_IT = 10000;
+    for (size_t i = 0; i < N_IT; ++i) {
+      cg_sd_gen::self_collision_signed_distances_and_jacobians(q_batched, signed_distances, constraint_jacobian);
+    }
+    auto end = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    std::cout << "CTUP BATCHED SD JAC (ns): \t\t\t\t" << elapsed.count()/(N_IT)<<std::endl;
+  }
 
   std::cout << "cg_grad_sd SD: " << signed_distances.row(0) << "\n";
+  std::cout << "cg_grad_sd grad: " << constraint_jacobian.row(0 * N_CP + 0) << "\n";
 }
 
 int main(int argc, char **argv) {
@@ -335,11 +345,22 @@ int main(int argc, char **argv) {
 
   updateGeometryPlacements(model, data, geom_model, geom_data, q);
 
+  size_t N_CP = geom_model.collisionPairs.size();
+  Eigen::VectorXd cp_sd(N_CP);
+  Eigen::MatrixXd cp_sd_grad(N_CP, model.nv);
+
+  size_t cp_it = 0;
+
   // Compute distance + gradient for all valid collision pairs
   for (const auto &cp : geom_model.collisionPairs) {
     auto result = computeDistanceAndGradientForPair(model, data, geom_model, geom_data, q, cp.first, cp.second);
     std::cout << "Collision Pair (" << cp.first << ", " << cp.second << ") -> Signed Distance: "
-              << result.signed_distance << "\n";
+              "\n" << result.signed_distance << "\n";
+
+    cp_sd(cp_it) = result.signed_distance;
+    cp_sd_grad.row(cp_it) = result.gradient;
+
+    cp_it++;
 
     // skipping finite diff check since there's no way
     // to actually check the cross product for the offset calc
@@ -347,6 +368,8 @@ int main(int argc, char **argv) {
     //finiteDifferenceCheck(model, data, geom_model, geom_data, q, result);
     std::cout << "----------------------------------------\n";
   }
+  std::cout << "Pinocchio SD: " << cp_sd.transpose() << "\n";
+  std::cout << "Pinocchio SD grad: " << cp_sd_grad.row(0) << "\n";
 
   run_cg_grad_sd(model, data, geom_model, geom_data, q);
 
