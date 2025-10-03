@@ -29,21 +29,20 @@ execute_process(COMMAND ${CMAKE_COMMAND} .
 execute_process(COMMAND ${CMAKE_COMMAND} --build .
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/deps-build)  
 
-link_directories(${CMAKE_BINARY_DIR}/install/pinocchio/lib)
-find_package(pinocchio
-        PATHS ${CMAKE_BINARY_DIR}/install/pinocchio
-        REQUIRED CONFIG
-)
-
-find_library(hpp-fcl hpp-fcl HINTS ${CMAKE_BINARY_DIR}/install/hpp-fcl/lib)
-find_library(cppad_lib cppad_lib HINTS ${CMAKE_BINARY_DIR}/install/CppAD/lib)
-find_library(urdf-compiler urdf-compiler PATHS ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/build)
-find_library(buildit buildit PATHS ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build)
+find_package(pinocchio REQUIRED)
 
 set(PINOCCHIO_MODEL_DIR ${CMAKE_SOURCE_DIR}/deps/pinocchio/models)
 add_compile_definitions(PINOCCHIO_MODEL_DIR="${PINOCCHIO_MODEL_DIR}")
 
+find_package(coal REQUIRED)
+find_package(cppad QUIET)
+if(NOT cppad_FOUND)
+  pkg_check_modules(cppad REQUIRED cppad)
+endif()
+find_library(urdf-compiler urdf-compiler PATHS ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/build)
+find_library(buildit buildit PATHS ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build)
 
+find_package(yaml-cpp REQUIRED)
 
 add_compile_definitions(LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}
                             LLVM_VERSION_MINOR=${LLVM_VERSION_MINOR})
@@ -96,12 +95,12 @@ foreach(SAMPLE_SOURCE ${SAMPLES_SOURCES})
     add_executable(${SAMPLE_NAME} ${SAMPLE_SOURCE})
     target_link_libraries(${SAMPLE_NAME} PUBLIC Eigen3::Eigen)
     target_link_libraries(${SAMPLE_NAME} PUBLIC pinocchio::pinocchio)
-    target_link_libraries(${SAMPLE_NAME} PUBLIC ${hpp-fcl})
+    target_link_libraries(${SAMPLE_NAME} PUBLIC coal::coal)
     target_link_libraries(${SAMPLE_NAME} PUBLIC ${buildit})
     target_link_libraries(${SAMPLE_NAME} PUBLIC ${urdf-compiler})
-    target_link_libraries(${SAMPLE_NAME} PUBLIC -lyaml-cpp)
+    target_link_libraries(${SAMPLE_NAME} PUBLIC ${YAML_CPP_LIBRARIES})
     target_include_directories(${SAMPLE_NAME} PUBLIC
-        ${CMAKE_BINARY_DIR}/install/pinocchio/include
+        ${YAML_CPP_INCLUDE_DIRS}
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/include
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/include
         ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build/gen_headers
@@ -184,16 +183,14 @@ foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
     target_link_libraries(${SCRIPT_NAME} PUBLIC ${Clang_LIBS})
 
     target_link_libraries(${SCRIPT_NAME} PUBLIC pinocchio::pinocchio)
-    target_link_libraries(${SCRIPT_NAME} PUBLIC ${cppad_lib})
-    target_link_libraries(${SCRIPT_NAME} PUBLIC ${hpp-fcl})
-    target_link_libraries(${SCRIPT_NAME} PUBLIC Eigen3::Eigen)
-    target_link_libraries(${SAMPLE_NAME} PUBLIC -lyaml-cpp)
+    target_link_libraries(${SCRIPT_NAME} PUBLIC ${cppad_LIBRARIES})
+    target_link_libraries(${SCRIPT_NAME} PUBLIC coal::coal)
+    target_link_libraries(${SCRIPT_NAME} PUBLIC ${YAML_CPP_LIBRARIES})
 
     target_include_directories(${SCRIPT_NAME} PUBLIC 
-        ${CMAKE_BINARY_DIR}/install/CppAD/include
-        ${CMAKE_BINARY_DIR}/install/CppADCodeGen/include
         ${CMAKE_CURRENT_SOURCE_DIR}/gen
-        ${CMAKE_BINARY_DIR}/install/pinocchio/include
+        ${CMAKE_BINARY_DIR}/install/CppADCodeGen/include
+        ${YAML_CPP_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIR}
         ${BLAZE_INCLUDE_DIR}
         ${CTUP_RUNTIME_INCLUDES}

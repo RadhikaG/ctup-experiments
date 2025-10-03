@@ -7,8 +7,8 @@
 #include "pinocchio/algorithm/geometry.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
-#include <hpp/fcl/collision_object.h>
-#include <hpp/fcl/shape/geometric_shapes.h>
+#include <coal/collision_object.h>
+#include <coal/shape/geometric_shapes.h>
 #include <memory>
 #include <pinocchio/multibody/fwd.hpp>
 #include <pinocchio/multibody/geometry.hpp>
@@ -158,7 +158,7 @@ static bool is_joint_ancestor(
 
 static dyn_var<int> get_eef_world_jacobian(
     const pinocchio::Model &model, 
-    dyn_var<builder::eigen_vectorXd_t &> q) {
+    dyn_var<ctup::EigenVectorXd &> q) {
 
   typedef typename Model::JointIndex JointIndex;
   const JointIndex njoints = (JointIndex)model.njoints;

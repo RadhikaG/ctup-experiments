@@ -1,0 +1,19 @@
+name: rla_env
+
+channels:
+  - conda-forge
+
+dependencies:
+  - pinocchio
+  - cppad
+  - eigen
+  - nlohmann_json
+  - cmake
+  - cxx-compiler
+  - llvm
+  - ninja
+  - fmt
+  - pkg-config
+  - yaml-cpp
+  - patch
+  - git

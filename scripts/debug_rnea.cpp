@@ -54,10 +54,6 @@ int main(int argc, char ** argv)
 
   Eigen::VectorXd ctup_res, pin_res;
 
-  //ctup_gen::set_X_T();
-  ctup_gen::robot_data * rd = new ctup_gen::robot_data;
-  ctup_gen::init_rd(rd);
-
   std::cout << "---CTUP DEBUG---\n";
 
   ctup_res = ctup_gen::rnea(q, qd);

@@ -106,7 +106,7 @@ static void set_X_T(Xform<Scalar> X_T[], const Model &model) {
   }
 }
 
-static dyn_var<EigenMatrix<double, 6, 6>> fk(const Model &model, dyn_var<builder::eigen_vectorXd_t &> q) {
+static dyn_var<EigenMatrix<double, 6, 6>> fk(const Model &model, dyn_var<ctup::EigenVectorXd &> q) {
   typedef typename Model::JointIndex JointIndex;
 
   Xform<double> X_T[model.njoints];

@@ -102,10 +102,10 @@ struct vector: public builder::custom_type<T> {
 
 //struct robot_data {
 //  static constexpr const char* type_name = "robot_data";
-//  dyn_var<vector<builder::eigen_vectorXd_t>> v = builder::with_name("v");
-//  dyn_var<vector<builder::eigen_vectorXd_t>> a = builder::with_name("a");
-//  dyn_var<vector<builder::eigen_vectorXd_t>> f = builder::with_name("f");
-//  dyn_var<builder::eigen_vectorXd_t> tau = builder::with_name("tau");
+//  dyn_var<vector<ctup::EigenVectorXd>> v = builder::with_name("v");
+//  dyn_var<vector<ctup::EigenVectorXd>> a = builder::with_name("a");
+//  dyn_var<vector<ctup::EigenVectorXd>> f = builder::with_name("f");
+//  dyn_var<ctup::EigenVectorXd> tau = builder::with_name("tau");
 //};
 //
 //static void init_rd(static_var<size_t> N, dyn_var<robot_data*> rd) {
@@ -211,10 +211,10 @@ static void vxIv(SpatialVector<double> &vecXIvec, SpatialVector<double> &vec, Sp
 
 #define EIGEN_MAT_CAST (dyn_var<EigenMatrix<double>>)(builder::cast)
 
-static dyn_var<builder::eigen_vectorXd_t> rnea(const Model &model, 
+static dyn_var<ctup::EigenVectorXd> rnea(const Model &model, 
         //dyn_var<robot_data*> rd,
-        dyn_var<builder::eigen_vectorXd_t &> q, 
-        dyn_var<builder::eigen_vectorXd_t &> qd, 
+        dyn_var<ctup::EigenVectorXd &> q, 
+        dyn_var<ctup::EigenVectorXd &> qd, 
         const double GRAVITY = -9.81) {
 
   typedef typename Model::JointIndex JointIndex;

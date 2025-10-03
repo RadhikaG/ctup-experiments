@@ -29,7 +29,7 @@ struct PinFKCC::Impl {
   pinocchio::GeometryData pin_geom_data_fine;
 
   // environment
-  std::vector<std::shared_ptr<hpp::fcl::CollisionObject>> pin_env;
+  std::vector<std::shared_ptr<coal::CollisionObject>> pin_env;
 
   Impl();
   Impl(std::string robot_name, const vamp::collision::Environment<float> &vamp_env);
@@ -51,24 +51,22 @@ PinFKCC::Impl::Impl(std::string robot_name, const vamp::collision::Environment<f
   std::string srdf_filename;
   std::string pin_model_path;
 
+  // todo: change to relative paths later
   std::string CTUP_ROOT = "/home/ubuntu/ctup_stuff/ctup-experiments/";
 
   if (robot_name == "panda") {
-    // todo: change to relative paths later
     urdf_filename_coarse = CTUP_ROOT + "models/panda/panda_spherized_1.urdf";
     urdf_filename_fine = CTUP_ROOT + "models/panda/panda_spherized.urdf";
     srdf_filename = CTUP_ROOT + "models/panda/panda.srdf";
     pin_model_path = CTUP_ROOT + "models/panda/";
   }
   else if (robot_name == "baxter") {
-    // todo: change to relative paths later
     urdf_filename_coarse = CTUP_ROOT + "models/baxter/baxter_spherized_1.urdf";
     urdf_filename_fine = CTUP_ROOT + "models/baxter/baxter_spherized.urdf";
     srdf_filename = CTUP_ROOT + "models/baxter/baxter.srdf";
     pin_model_path = CTUP_ROOT + "models/baxter/";
   }
   else if (robot_name == "fetch") {
-    // todo: change to relative paths later
     urdf_filename_coarse = CTUP_ROOT + "models/fetch/fetch_spherized_1.urdf";
     urdf_filename_fine = CTUP_ROOT + "models/fetch/fetch_spherized.urdf";
     srdf_filename = CTUP_ROOT + "models/fetch/fetch.srdf";
@@ -230,13 +228,13 @@ bool PinFKCC::Impl::fkcc_pin(const ConfigurationBlockDimEigen<ndim> &q_block) {
     for (size_t c_i = 0; c_i < pin_geom_model_coarse.geometryObjects.size(); c_i++) {
       const auto &c_sph = pin_geom_model_coarse.geometryObjects[c_i];
       const auto &c_pose = pin_geom_data_coarse.oMg[c_i];
-      hpp::fcl::CollisionRequest c_req;
-      hpp::fcl::CollisionResult c_res;
+      coal::CollisionRequest c_req;
+      coal::CollisionResult c_res;
 
       pinocchio::CollisionObject c_obj(c_sph.geometry, c_pose);
 
       for (const auto &e_obj : pin_env) {
-        hpp::fcl::collide(&c_obj, e_obj.get(), c_req, c_res);
+        coal::collide(&c_obj, e_obj.get(), c_req, c_res);
 
         if (c_res.isCollision()) {
           // coarse collision, now check fine
@@ -246,10 +244,10 @@ bool PinFKCC::Impl::fkcc_pin(const ConfigurationBlockDimEigen<ndim> &q_block) {
             const auto &f_pose = pin_geom_data_fine.oMg[f_i];
             pinocchio::CollisionObject f_obj(f_sph.geometry, f_pose);
 
-            hpp::fcl::CollisionRequest f_req;
-            hpp::fcl::CollisionResult f_res;
+            coal::CollisionRequest f_req;
+            coal::CollisionResult f_res;
 
-            hpp::fcl::collide(&f_obj, e_obj.get(), f_req, f_res);
+            coal::collide(&f_obj, e_obj.get(), f_req, f_res);
 
             if (f_res.isCollision())
               return false;
@@ -291,6 +289,6 @@ template bool PinFKCC::fkcc_pin<7>(const ConfigurationBlockDimEigen<7>&);
 template bool PinFKCC::fkcc_pin<8>(const ConfigurationBlockDimEigen<8>&);
 template bool PinFKCC::fkcc_pin<14>(const ConfigurationBlockDimEigen<14>&);
  
-}
+} // namespace pin_compat
 
-}
+} // namespace ctup_runtime

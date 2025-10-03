@@ -5,7 +5,7 @@
 #include <pinocchio/algorithm/geometry.hpp>
 #include <pinocchio/algorithm/jacobian.hpp>
 
-#include <hpp/fcl/shape/geometric_shapes.h>  // for hpp::fcl::Sphere
+#include <coal/shape/geometric_shapes.h>  // for coal::Sphere
 
 #include <cassert>
 #include <iostream>
@@ -52,8 +52,8 @@ static double computeDistance(
   const auto &obj1 = geom_model.geometryObjects[g1];
   const auto &obj2 = geom_model.geometryObjects[g2];
 
-  auto sph1 = std::dynamic_pointer_cast<hpp::fcl::Sphere>(obj1.geometry);
-  auto sph2 = std::dynamic_pointer_cast<hpp::fcl::Sphere>(obj2.geometry);
+  auto sph1 = std::dynamic_pointer_cast<coal::Sphere>(obj1.geometry);
+  auto sph2 = std::dynamic_pointer_cast<coal::Sphere>(obj2.geometry);
   if (!sph1 || !sph2) {
     throw std::runtime_error("Non-sphere geometry detected in collision model.");
   }
@@ -89,8 +89,8 @@ static CollisionGradient computeDistanceAndGradientForPair(
   const auto &obj1 = geom_model.geometryObjects[g1];
   const auto &obj2 = geom_model.geometryObjects[g2];
 
-  auto sph1 = std::dynamic_pointer_cast<hpp::fcl::Sphere>(obj1.geometry);
-  auto sph2 = std::dynamic_pointer_cast<hpp::fcl::Sphere>(obj2.geometry);
+  auto sph1 = std::dynamic_pointer_cast<coal::Sphere>(obj1.geometry);
+  auto sph2 = std::dynamic_pointer_cast<coal::Sphere>(obj2.geometry);
   if (!sph1 || !sph2) {
     throw std::runtime_error("Non-sphere geometry detected in collision model.");
   }
@@ -200,8 +200,8 @@ static void finiteDifferenceCheck(
   const auto &obj1 = geom_model.geometryObjects[g1];
   const auto &obj2 = geom_model.geometryObjects[g2];
 
-  auto sph1 = std::dynamic_pointer_cast<hpp::fcl::Sphere>(obj1.geometry);
-  auto sph2 = std::dynamic_pointer_cast<hpp::fcl::Sphere>(obj2.geometry);
+  auto sph1 = std::dynamic_pointer_cast<coal::Sphere>(obj1.geometry);
+  auto sph2 = std::dynamic_pointer_cast<coal::Sphere>(obj2.geometry);
   if (!sph1 || !sph2) {
     throw std::runtime_error("Non-sphere geometry detected in collision model.");
   }
@@ -304,7 +304,7 @@ static void run_cg_grad_sd(
     }
     auto end = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
-    std::cout << "CTUP BATCHED SD JAC (ns): \t\t\t\t" << elapsed.count()/(N_IT)<<std::endl;
+    std::cout << "CTUP BATCHED SD JAC (ns): 				" << elapsed.count()/(N_IT)<<std::endl;
   }
 
   std::cout << "cg_grad_sd SD: " << signed_distances.row(0) << "\n";
@@ -375,4 +375,3 @@ int main(int argc, char **argv) {
 
   return 0;
 }
-

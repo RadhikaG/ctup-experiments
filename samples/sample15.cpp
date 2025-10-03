@@ -6,8 +6,8 @@
 #include "pinocchio/collision/collision.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
-#include <hpp/fcl/collision_object.h>
-#include <hpp/fcl/shape/geometric_shapes.h>
+#include <coal/collision_object.h>
+#include <coal/shape/geometric_shapes.h>
 #include <memory>
 #include <ostream>
 #include <pinocchio/multibody/fwd.hpp>
@@ -156,12 +156,12 @@ static JointChildSpheres joint_to_child_spheres(
     if (parent_joint_id != jid)
       continue;
 
-    hpp::fcl::NODE_TYPE node_type = geom_obj.geometry->getNodeType();
-    assert(node_type == hpp::fcl::GEOM_SPHERE && 
+    coal::NODE_TYPE node_type = geom_obj.geometry->getNodeType();
+    assert(node_type == coal::GEOM_SPHERE && 
             "we don't support non sphere geoms inside robot");
 
     Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
-    float sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(
+    float sphere_radius = std::dynamic_pointer_cast<coal::Sphere>(
             geom_obj.geometry)->radius;
 
     joint_child_spheres.geom_id.push_back(i);
@@ -546,4 +546,3 @@ int main(int argc, char* argv[]) {
 
   of << "}\n";
 }
-

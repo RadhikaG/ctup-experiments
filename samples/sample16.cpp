@@ -6,8 +6,8 @@
 #include "pinocchio/collision/collision.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
-#include <hpp/fcl/collision_object.h>
-#include <hpp/fcl/shape/geometric_shapes.h>
+#include <coal/collision_object.h>
+#include <coal/shape/geometric_shapes.h>
 #include <memory>
 #include <ostream>
 #include <pinocchio/multibody/fwd.hpp>

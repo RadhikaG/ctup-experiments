@@ -6,8 +6,8 @@
 #include "pinocchio/collision/collision.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
-#include <hpp/fcl/collision_object.h>
-#include <hpp/fcl/shape/geometric_shapes.h>
+#include <coal/collision_object.h>
+#include <coal/shape/geometric_shapes.h>
 #include <memory>
 #include <ostream>
 #include <pinocchio/multibody/fwd.hpp>
@@ -237,7 +237,7 @@ void set_std_array_size(dyn_var<ctup::std_array_t<T>> &arr, size_t std_array_siz
   type->template_args.push_back(s);
 }
 
-}
+} // namespace backend
 
 using ctup::std_array_t;
 
@@ -297,7 +297,7 @@ builder::dyn_var<int (
         )>
     link_vs_environment_collision = builder::as_global("ctup_runtime::link_vs_environment_collision");
 
-}
+} // namespace runtime
 
 /////////////////////////////////////////////
 
@@ -331,7 +331,7 @@ static void parseCollisionObjects(const YAML::Node& collisionObjectsNode, std::v
 //    dyn_var<aligned_vector_t<blaze_avx256f> &> fine_z, 
 //    dyn_var<aligned_vector_t<float> &> fine_r) {
 //
-//}
+//} //
 
 static std::map<size_t, LinkSpheres> joint_to_child_spheres(
     const pinocchio::Model &model_coarse, 
@@ -356,11 +356,11 @@ static std::map<size_t, LinkSpheres> joint_to_child_spheres(
     if (parent_joint_id != jid)
       continue;
 
-    hpp::fcl::NODE_TYPE node_type = geom_obj.geometry->getNodeType();
-    assert(node_type == hpp::fcl::GEOM_SPHERE && "we don't support non sphere geoms inside robot");
+    coal::NODE_TYPE node_type = geom_obj.geometry->getNodeType();
+    assert(node_type == coal::GEOM_SPHERE && "we don't support non sphere geoms inside robot");
 
     Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
-    float sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(geom_obj.geometry)->radius;
+    float sphere_radius = std::dynamic_pointer_cast<coal::Sphere>(geom_obj.geometry)->radius;
     ls.coarse_x = sphere_xyz[0];
     ls.coarse_y = sphere_xyz[1];
     ls.coarse_z = sphere_xyz[2]; 
@@ -381,12 +381,12 @@ static std::map<size_t, LinkSpheres> joint_to_child_spheres(
     if (parent_joint_id != jid)
       continue;
 
-    hpp::fcl::NODE_TYPE node_type = geom_obj.geometry->getNodeType();
-    assert(node_type == hpp::fcl::GEOM_SPHERE && 
+    coal::NODE_TYPE node_type = geom_obj.geometry->getNodeType();
+    assert(node_type == coal::GEOM_SPHERE && 
             "we don't support non sphere geoms inside robot");
 
     Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
-    float sphere_radius = std::dynamic_pointer_cast<hpp::fcl::Sphere>(
+    float sphere_radius = std::dynamic_pointer_cast<coal::Sphere>(
             geom_obj.geometry)->radius;
 
     size_t link_id = rel_link_num[(model_fine.frames[geom_obj.parentFrame].name)];

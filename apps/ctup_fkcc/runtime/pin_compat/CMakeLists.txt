@@ -28,13 +28,13 @@ find_library(hpp-fcl hpp-fcl
     HINTS ${CTUP_BUILD_ROOT}/install/hpp-fcl/lib)
 
 #### VAMP (to get environment)
-set(VAMP_INCLUDE_DIR "${CTUP_ROOT}/../../vamp/src/impl")
+set(VAMP_INCLUDE_DIR "${CTUP_ROOT}/../vamp/src/impl")
 
 #### Blaze (VAMP collision headers complain otherwise)
 set(BLAZE_INCLUDE_DIR "${CTUP_ROOT}/deps/compile-time-urdf-parser/deps/blaze")
 
 #### pdqsort (VAMP collision headers complain otherwise)
-set(PDQDORT_INCLUDE_DIR "${CTUP_ROOT}/../../vamp/build/_deps/pdqsort-src")
+set(PDQDORT_INCLUDE_DIR "${CTUP_ROOT}/../vamp/build/_deps/pdqsort-src")
 
 # Add static library
 add_library(pin_fkcc STATIC

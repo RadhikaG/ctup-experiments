@@ -11,12 +11,12 @@ namespace ctup_runtime {
 
 namespace pin_compat {
 
-using Transform3f = hpp::fcl::Transform3f;
+using Transform3f = coal::Transform3f;
 
 template <typename T>
-std::shared_ptr<hpp::fcl::CollisionObject> to_fcl_box(const vamp::collision::Cuboid<T> &box)
+std::shared_ptr<coal::CollisionObject> to_fcl_box(const vamp::collision::Cuboid<T> &box)
 {
-    auto geom = std::make_shared<hpp::fcl::Box>(
+    auto geom = std::make_shared<coal::Box>(
         box.axis_1_r * 2,
         box.axis_2_r * 2,
         box.axis_3_r * 2
@@ -33,15 +33,15 @@ std::shared_ptr<hpp::fcl::CollisionObject> to_fcl_box(const vamp::collision::Cub
     tf.setRotation(rot);
     tf.setTranslation(trans);
 
-    return std::make_shared<hpp::fcl::CollisionObject>(geom, tf);
+    return std::make_shared<coal::CollisionObject>(geom, tf);
 }
 
 
 template <typename T>
-static std::shared_ptr<hpp::fcl::CollisionObject> to_fcl_cylinder(const vamp::collision::Cylinder<T> &cyl)
+static std::shared_ptr<coal::CollisionObject> to_fcl_cylinder(const vamp::collision::Cylinder<T> &cyl)
 {
     float length = std::sqrt(cyl.xv * cyl.xv + cyl.yv * cyl.yv + cyl.zv * cyl.zv);
-    auto geom = std::make_shared<hpp::fcl::Cylinder>(cyl.r, length);
+    auto geom = std::make_shared<coal::Cylinder>(cyl.r, length);
 
     Eigen::Vector3d axis(cyl.xv, cyl.yv, cyl.zv);
     axis.normalize();
@@ -68,13 +68,13 @@ static std::shared_ptr<hpp::fcl::CollisionObject> to_fcl_cylinder(const vamp::co
     tf.setRotation(rot);
     tf.setTranslation(center);
 
-    return std::make_shared<hpp::fcl::CollisionObject>(geom, tf);
+    return std::make_shared<coal::CollisionObject>(geom, tf);
 }
 
 template <typename T>
-static std::shared_ptr<hpp::fcl::CollisionObject> to_fcl_sphere(const vamp::collision::Sphere<T> &sphere)
+static std::shared_ptr<coal::CollisionObject> to_fcl_sphere(const vamp::collision::Sphere<T> &sphere)
 {
-    auto geom = std::make_shared<hpp::fcl::Sphere>(sphere.r);
+    auto geom = std::make_shared<coal::Sphere>(sphere.r);
 
     Transform3f tf;
     Eigen::Vector3d trans(sphere.x, sphere.y, sphere.z);
@@ -82,14 +82,14 @@ static std::shared_ptr<hpp::fcl::CollisionObject> to_fcl_sphere(const vamp::coll
     Eigen::Matrix3d I = Eigen::Matrix3d::Identity();
     tf.setRotation(I);
 
-    return std::make_shared<hpp::fcl::CollisionObject>(geom, tf);
+    return std::make_shared<coal::CollisionObject>(geom, tf);
 }
 
 template <typename T>
-static std::shared_ptr<hpp::fcl::CollisionObject> to_fcl_capsule(const vamp::collision::Capsule<T> &caps)
+static std::shared_ptr<coal::CollisionObject> to_fcl_capsule(const vamp::collision::Capsule<T> &caps)
 {
     float length = std::sqrt(caps.xv * caps.xv + caps.yv * caps.yv + caps.zv * caps.zv);
-    auto geom = std::make_shared<hpp::fcl::Capsule>(caps.r, length);
+    auto geom = std::make_shared<coal::Capsule>(caps.r, length);
 
     Eigen::Vector3d axis(caps.xv, caps.yv, caps.zv);
     axis.normalize();
@@ -116,7 +116,7 @@ static std::shared_ptr<hpp::fcl::CollisionObject> to_fcl_capsule(const vamp::col
     tf.setRotation(rot);
     tf.setTranslation(center);
 
-    return std::make_shared<hpp::fcl::CollisionObject>(geom, tf);
+    return std::make_shared<coal::CollisionObject>(geom, tf);
 }
 
 }
