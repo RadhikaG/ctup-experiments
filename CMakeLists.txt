@@ -65,6 +65,7 @@ set(CFLAGS_PEDANTIC
     -Wno-deprecated
     -Wdelete-non-virtual-dtor
     -Werror
+    -Wno-template-id-cdtor
     -Wno-vla
     -pedantic-errors
 )
