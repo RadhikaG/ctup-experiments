@@ -2,7 +2,7 @@
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
 //#include "fk_gen_dense.h"
-#include "fk_gen_unrolled.h"
+#include "rla_fk/gen/fk_gen_unrolled.h"
 #include <iostream>
 
 int main(int argc, char ** argv)

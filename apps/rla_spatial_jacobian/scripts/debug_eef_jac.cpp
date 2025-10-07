@@ -1,4 +1,4 @@
-#include "ctup_sd/runtime/utils.h"
+#include "rla_spatial_jacobian/runtime/utils.h"
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/frames.hpp"
@@ -6,8 +6,8 @@
 #include <Eigen/src/Core/Matrix.h>
 #include <Eigen/src/Core/util/Constants.h>
 #include <iostream>
-#include "jac_gen.h"
-#include "ctup_sd/gen/batched_jac_panda.h"
+#include "rla_spatial_jacobian/gen/jac_gen.h"
+#include "rla_spatial_jacobian/gen/batched_jac_panda.h"
 
 int main(int argc, char ** argv)
 {
@@ -107,7 +107,7 @@ int main(int argc, char ** argv)
   const size_t SIMD_WIDTH = 8;
   Eigen::Matrix<float, SIMD_WIDTH, Eigen::Dynamic> batched_ctup_res(SIMD_WIDTH, 6 * model.nv);
 
-  cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::robots::Panda> batched_q;
+  rla_jac_runtime::ConfigurationBlockRobot<rla_jac_runtime::robots::Panda> batched_q;
   for (size_t i = 0; i < (size_t)model.nq; i++) {
     batched_q[i] = q(i);
   }
@@ -117,7 +117,7 @@ int main(int argc, char ** argv)
   {
     auto start = std::chrono::steady_clock::now();
     for (size_t i = 0; i < N_IT; ++i) {
-      cg_sd_gen::batched_jac(batched_q, batched_ctup_res);
+      rla_jac_gen::batched_jac(batched_q, batched_ctup_res);
     }
     auto end = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);

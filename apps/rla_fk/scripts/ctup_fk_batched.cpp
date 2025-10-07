@@ -1,14 +1,14 @@
 // export CXX=/home/ubuntu/build/gcc-15.1-build/gcc-15.1.0-install/bin/g++
 // $CXX -std=c++17 -O3 -ffast-math -gno-as-locview-support -I../gen -I../deps/compile-time-urdf-parser/deps/eigen -I../deps/compile-time-urdf-parser/deps/blaze ../scripts/ctup_fk_batched.cpp -o ctup_fk_batched
 // export LD_LIBRARY_PATH=/home/ubuntu/build/gcc-15.1-build/gcc-15.1.0-install/lib64/
-#include "fk_gen_batched.h"
+#include "rla_fk/gen/fk_gen_batched.h"
 #include "blaze/Math.h"
 #include <iostream>
 #include <chrono>
 
 #define SMOOTH(s) for (size_t _smooth = 0; _smooth < s; ++_smooth)
-#define NQ 12 // change for iiwa - 7, hyq - 12, baxter - 19
-#define SIMD_WIDTH 8
+#define NQ 7 // change for iiwa - 7, hyq - 12, baxter - 19
+#define SIMD_WIDTH 4
 
 int main(int argc, char ** argv)
 {

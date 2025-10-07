@@ -4,7 +4,7 @@
 
 #include "ctup/typedefs.h"
 
-#include "ctup_sd/runtime/utils.h"
+#include "rla_grad_self_collision/runtime/utils.h"
 
 #include <iostream>
 

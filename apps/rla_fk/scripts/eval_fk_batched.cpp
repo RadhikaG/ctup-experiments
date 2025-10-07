@@ -1,4 +1,3 @@
-#include "blaze/math/dense/StaticVector.h"
 #include "pinocchio/codegen/cppadcg.hpp"
 #include "cppad/cg.hpp"
 #include "pinocchio/parsers/urdf.hpp"
@@ -7,7 +6,7 @@
 #include "pinocchio/utils/timer.hpp"
 #include <cppad/cg/model/llvm/llvm.hpp>
 #include "blaze/Math.h"
-#include "fk_gen_batched.h"
+#include "rla_fk/gen/fk_gen_batched.h"
 #include <iostream>
 
 #define NQ 7 // change for iiwa - 7, hyq - 12, baxter - 19

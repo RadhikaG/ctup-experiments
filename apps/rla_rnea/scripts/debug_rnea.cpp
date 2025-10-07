@@ -2,7 +2,7 @@
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/rnea.hpp"
-#include "rnea_gen.h"
+#include "rla_rnea/gen/rnea_gen.h"
 #include <iostream>
 
 int main(int argc, char ** argv)

@@ -78,15 +78,15 @@ set(CFLAGS_PEDANTIC
 
 #SAMPLES
 set(SAMPLES_SOURCES
-    samples/sample8.cpp
-    samples/sample9.cpp
-    samples/sample10.cpp
-    samples/sample11.cpp
-    samples/sample12.cpp
-    samples/sample13.cpp
-    samples/sample14.cpp
-    samples/sample15.cpp
-    samples/sample16.cpp
+    samples/eigenmatrix_fk.cpp
+    samples/scalar_rla_fk.cpp
+    samples/scalar_rla_rnea.cpp
+    samples/batched_rla_fk.cpp
+    samples/batched_rla_fk_no_tt_sparsity.cpp
+    samples/batched_fkcc_early_exit.cpp
+    samples/scalar_spatial_jacobian.cpp
+    samples/batched_grad_self_collision.cpp
+    samples/batched_spatial_jacobian.cpp
 )
 
 
@@ -149,59 +149,13 @@ endforeach()
 ################################################
 
 list(APPEND CTUP_RUNTIME_INCLUDES
-    ${CMAKE_SOURCE_DIR}/apps
     ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/runtime
 )
 
-#SCRIPTS
-set(SCRIPT_SOURCES
-    scripts/eval_fk.cpp
-    scripts/debug_fk.cpp
-    scripts/debug_fkcc.cpp
-    scripts/debug_eef_jac.cpp
-    scripts/debug_sd_grad.cpp
-    scripts/debug_jacobian.cpp
-    scripts/eval_fkcc.cpp
-    scripts/debug_rnea.cpp
-    scripts/eval_rnea.cpp
-    scripts/pin_fk.cpp
-    scripts/pin_fk_codegen.cpp
-    scripts/pin_eef_jac_codegen.cpp
-    scripts/pin_fk_codegen_vectorized_comp.cpp
-    scripts/pin_rnea_codegen.cpp
-    scripts/eval_fk_batched.cpp
-    scripts/debug_fk_batched.cpp
-    scripts/naive_fk_batched.cpp
-    scripts/naive_fk.cpp
-)
-
-#Compile SCRIPTS
-foreach(SCRIPT_SOURCE ${SCRIPT_SOURCES})
-    # get filename without extension
-    get_filename_component(SCRIPT_NAME ${SCRIPT_SOURCE} NAME_WE)
-    add_executable(${SCRIPT_NAME} ${SCRIPT_SOURCE})
-    target_link_libraries(${SCRIPT_NAME} PUBLIC ${LLVM_MODULE_LIBS})
-    target_link_libraries(${SCRIPT_NAME} PUBLIC ${Clang_LIBS})
-
-    target_link_libraries(${SCRIPT_NAME} PUBLIC pinocchio::pinocchio)
-    target_link_libraries(${SCRIPT_NAME} PUBLIC ${cppad_LIBRARIES})
-    target_link_libraries(${SCRIPT_NAME} PUBLIC coal::coal)
-    target_link_libraries(${SCRIPT_NAME} PUBLIC ${YAML_CPP_LIBRARIES})
-
-    target_include_directories(${SCRIPT_NAME} PUBLIC 
-        ${CMAKE_CURRENT_SOURCE_DIR}/gen
-        ${CMAKE_BINARY_DIR}/install/CppADCodeGen/include
-        ${YAML_CPP_INCLUDE_DIRS}
-        ${EIGEN3_INCLUDE_DIR}
-        ${BLAZE_INCLUDE_DIR}
-        ${CTUP_RUNTIME_INCLUDES}
-    )
-    target_compile_options(${SCRIPT_NAME} PRIVATE 
-        -O3 -g -DNDEBUG
-        -ffast-math
-        ${CFLAGS_PEDANTIC}
-    )
-endforeach()
+add_subdirectory(apps/rla_fk)
+add_subdirectory(apps/rla_rnea)
+add_subdirectory(apps/rla_spatial_jacobian)
+add_subdirectory(apps/rla_grad_self_collision)
 
 #set(BATCHED_SCRIPT_SOURCES
 #  scripts/ctup_fk_batched.cpp

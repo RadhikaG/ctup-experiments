@@ -8,11 +8,11 @@
 
 #include "ctup/typedefs.h"
 
-#include "ctup_sd/runtime/utils.h"
+#include "rla_spatial_jacobian/runtime/utils.h"
 
 #include <iostream>
 
-namespace cg_sd_gen {
+namespace rla_jac_gen {
 
 static void print_string(const char* str) {
   std::cout << str << "\n";
@@ -28,7 +28,7 @@ static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {
   std::cout << matrix << "\n";
 }
 
-static void batched_jac (cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::robots::Panda> const& arg1, Eigen::Matrix<float, 8, Eigen::Dynamic>& arg2) {
+static void batched_jac (rla_jac_runtime::ConfigurationBlockRobot<rla_jac_runtime::robots::Panda> const& arg1, Eigen::Matrix<float, 8, Eigen::Dynamic>& arg2) {
   blaze::StaticVector<float, 8> var47[9];
   blaze::StaticVector<float, 8> var48;
   blaze::StaticVector<float, 8> var49;
@@ -674,12 +674,12 @@ static void batched_jac (cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::r
   blaze::StaticVector<float, 8> var279;
   var279 = 0;
   var135[5ll] = var279;
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(0ll, var135[0ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(7ll, var135[1ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(14ll, var135[2ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(21ll, var135[3ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(28ll, var135[4ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(35ll, var135[5ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(0ll, var135[0ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(7ll, var135[1ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(14ll, var135[2ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(21ll, var135[3ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(28ll, var135[4ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(35ll, var135[5ll], arg2);
   var130[0ll] = var92[0ll];
   var130[1ll] = var92[1ll];
   var130[4ll] = var92[2ll];
@@ -736,12 +736,12 @@ static void batched_jac (cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::r
   blaze::StaticVector<float, 8> var291;
   var291 = 0;
   var135[5ll] = var291;
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(1ll, var135[0ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(8ll, var135[1ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(15ll, var135[2ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(22ll, var135[3ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(29ll, var135[4ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(36ll, var135[5ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(1ll, var135[0ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(8ll, var135[1ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(15ll, var135[2ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(22ll, var135[3ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(29ll, var135[4ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(36ll, var135[5ll], arg2);
   var130[0ll] = var97[0ll];
   var130[1ll] = var97[1ll];
   var130[4ll] = var97[2ll];
@@ -826,12 +826,12 @@ static void batched_jac (cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::r
   var306 = 0;
   var306 = var306 + (var134[8ll] * 1.0f);
   var135[5ll] = var306;
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(2ll, var135[0ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(9ll, var135[1ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(16ll, var135[2ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(23ll, var135[3ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(30ll, var135[4ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(37ll, var135[5ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(2ll, var135[0ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(9ll, var135[1ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(16ll, var135[2ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(23ll, var135[3ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(30ll, var135[4ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(37ll, var135[5ll], arg2);
   var130[0ll] = var102[0ll];
   var130[1ll] = var102[1ll];
   var130[4ll] = var102[2ll];
@@ -916,12 +916,12 @@ static void batched_jac (cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::r
   var321 = 0;
   var321 = var321 + (var134[8ll] * 1.0f);
   var135[5ll] = var321;
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(3ll, var135[0ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(10ll, var135[1ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(17ll, var135[2ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(24ll, var135[3ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(31ll, var135[4ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(38ll, var135[5ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(3ll, var135[0ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(10ll, var135[1ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(17ll, var135[2ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(24ll, var135[3ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(31ll, var135[4ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(38ll, var135[5ll], arg2);
   var130[0ll] = var107[0ll];
   var130[1ll] = var107[1ll];
   var130[4ll] = var107[2ll];
@@ -1006,12 +1006,12 @@ static void batched_jac (cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::r
   var336 = 0;
   var336 = var336 + (var134[8ll] * 1.0f);
   var135[5ll] = var336;
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(4ll, var135[0ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(11ll, var135[1ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(18ll, var135[2ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(25ll, var135[3ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(32ll, var135[4ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(39ll, var135[5ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(4ll, var135[0ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(11ll, var135[1ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(18ll, var135[2ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(25ll, var135[3ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(32ll, var135[4ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(39ll, var135[5ll], arg2);
   var130[0ll] = var112[0ll];
   var130[1ll] = var112[1ll];
   var130[4ll] = var112[2ll];
@@ -1096,12 +1096,12 @@ static void batched_jac (cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::r
   var351 = 0;
   var351 = var351 + (var134[8ll] * 1.0f);
   var135[5ll] = var351;
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(5ll, var135[0ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(12ll, var135[1ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(19ll, var135[2ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(26ll, var135[3ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(33ll, var135[4ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(40ll, var135[5ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(5ll, var135[0ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(12ll, var135[1ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(19ll, var135[2ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(26ll, var135[3ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(33ll, var135[4ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(40ll, var135[5ll], arg2);
   var130[0ll] = var117[0ll];
   var130[1ll] = var117[1ll];
   var130[4ll] = var117[2ll];
@@ -1186,12 +1186,12 @@ static void batched_jac (cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::r
   var366 = 0;
   var366 = var366 + (var134[8ll] * 1.0f);
   var135[5ll] = var366;
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(6ll, var135[0ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(13ll, var135[1ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(20ll, var135[2ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(27ll, var135[3ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(34ll, var135[4ll], arg2);
-  cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim(41ll, var135[5ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(6ll, var135[0ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(13ll, var135[1ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(20ll, var135[2ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(27ll, var135[3ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(34ll, var135[4ll], arg2);
+  rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim(41ll, var135[5ll], arg2);
 }
 
 }

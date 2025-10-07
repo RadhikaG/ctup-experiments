@@ -3,7 +3,7 @@
 #include "pinocchio/algorithm/kinematics.hpp"
 #include "pinocchio/utils/timer.hpp"
 #include "blaze/Math.h"
-#include "fk_gen_batched.h"
+#include "rla_fk/gen/fk_gen_batched.h"
 #include <iostream>
 
 #define NQ 7 // change to: iiwa - 7, hyq - 12, baxter - 19

@@ -4,7 +4,7 @@ namespace ctup_gen {
 
 Eigen::Matrix<double, 6, 6> X_T[20];
 
-void set_X_T (void) {
+static void set_X_T (void) {
   (X_T[1ll]).coeffRef(0, 0) = 1.0; //head_pan
   (X_T[1ll]).coeffRef(0, 1) = 0.0;
   (X_T[1ll]).coeffRef(0, 2) = 0.0;
@@ -691,7 +691,7 @@ void set_X_T (void) {
   (X_T[19ll]).coeffRef(5, 5) = 1.0;
 }
 
-Eigen::Matrix<double, 6, 6> fk (Eigen::VectorXd& arg1) {
+static Eigen::Matrix<double, 6, 6> fk (Eigen::VectorXd& arg1) {
   Eigen::VectorXd& var0 = arg1;
   Eigen::Matrix<double, 6, 6> var1[20];
   Eigen::Matrix<double, 6, 6> var2[20];
@@ -802,8 +802,8 @@ Eigen::Matrix<double, 6, 6> fk (Eigen::VectorXd& arg1) {
   double var19 = sin(var0(8ll));
   double var20 = cos(var0(8ll));
   (var1[9ll]).setZero();
-  (var1[9ll]).coeffRef(0, 2) = var0(8ll); //l_gripper_l_finger_joint
-  (var1[9ll]).coeffRef(2, 0) = -(var0(8ll));
+  (var1[9ll]).coeffRef(3, 2) = var0(8ll); //l_gripper_l_finger_joint
+  (var1[9ll]).coeffRef(5, 0) = -(var0(8ll));
   (var1[9ll]).coeffRef(0, 0) = 1;
   (var1[9ll]).coeffRef(1, 1) = 1;
   (var1[9ll]).coeffRef(2, 2) = 1;
@@ -813,8 +813,8 @@ Eigen::Matrix<double, 6, 6> fk (Eigen::VectorXd& arg1) {
   double var21 = sin(var0(9ll));
   double var22 = cos(var0(9ll));
   (var1[10ll]).setZero();
-  (var1[10ll]).coeffRef(0, 2) = var0(9ll); //l_gripper_r_finger_joint
-  (var1[10ll]).coeffRef(2, 0) = -(var0(9ll));
+  (var1[10ll]).coeffRef(3, 2) = var0(9ll); //l_gripper_r_finger_joint
+  (var1[10ll]).coeffRef(5, 0) = -(var0(9ll));
   (var1[10ll]).coeffRef(0, 0) = 1;
   (var1[10ll]).coeffRef(1, 1) = 1;
   (var1[10ll]).coeffRef(2, 2) = 1;
@@ -915,8 +915,8 @@ Eigen::Matrix<double, 6, 6> fk (Eigen::VectorXd& arg1) {
   double var37 = sin(var0(17ll));
   double var38 = cos(var0(17ll));
   (var1[18ll]).setZero();
-  (var1[18ll]).coeffRef(0, 2) = var0(17ll); //r_gripper_l_finger_joint
-  (var1[18ll]).coeffRef(2, 0) = -(var0(17ll));
+  (var1[18ll]).coeffRef(3, 2) = var0(17ll); //r_gripper_l_finger_joint
+  (var1[18ll]).coeffRef(5, 0) = -(var0(17ll));
   (var1[18ll]).coeffRef(0, 0) = 1;
   (var1[18ll]).coeffRef(1, 1) = 1;
   (var1[18ll]).coeffRef(2, 2) = 1;
@@ -926,8 +926,8 @@ Eigen::Matrix<double, 6, 6> fk (Eigen::VectorXd& arg1) {
   double var39 = sin(var0(18ll));
   double var40 = cos(var0(18ll));
   (var1[19ll]).setZero();
-  (var1[19ll]).coeffRef(0, 2) = var0(18ll); //r_gripper_r_finger_joint
-  (var1[19ll]).coeffRef(2, 0) = -(var0(18ll));
+  (var1[19ll]).coeffRef(3, 2) = var0(18ll); //r_gripper_r_finger_joint
+  (var1[19ll]).coeffRef(5, 0) = -(var0(18ll));
   (var1[19ll]).coeffRef(0, 0) = 1;
   (var1[19ll]).coeffRef(1, 1) = 1;
   (var1[19ll]).coeffRef(2, 2) = 1;

@@ -11,8 +11,8 @@
 #include <iostream>
 #include <cmath>
 
-#include "ctup_sd/runtime/utils.h"
-#include "ctup_sd/gen/batched_sd_jac_panda.h"
+#include "rla_grad_self_collision/runtime/utils.h"
+#include "rla_grad_self_collision/gen/batched_sd_jac_panda.h"
 
 using namespace pinocchio;
 
