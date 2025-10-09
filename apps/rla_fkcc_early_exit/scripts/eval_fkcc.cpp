@@ -2,7 +2,8 @@
 // $CXX -std=c++17 -O3 -ffast-math -gno-as-locview-support -I../gen -I../deps/compile-time-urdf-parser/deps/eigen -I../deps/compile-time-urdf-parser/deps/blaze ../scripts/eval_fkcc.cpp -o eval_fkcc
 // export LD_LIBRARY_PATH=/home/ubuntu/build/gcc-15.1-build/gcc-15.1.0-install/lib64/
 #include <blaze/Math.h>
-#include "cc_simd_ur5_2.h"
+#include "rla_fkcc_early_exit/gen/cc_simd_ur5.h"
+#include "rla_fkcc_early_exit/runtime/typedefs.h"
 #include <iostream>
 #include <chrono>
 
@@ -11,7 +12,7 @@ int main(int argc, char ** argv)
     const int NBT = 16;
     int it=100000;
 
-    AlignedSVd8Vector q;
+    ctup_runtime::ConfigurationBlockRobot<ctup_runtime::robots::UR5> q;
     q.resize(6);
 
     q[0] = -0.3369;

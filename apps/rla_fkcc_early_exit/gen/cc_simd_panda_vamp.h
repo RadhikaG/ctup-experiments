@@ -4,9 +4,9 @@
 
 #include "ctup/typedefs.h"
 
-#include "ctup_fkcc/runtime/typedefs.h"
+#include "rla_fkcc_early_exit/runtime/typedefs.h"
 
-#include "ctup_fkcc/runtime/vamp_collision.h"
+#include "rla_fkcc_early_exit/runtime/vamp_collision.h"
 
 namespace ctup_gen {
 

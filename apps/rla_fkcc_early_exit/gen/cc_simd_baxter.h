@@ -4,9 +4,9 @@
 
 #include "ctup/typedefs.h"
 
-#include "ctup_fkcc/runtime/typedefs.h"
+#include "rla_fkcc_early_exit/runtime/typedefs.h"
 
-#include "ctup_fkcc/runtime/collision.h"
+#include "rla_fkcc_early_exit/runtime/collision.h"
 
 #include <iostream>
 

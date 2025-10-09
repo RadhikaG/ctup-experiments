@@ -155,6 +155,7 @@ list(APPEND CTUP_RUNTIME_INCLUDES
 add_subdirectory(apps/rla_fk)
 add_subdirectory(apps/rla_rnea)
 add_subdirectory(apps/rla_spatial_jacobian)
+add_subdirectory(apps/rla_fkcc_early_exit)
 add_subdirectory(apps/rla_grad_self_collision)
 
 #set(BATCHED_SCRIPT_SOURCES

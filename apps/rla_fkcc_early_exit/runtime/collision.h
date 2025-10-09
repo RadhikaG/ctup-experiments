@@ -2,7 +2,7 @@
 #define CTUP_FKCC_COLLISION_H
 
 #include "ctup/typedefs.h"
-#include "ctup_fkcc/runtime/typedefs.h"
+#include "rla_fkcc_early_exit/runtime/typedefs.h"
 #include "blaze/Math.h"
 
 #include <vamp/collision/environment.hh>
