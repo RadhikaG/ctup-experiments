@@ -6,7 +6,7 @@
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include <cppad/cg/model/llvm/llvm.hpp>
 #include "pinocchio/algorithm/rnea.hpp"
-#include "rla_rnea/gen/rnea_gen.h"
+#include "rla_rnea/runtime/runtime_dispatcher.h"
 #include <iostream>
 #include <argparse/argparse.hpp>
 
@@ -16,6 +16,10 @@ int main(int argc, char ** argv)
 
   program.add_argument("urdf")
       .help("path to the URDF file");
+
+  program.add_argument("-r", "--robot")
+      .default_value(std::string("baxter"))
+      .help("robot name (baxter, hyq, iiwa)");
 
   try {
       program.parse_args(argc, argv);
@@ -36,12 +40,16 @@ int main(int argc, char ** argv)
 
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
   const std::string urdf_filename = program.get<std::string>("urdf");
+  const std::string robot_name = program.get<std::string>("--robot");
   std::cout << urdf_filename << "\n";
-  
+
   // Load the urdf model
   Model model;
   pinocchio::urdf::buildModel(urdf_filename,model);
   std::cout << "model name: " << model.name << std::endl;
+
+  // Get RNEA function from dispatcher
+  auto rnea_func = RneaDispatcher::get_rnea_function(robot_name);
 
   size_t last_joint = model.njoints - 1;
   
@@ -114,15 +122,9 @@ int main(int argc, char ** argv)
   std::cout << "pin cg avg time taken (ns): \t\t\t\t";
   timer.toc(std::cout, NBT);
 
-  //ctup_gen::set_X_T();
-  //ctup_gen::robot_data * rd = new ctup_gen::robot_data;
-  //ctup_gen::init_rd(rd);
-
   timer.tic();
   SMOOTH(NBT) {
-    //ctup_gen::init_gl();
-    ctup_res = ctup_gen::rnea(q, qd);
-    //ctup_res = ctup_gen::rnea(rd, q, qd);
+    ctup_res = rnea_func(q, qd);
   }
   std::cout << "ctup gen avg time taken (ns): \t\t\t\t";
   timer.toc(std::cout, NBT);

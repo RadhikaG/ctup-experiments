@@ -331,6 +331,10 @@ int main(int argc, char* argv[]) {
       .default_value(std::string("./rnea_gen.h"))
       .help("output header file path");
 
+  program.add_argument("-r", "--robot-name")
+      .default_value(std::string(""))
+      .help("robot name for unique namespace (e.g., baxter, hyq, iiwa)");
+
   try {
       program.parse_args(argc, argv);
   }
@@ -342,6 +346,7 @@ int main(int argc, char* argv[]) {
 
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string header_filename = program.get<std::string>("--output");
+  const std::string robot_name = program.get<std::string>("--robot-name");
 
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Output header: " << header_filename << "\n";
@@ -352,18 +357,17 @@ int main(int argc, char* argv[]) {
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
 
-  of << "#include \"Eigen/Dense\"\n\n";
-  of << "#include <iostream>\n\n";
-  of << "namespace ctup_gen {\n\n";
+  of << "#include \"rla_rnea/runtime/rnea_runtime.h\"\n\n";
 
-  of << "static void print_string(const char* str) {\n";
-  of << "  std::cout << str << \"\\n\";\n";
-  of << "}\n\n";
+  // Generate unique namespace based on robot name
+  if (robot_name.empty()) {
+    of << "namespace ctup_gen {\n\n";
+  } else {
+    of << "namespace ctup_gen_" << robot_name << " {\n\n";
+  }
 
-  of << "template<typename Derived>\n";
-  of << "static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {\n";
-  of << "  std::cout << matrix << \"\\n\";\n";
-  of << "}\n\n";
+  of << "using rla_rnea_runtime::print_string;\n";
+  of << "using rla_rnea_runtime::print_matrix;\n\n";
 
   //auto rd_decl = std::make_shared<block::decl_stmt>();
   //rd_decl->decl_var = rd.block_var;

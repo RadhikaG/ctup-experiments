@@ -2,7 +2,7 @@
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/rnea.hpp"
-#include "rla_rnea/gen/rnea_gen.h"
+#include "rla_rnea/runtime/runtime_dispatcher.h"
 #include <iostream>
 #include <argparse/argparse.hpp>
 #include <vector>
@@ -37,7 +37,10 @@ int main(int argc, char ** argv)
   const std::string robot_name = program.get<std::string>("--robot");
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Robot: " << robot_name << "\n";
-  
+
+  // Get RNEA function from dispatcher
+  auto rnea_func = RneaDispatcher::get_rnea_function(robot_name);
+
   // Load the urdf model
   Model model;
   pinocchio::urdf::buildModel(urdf_filename,model);
@@ -81,8 +84,7 @@ int main(int argc, char ** argv)
 
   std::cout << "---CTUP DEBUG---\n";
 
-  ctup_res = ctup_gen::rnea(q, qd);
-  //ctup_res = ctup_gen::rnea(rd, q, qd);
+  ctup_res = rnea_func(q, qd);
 
   std::cout << "-------------------\n";
 
