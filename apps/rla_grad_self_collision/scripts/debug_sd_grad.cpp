@@ -10,6 +10,7 @@
 #include <cassert>
 #include <iostream>
 #include <cmath>
+#include <argparse/argparse.hpp>
 
 #include "rla_grad_self_collision/runtime/utils.h"
 #include "rla_grad_self_collision/gen/batched_sd_jac_panda.h"
@@ -312,13 +313,24 @@ static void run_cg_grad_sd(
 }
 
 int main(int argc, char **argv) {
-  if (argc < 3) {
-    std::cerr << "Usage: " << argv[0] << " robot.urdf robot.srdf\n";
-    return 1;
+  argparse::ArgumentParser program("debug_sd_grad");
+
+  program.add_argument("urdf")
+      .help("path to the URDF file");
+  program.add_argument("srdf")
+      .help("path to the SRDF file");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
   }
 
-  const std::string urdf_path = argv[1];
-  const std::string srdf_path = argv[2];
+  const std::string urdf_path = program.get<std::string>("urdf");
+  const std::string srdf_path = program.get<std::string>("srdf");
 
   // Load model and geometry
   Model model;

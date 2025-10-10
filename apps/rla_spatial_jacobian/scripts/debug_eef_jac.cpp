@@ -6,16 +6,31 @@
 #include <Eigen/src/Core/Matrix.h>
 #include <Eigen/src/Core/util/Constants.h>
 #include <iostream>
+#include <argparse/argparse.hpp>
 #include "rla_spatial_jacobian/gen/jac_gen.h"
 #include "rla_spatial_jacobian/gen/batched_jac_panda.h"
 
 int main(int argc, char ** argv)
 {
+  argparse::ArgumentParser program("debug_eef_jac");
+
+  program.add_argument("urdf")
+      .help("path to the URDF file");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
   using namespace pinocchio;
 
   size_t N_IT = 10000;
 
-  const std::string urdf_filename = (argc<=1) ? PINOCCHIO_MODEL_DIR + std::string("/others/robots/ur_description/urdf/ur5_robot.urdf") : argv[1];
+  const std::string urdf_filename = program.get<std::string>("urdf");
   std::cout << urdf_filename << "\n";
 
   // Load the urdf model

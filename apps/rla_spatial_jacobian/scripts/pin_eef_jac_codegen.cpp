@@ -5,9 +5,25 @@
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include <cppad/cg/model/llvm/llvm.hpp>
 #include <iostream>
+#include <argparse/argparse.hpp>
 
 int main(int argc, char ** argv)
 {
+  argparse::ArgumentParser program("pin_eef_jac_codegen");
+
+  program.add_argument("urdf")
+      .help("path to the URDF file")
+      .default_value(std::string(PINOCCHIO_MODEL_DIR) + "/others/robots/ur_description/urdf/ur5_robot.urdf");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
   const int N_ITER = 100000;
   //const int N_ITER = 1;
 
@@ -25,7 +41,7 @@ int main(int argc, char ** argv)
   typedef Eigen::Matrix<ADCG, 6, Eigen::Dynamic> ADMatrixDyn6xN; // 6xN jacobian type
   
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
-  const std::string urdf_filename = (argc<=1) ? PINOCCHIO_MODEL_DIR + std::string("/others/robots/ur_description/urdf/ur5_robot.urdf") : argv[1];
+  const std::string urdf_filename = program.get<std::string>("urdf");
   std::cout << urdf_filename << "\n";
   
   // Load the urdf model

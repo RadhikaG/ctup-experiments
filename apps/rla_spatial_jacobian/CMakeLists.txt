@@ -1,5 +1,9 @@
 # Find all the script files in the scripts subdirectory
-file(GLOB RLA_SPATIAL_JACOBIAN_SCRIPT_SOURCES scripts/*.cpp)
+set(RLA_SPATIAL_JACOBIAN_SCRIPT_SOURCES
+    scripts/debug_eef_jac.cpp
+    scripts/debug_jacobian.cpp
+    scripts/pin_eef_jac_codegen.cpp
+)
 
 # Compile each script as a separate executable
 foreach(SCRIPT_SOURCE ${RLA_SPATIAL_JACOBIAN_SCRIPT_SOURCES})
@@ -11,6 +15,7 @@ foreach(SCRIPT_SOURCE ${RLA_SPATIAL_JACOBIAN_SCRIPT_SOURCES})
     # Link the necessary libraries
     target_link_libraries(${SCRIPT_NAME} PUBLIC
         pinocchio::pinocchio
+        argparse::argparse
         ${cppad_LIBRARIES}
         ${LLVM_MODULE_LIBS}
         ${Clang_LIBS}

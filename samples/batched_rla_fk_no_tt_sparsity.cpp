@@ -17,6 +17,7 @@
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
 #include <string>
+#include <argparse/argparse.hpp>
 
 using builder::dyn_var;
 using builder::static_var;
@@ -385,11 +386,29 @@ static dyn_var<BlazeStaticMatrix<blaze_avx512d>> fk(const Model &model, dyn_var<
 }
 
 int main(int argc, char* argv[]) {
-  const std::string urdf_filename = argv[1];
-  std::cout << urdf_filename << "\n";
+  argparse::ArgumentParser program("batched_rla_fk_no_tt_sparsity");
 
-  const std::string header_filename = (argc <= 2) ? "./fk_gen.h" : argv[2];
-  std::cout << header_filename << "\n";
+  program.add_argument("urdf")
+      .help("path to the URDF file");
+
+  program.add_argument("-o", "--output")
+      .default_value(std::string("./fk_gen.h"))
+      .help("output header file path");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
+  const std::string urdf_filename = program.get<std::string>("urdf");
+  const std::string header_filename = program.get<std::string>("--output");
+
+  std::cout << "URDF file: " << urdf_filename << "\n";
+  std::cout << "Output header: " << header_filename << "\n";
 
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);

@@ -19,6 +19,7 @@
 #include <iostream>
 #include <yaml-cpp/yaml.h>
 #include <map>
+#include <argparse/argparse.hpp>
 
 #include "blocks/block_visitor.h"
 #include "blocks/c_code_generator.h"
@@ -467,18 +468,34 @@ static void self_collision_signed_distances_and_jacobians(
 }
 
 int main(int argc, char* argv[]) {
-  //--------------------------
-  //LOAD URDF FILE
-  //--------------------------
-  const char* urdf_filename = argv[1];
-  std::cout << urdf_filename << "\n";
+  argparse::ArgumentParser program("batched_grad_self_collision");
 
-  //--------------------------
-  //END LOAD URDF FILE
-  //--------------------------
+  program.add_argument("urdf")
+      .help("path to the URDF file");
 
-  const std::string header_filename = (argc <= 3) ? "./fk_gen.h" : argv[3];
-  std::cout << header_filename << "\n";
+  program.add_argument("srdf")
+      .help("path to the SRDF file");
+
+  program.add_argument("-o", "--output")
+      .default_value(std::string("./fk_gen.h"))
+      .help("output header file path");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
+  const std::string urdf_filename = program.get<std::string>("urdf");
+  const std::string srdf_filename = program.get<std::string>("srdf");
+  const std::string header_filename = program.get<std::string>("--output");
+
+  std::cout << "URDF file: " << urdf_filename << "\n";
+  std::cout << "SRDF file: " << srdf_filename << "\n";
+  std::cout << "Output header: " << header_filename << "\n";
 
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
@@ -503,7 +520,6 @@ int main(int argc, char* argv[]) {
   //////
 
   geom_model.addAllCollisionPairs();
-  const std::string srdf_filename = argv[2];
   pinocchio::srdf::removeCollisionPairs(model, geom_model, srdf_filename);
 
   std::ofstream of(header_filename);

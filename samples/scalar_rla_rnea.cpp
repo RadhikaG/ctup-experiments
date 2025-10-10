@@ -20,6 +20,7 @@
 #include "pinocchio/multibody/model.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "assert.h"
+#include <argparse/argparse.hpp>
 #include <Eigen/src/Core/util/ForwardDeclarations.h>
 #include <string>
 
@@ -321,11 +322,29 @@ static dyn_var<ctup::EigenVectorXd> rnea(const Model &model,
 }
 
 int main(int argc, char* argv[]) {
-  const std::string urdf_filename = argv[1];
-  std::cout << urdf_filename << "\n";
+  argparse::ArgumentParser program("scalar_rla_rnea");
 
-  const std::string header_filename = (argc <= 2) ? "./rnea_gen.h" : argv[2];
-  std::cout << header_filename << "\n";
+  program.add_argument("urdf")
+      .help("path to the URDF file");
+
+  program.add_argument("-o", "--output")
+      .default_value(std::string("./rnea_gen.h"))
+      .help("output header file path");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
+  const std::string urdf_filename = program.get<std::string>("urdf");
+  const std::string header_filename = program.get<std::string>("--output");
+
+  std::cout << "URDF file: " << urdf_filename << "\n";
+  std::cout << "Output header: " << header_filename << "\n";
 
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);

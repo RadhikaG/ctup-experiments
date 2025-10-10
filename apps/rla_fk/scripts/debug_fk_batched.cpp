@@ -5,6 +5,7 @@
 #include "blaze/Math.h"
 #include "rla_fk/gen/fk_gen_batched.h"
 #include <iostream>
+#include <argparse/argparse.hpp>
 
 #define NQ 7 // change to: iiwa - 7, hyq - 12, baxter - 19
 
@@ -13,11 +14,25 @@
 
 int main(int argc, char ** argv)
 {
+  argparse::ArgumentParser program("debug_fk_batched");
+
+  program.add_argument("urdf")
+      .help("path to the URDF file");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
   typedef Eigen::Matrix<double, 6, 6> EigenSpatialXform;
   using namespace pinocchio;
 
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
-  const std::string urdf_filename = (argc<=1) ? PINOCCHIO_MODEL_DIR + std::string("/others/robots/ur_description/urdf/ur5_robot.urdf") : argv[1];
+  const std::string urdf_filename = program.get<std::string>("urdf");
   std::cout << urdf_filename << "\n";
   
   // Load the urdf model

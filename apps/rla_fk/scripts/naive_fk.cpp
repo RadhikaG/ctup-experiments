@@ -4,6 +4,7 @@
 #include "pinocchio/algorithm/kinematics.hpp"
 #include "blaze/Math.h"
 #include <iostream>
+#include <argparse/argparse.hpp>
 
 typedef blaze::StaticVector<double, 8> blazeSIMDVec8d; 
 typedef blaze::StaticMatrix<blazeSIMDVec8d, 6, 6> XformBatched_t;
@@ -171,12 +172,26 @@ static Xform_t fk(const Model &model, blaze::DynamicVector<Xform_t> &X_T, blaze:
 
 int main(int argc, char ** argv)
 {
+  argparse::ArgumentParser program("naive_fk");
+
+  program.add_argument("urdf")
+      .help("path to the URDF file");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
   PinocchioTicToc timer(PinocchioTicToc::NS);
   //const int NBT = 1000000;
   const int NBT = 1;
 
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
-  const std::string urdf_filename = (argc<=1) ? PINOCCHIO_MODEL_DIR + std::string("/others/robots/ur_description/urdf/ur5_robot.urdf") : argv[1];
+  const std::string urdf_filename = program.get<std::string>("urdf");
   std::cout << urdf_filename << "\n";
   
   // Load the urdf model

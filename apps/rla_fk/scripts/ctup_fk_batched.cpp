@@ -5,6 +5,7 @@
 #include "blaze/Math.h"
 #include <iostream>
 #include <chrono>
+#include <argparse/argparse.hpp>
 
 #define SMOOTH(s) for (size_t _smooth = 0; _smooth < s; ++_smooth)
 #define NQ 7 // change for iiwa - 7, hyq - 12, baxter - 19
@@ -12,13 +13,25 @@
 
 int main(int argc, char ** argv)
 {
+  argparse::ArgumentParser program("ctup_fk_batched");
+
+  program.add_argument("urdf")
+      .help("path to the URDF file");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
   const int iterations = 1000000;
   const int NBT = 1;
 
-  assert(argc == 2 && "missing urdf filename");
-
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
-  const std::string urdf_filename = argv[1];
+  const std::string urdf_filename = program.get<std::string>("urdf");
   std::cout << urdf_filename << "\n";
 
   size_t nq = 0;

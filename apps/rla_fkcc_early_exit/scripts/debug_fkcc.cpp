@@ -5,13 +5,29 @@
 #include "pinocchio/collision/collision.hpp"
 #include "pinocchio/utils/timer.hpp"
 #include <iostream>
+#include <argparse/argparse.hpp>
+
 int main(int argc, char ** argv)
 {
+  argparse::ArgumentParser program("debug_fkcc");
+
+  program.add_argument("urdf")
+      .help("path to the URDF file");
+  program.add_argument("srdf")
+      .help("path to the SRDF file");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
   using namespace pinocchio;
-  const std::string pin_model_path = argv[1];
-  const std::string urdf_filename = pin_model_path + std::string("ur5_spherized.urdf");
-  // You should change here to set up your own SRDF file
-  const std::string srdf_filename = pin_model_path + std::string("ur5.srdf");
+  const std::string urdf_filename = program.get<std::string>("urdf");
+  const std::string srdf_filename = program.get<std::string>("srdf");
 
   PinocchioTicToc timer(PinocchioTicToc::NS);
   //const int NBT = 100000;
@@ -24,7 +40,7 @@ int main(int argc, char ** argv)
   Data data(model);
   // Load the geometries associated to model which are contained in the URDF file
   GeometryModel geom_model;
-  pinocchio::urdf::buildGeom(model, urdf_filename, pinocchio::COLLISION, geom_model, pin_model_path);
+  pinocchio::urdf::buildGeom(model, urdf_filename, pinocchio::COLLISION, geom_model);
   // Add all possible collision pairs and remove the ones collected in the SRDF file
   geom_model.addAllCollisionPairs();
   pinocchio::srdf::removeCollisionPairs(model, geom_model, srdf_filename);

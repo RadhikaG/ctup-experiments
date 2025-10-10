@@ -10,6 +10,7 @@
 #include <iostream>
 #include <string>
 #include <cmath>
+#include <argparse/argparse.hpp>
 
 namespace pin = pinocchio;
 
@@ -221,13 +222,24 @@ manual_world_jacobian_for_joint(const pin::Model &model,
 }
 
 int main(int argc, char** argv) {
-  if (argc < 3) {
-    std::cerr << "Usage: " << argv[0] << " path/to/robot.urdf path/to/robot.srdf\n";
-    return 1;
+  argparse::ArgumentParser program("debug_jacobian");
+
+  program.add_argument("urdf")
+      .help("path to the URDF file");
+  program.add_argument("srdf")
+      .help("path to the SRDF file");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
   }
 
-  std::string urdf_path = argv[1];
-  std::string srdf_path = argv[2];
+  std::string urdf_path = program.get<std::string>("urdf");
+  std::string srdf_path = program.get<std::string>("srdf");
 
   pin::Model model;
   try {

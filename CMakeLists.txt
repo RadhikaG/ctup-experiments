@@ -43,6 +43,7 @@ find_library(urdf-compiler urdf-compiler PATHS ${CMAKE_SOURCE_DIR}/deps/compile-
 find_library(buildit buildit PATHS ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/deps/buildit/build)
 
 find_package(yaml-cpp REQUIRED)
+find_package(argparse REQUIRED)
 
 add_compile_definitions(LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}
                             LLVM_VERSION_MINOR=${LLVM_VERSION_MINOR})

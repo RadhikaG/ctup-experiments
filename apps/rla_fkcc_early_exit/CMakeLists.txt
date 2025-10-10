@@ -1,5 +1,8 @@
 # Find all the script files in the scripts subdirectory
-file(GLOB RLA_FKCC_SCRIPT_SOURCES scripts/*.cpp)
+set(RLA_FKCC_SCRIPT_SOURCES
+    scripts/debug_fkcc.cpp
+    #scripts/eval_fkcc.cpp
+)
 
 # Compile each script as a separate executable
 foreach(SCRIPT_SOURCE ${RLA_FKCC_SCRIPT_SOURCES})
@@ -11,6 +14,7 @@ foreach(SCRIPT_SOURCE ${RLA_FKCC_SCRIPT_SOURCES})
     # Link the necessary libraries
     target_link_libraries(${SCRIPT_NAME} PUBLIC
         pinocchio::pinocchio
+        argparse::argparse
         ${cppad_LIBRARIES}
         ${LLVM_MODULE_LIBS}
         ${Clang_LIBS}

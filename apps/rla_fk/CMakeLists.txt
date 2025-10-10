@@ -1,5 +1,16 @@
 # Find all the script files in the scripts subdirectory
-file(GLOB RLA_FK_SCRIPT_SOURCES scripts/*.cpp)
+set(RLA_FK_SCRIPT_SOURCES
+    scripts/ctup_fk_batched.cpp
+    scripts/debug_fk_batched.cpp
+    scripts/debug_fk.cpp
+    scripts/eval_fk_batched.cpp
+    scripts/eval_fk.cpp
+    scripts/naive_fk_batched.cpp
+    scripts/naive_fk.cpp
+    scripts/pin_fk_codegen_vectorized_comp.cpp
+    scripts/pin_fk_codegen.cpp
+    scripts/pin_fk.cpp
+)
 
 # Compile each script as a separate executable
 foreach(SCRIPT_SOURCE ${RLA_FK_SCRIPT_SOURCES})
@@ -11,6 +22,7 @@ foreach(SCRIPT_SOURCE ${RLA_FK_SCRIPT_SOURCES})
     # Link the necessary libraries
     target_link_libraries(${SCRIPT_NAME} PUBLIC
         pinocchio::pinocchio
+        argparse::argparse
         ${cppad_LIBRARIES}
         ${LLVM_MODULE_LIBS}
         ${Clang_LIBS}

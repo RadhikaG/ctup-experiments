@@ -19,6 +19,7 @@
 #include <iostream>
 #include <yaml-cpp/yaml.h>
 #include <map>
+#include <argparse/argparse.hpp>
 
 #include "blocks/block_visitor.h"
 #include "blocks/c_code_generator.h"
@@ -752,25 +753,44 @@ static dyn_var<int> fkcc(
 }
 
 int main(int argc, char* argv[]) {
-  //--------------------------
-  //LOAD URDF FILE
-  //--------------------------
+  argparse::ArgumentParser program("batched_fkcc_early_exit");
 
-  // Path to the URDF file 1
-  const char* urdf_filename_coarse = argv[1];
-  std::cout << urdf_filename_coarse << "\n";
+  program.add_argument("urdf_coarse")
+      .help("path to the coarse URDF file");
 
-  const char* urdf_filename_fine = argv[2];
-  std::cout << urdf_filename_fine << "\n";
-  //--------------------------
-  //END LOAD URDF FILE
-  //--------------------------
+  program.add_argument("urdf_fine")
+      .help("path to the fine URDF file");
 
-  //--------------------------
-  //LOAD YAML FILE
-  //--------------------------
-  const std::string env_filename = argv[3];
-  std::cout << env_filename << "\n";
+  program.add_argument("env_yaml")
+      .help("path to the environment YAML file");
+
+  program.add_argument("srdf")
+      .help("path to the SRDF file");
+
+  program.add_argument("-o", "--output")
+      .default_value(std::string("./fk_gen.h"))
+      .help("output header file path");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
+  const std::string urdf_filename_coarse = program.get<std::string>("urdf_coarse");
+  const std::string urdf_filename_fine = program.get<std::string>("urdf_fine");
+  const std::string env_filename = program.get<std::string>("env_yaml");
+  const std::string srdf_filename = program.get<std::string>("srdf");
+  const std::string header_filename = program.get<std::string>("--output");
+
+  std::cout << "URDF coarse: " << urdf_filename_coarse << "\n";
+  std::cout << "URDF fine: " << urdf_filename_fine << "\n";
+  std::cout << "Environment YAML: " << env_filename << "\n";
+  std::cout << "SRDF file: " << srdf_filename << "\n";
+  std::cout << "Output header: " << header_filename << "\n";
 
   YAML::Node root = YAML::LoadFile(env_filename);
   // Parse collision objects
@@ -842,12 +862,6 @@ int main(int argc, char* argv[]) {
   env_obj.spheres=spheres;
   env_obj.cylinders=cylinders;
   env_obj.boxs=boxs;
-  //--------------------------
-  //END LOAD YAML FILE
-  //--------------------------
-
-  const std::string header_filename = (argc <= 5) ? "./fk_gen.h" : argv[5];
-  std::cout << header_filename << "\n";
 
   Model model_coarse;
   pinocchio::urdf::buildModel(urdf_filename_coarse, model_coarse);
@@ -872,7 +886,6 @@ int main(int argc, char* argv[]) {
   //////
 
   geom_model_coarse.addAllCollisionPairs();
-  const std::string srdf_filename = argv[4];
   pinocchio::srdf::removeCollisionPairs(model_coarse, geom_model_coarse, srdf_filename);
 
   Model model_fine;
