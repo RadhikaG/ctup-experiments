@@ -180,6 +180,10 @@ int main(int argc, char* argv[]) {
       .default_value(std::string("./fk_gen.h"))
       .help("output header file path");
 
+  program.add_argument("-r", "--robot")
+      .required()
+      .help("robot name (iiwa, hyq, baxter)");
+
   try {
       program.parse_args(argc, argv);
   }
@@ -191,9 +195,11 @@ int main(int argc, char* argv[]) {
 
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string header_filename = program.get<std::string>("--output");
+  const std::string robot_name = program.get<std::string>("--robot");
 
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Output header: " << header_filename << "\n";
+  std::cout << "Robot: " << robot_name << "\n";
 
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
@@ -201,18 +207,15 @@ int main(int argc, char* argv[]) {
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
 
-  of << "#include \"Eigen/Dense\"\n\n";
-  of << "#include <iostream>\n\n";
-  of << "namespace ctup_gen {\n\n";
+  // Generate unique namespace per robot
+  std::string namespace_name = "ctup_gen_" + robot_name;
 
-  of << "static void print_string(const char* str) {\n";
-  of << "  std::cout << str << \"\\n\";\n";
-  of << "}\n\n";
+  of << "#include \"Eigen/Dense\"\n";
+  of << "#include \"rla_fk/runtime/utils.h\"\n\n";
+  of << "namespace " << namespace_name << " {\n\n";
 
-  of << "template<typename Derived>\n";
-  of << "static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {\n";
-  of << "  std::cout << matrix << \"\\n\";\n";
-  of << "}\n\n";
+  of << "using ctup_runtime::print_string;\n";
+  of << "using ctup_runtime::print_matrix;\n\n";
 
   builder::builder_context context;
 

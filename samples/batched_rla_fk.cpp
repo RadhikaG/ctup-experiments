@@ -64,6 +64,23 @@ builder::dyn_var<void(BlazeStaticMatrix<double> &)> print_matrix = builder::as_g
 
 builder::dyn_var<void(char *)> print_string = builder::as_global("print_string");
 
+/** Robot type declarations **/
+namespace runtime {
+namespace robots {
+constexpr char iiwa_name[] = "ctup_runtime::robots::iiwa";
+constexpr char hyq_name[] = "ctup_runtime::robots::hyq";
+constexpr char baxter_name[] = "ctup_runtime::robots::baxter";
+
+using iiwa = typename builder::name<iiwa_name>;
+using hyq = typename builder::name<hyq_name>;
+using baxter = typename builder::name<baxter_name>;
+}
+
+constexpr char configuration_block_robot_name[] = "ctup_runtime::ConfigurationBlockRobot";
+template <typename RobotT>
+using configuration_block_robot_t = typename builder::name<configuration_block_robot_name, RobotT>;
+}
+
 template <typename Scalar>
 static void print_Xmat(std::string prefix, Xform<Scalar> &xform) {
   print_string(prefix.c_str());
@@ -99,7 +116,12 @@ static void set_X_T(builder::array<Xform<Prim>> &X_T, const Model &model) {
   }
 }
 
-static dyn_var<BlazeStaticMatrix<blaze_avx512d>> fk(const Model &model, dyn_var<BlazeStaticVector<blaze_avx512d> &> q) {
+template <typename RobotT>
+static void batched_fk(
+    const Model &model,
+    dyn_var<const runtime::configuration_block_robot_t<RobotT>&> q,
+    dyn_var<ctup::EigenMatrixXd&> result)
+{
   typedef typename Model::JointIndex JointIndex;
 
   builder::array<Xform<blaze_avx512d>> X_T;
@@ -160,11 +182,8 @@ static dyn_var<BlazeStaticMatrix<blaze_avx512d>> fk(const Model &model, dyn_var<
   //  print_Xmat(prefix + std::to_string(i), X_0[i]);
   //}
 
-  dyn_var<BlazeStaticMatrix<blaze_avx512d>> final_ans;
-  final_ans.set_matrix_fixed_size(6, 6);
-  toRawMatrix(final_ans, X_0[model.njoints-1]);
-
-  return final_ans;
+  // TODO: Copy final_ans to result (EigenMatrixXd)
+  // This requires a conversion function from BlazeStaticMatrix to EigenMatrixXd
 }
 
 int main(int argc, char* argv[]) {
@@ -177,6 +196,10 @@ int main(int argc, char* argv[]) {
       .default_value(std::string("./fk_gen.h"))
       .help("output header file path");
 
+  program.add_argument("-r", "--robot")
+      .required()
+      .help("robot name (iiwa, hyq, baxter)");
+
   try {
       program.parse_args(argc, argv);
   }
@@ -188,9 +211,11 @@ int main(int argc, char* argv[]) {
 
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string header_filename = program.get<std::string>("--output");
+  const std::string robot_name = program.get<std::string>("--robot");
 
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Output header: " << header_filename << "\n";
+  std::cout << "Robot: " << robot_name << "\n";
 
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
@@ -198,48 +223,38 @@ int main(int argc, char* argv[]) {
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
 
+  // Generate unique namespace per robot
+  std::string namespace_name = "ctup_gen_" + robot_name;
+
   of << "// clang-format off\n\n";
-  of << "#include \"Eigen/Dense\"\n\n";
-  of << "#include \"blaze/Math.h\"\n\n";
-  of << "#include <iostream>\n\n";
-  of << "namespace ctup_gen {\n\n";
+  of << "#include \"Eigen/Dense\"\n";
+  of << "#include \"blaze/Math.h\"\n";
+  of << "#include \"rla_fk/runtime/utils.h\"\n\n";
+  of << "namespace " << namespace_name << " {\n\n";
 
-  of << "static void print_string(const char* str) {\n";
-  of << "  std::cout << str << \"\\n\";\n";
-  of << "}\n\n";
-
-  //----- todo fix print funcs
-
-  of << "static void print_matrix(const blaze::StaticMatrix<blaze::StaticVector<double, 8>, 6, 6>& matrix) {\n";
-  of << "  for (int i = 0; i < 6; i++) {\n";
-  of << "    for (int j = 0; j < 6; j++) {\n";
-  of << "      blaze::StaticVector<double, 8> colVec(matrix(i, j));\n";
-  of << "      blaze::StaticVector<double, 8, blaze::rowVector> rowVec;\n";
-  of << "      for (int k = 0; k < 8; k++)\n";
-  of << "        rowVec[k] = colVec[k];\n";
-  of << "      std::cout << rowVec;\n";
-  of << "    }\n";
-  of << "  }\n";
-  of << "}\n\n";
-
-  of << "template<typename MT>\n";
-  of << "static void print_matrix(const blaze::DenseMatrix<MT, blaze::rowMajor>& matrix) {\n";
-  of << "  std::cout << matrix << \"\\n\";\n";
-  of << "}\n\n";
-
-  of << "template<typename Derived>\n";
-  of << "static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {\n";
-  of << "  std::cout << matrix << \"\\n\";\n";
-  of << "}\n\n";
-
-  //-------------------------
+  of << "using ctup_runtime::print_string;\n";
+  of << "using ctup_runtime::print_matrix;\n\n";
 
   builder::builder_context context;
   context.run_rce = true;
 
-  auto ast = context.extract_function_ast(fk, "fk", model);
-  of << "static ";
-  block::c_code_generator::generate_code(ast, of, 0);
+  // Instantiate batched_fk function based on robot type
+  if (robot_name == "iiwa") {
+    auto ast = context.extract_function_ast(batched_fk<runtime::robots::iiwa>, "batched_fk", model);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  } else if (robot_name == "hyq") {
+    auto ast = context.extract_function_ast(batched_fk<runtime::robots::hyq>, "batched_fk", model);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  } else if (robot_name == "baxter") {
+    auto ast = context.extract_function_ast(batched_fk<runtime::robots::baxter>, "batched_fk", model);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  } else {
+    std::cerr << "Unknown robot: " << robot_name << "\n";
+    return 1;
+  }
 
   of << "}\n";
 }

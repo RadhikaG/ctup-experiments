@@ -121,7 +121,7 @@ static int get_joint_axis(const Model &model, Model::JointIndex i) {
   }
 }
 
-static dyn_var<eigen_Xmat_t> fk(const Model &model, dyn_var<eigen_vectorXd_t &> q) {
+static dyn_var<eigen_Xmat_t> eigenmatrix_fk(const Model &model, dyn_var<eigen_vectorXd_t &> q) {
   dyn_var<eigen_Xmat_t[]> X_J, X_0;
   resize_arr(X_J, model.njoints);
   resize_arr(X_0, model.njoints);
@@ -242,6 +242,10 @@ int main(int argc, char* argv[]) {
       .default_value(std::string("./fk_gen.h"))
       .help("output header file path");
 
+  program.add_argument("-r", "--robot")
+      .required()
+      .help("robot name (iiwa, hyq, baxter)");
+
   try {
       program.parse_args(argc, argv);
   }
@@ -253,9 +257,11 @@ int main(int argc, char* argv[]) {
 
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string header_filename = program.get<std::string>("--output");
+  const std::string robot_name = program.get<std::string>("--robot");
 
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Output header: " << header_filename << "\n";
+  std::cout << "Robot: " << robot_name << "\n";
 
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
@@ -263,8 +269,15 @@ int main(int argc, char* argv[]) {
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
 
-  of << "#include \"Eigen/Dense\"\n\n";
-  of << "namespace ctup_gen {\n\n";
+  // Generate unique namespace per robot
+  std::string namespace_name = "ctup_gen_" + robot_name;
+
+  of << "#include \"Eigen/Dense\"\n";
+  of << "#include \"rla_fk/runtime/utils.h\"\n\n";
+  of << "namespace " << namespace_name << " {\n\n";
+
+  of << "using ctup_runtime::print_string;\n";
+  of << "using ctup_runtime::print_matrix;\n\n";
 
   resize_arr(X_T, model.njoints);
   auto X_T_decl = std::make_shared<block::decl_stmt>();
@@ -277,7 +290,7 @@ int main(int argc, char* argv[]) {
   of << "static ";
   block::c_code_generator::generate_code(ast, of, 0);
 
-  ast = context.extract_function_ast(fk, "fk", model);
+  ast = context.extract_function_ast(eigenmatrix_fk, "eigenmatrix_fk", model);
   of << "static ";
   block::c_code_generator::generate_code(ast, of, 0);
 

@@ -1,15 +1,12 @@
+# Add the FK dispatcher static library subdirectory
+add_subdirectory(rla_fk_dispatcher)
+
 # Find all the script files in the scripts subdirectory
 set(RLA_FK_SCRIPT_SOURCES
-    scripts/ctup_fk_batched.cpp
-    scripts/debug_fk_batched.cpp
     scripts/debug_fk.cpp
-    scripts/eval_fk_batched.cpp
+    scripts/debug_fk_batched.cpp
     scripts/eval_fk.cpp
-    scripts/naive_fk_batched.cpp
-    scripts/naive_fk.cpp
-    scripts/pin_fk_codegen_vectorized_comp.cpp
-    scripts/pin_fk_codegen.cpp
-    scripts/pin_fk.cpp
+    scripts/eval_fk_batched.cpp
 )
 
 # Compile each script as a separate executable
@@ -21,6 +18,7 @@ foreach(SCRIPT_SOURCE ${RLA_FK_SCRIPT_SOURCES})
 
     # Link the necessary libraries
     target_link_libraries(${SCRIPT_NAME} PUBLIC
+        rla_fk_lib
         pinocchio::pinocchio
         argparse::argparse
         ${cppad_LIBRARIES}
@@ -42,6 +40,7 @@ foreach(SCRIPT_SOURCE ${RLA_FK_SCRIPT_SOURCES})
     target_compile_options(${SCRIPT_NAME} PRIVATE
         -O3 -g -DNDEBUG
         -ffast-math
+        -Wno-maybe-uninitialized
         ${CFLAGS_PEDANTIC}
     )
 endforeach()

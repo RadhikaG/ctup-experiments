@@ -1,16 +1,14 @@
+#include "Eigen/Dense"
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
-#include "pinocchio/utils/timer.hpp"
+#include "rla_fk/rla_fk_dispatcher/fk_dispatcher.h"
 #include "blaze/Math.h"
-#include "rla_fk/gen/fk_gen_batched.h"
 #include <iostream>
 #include <argparse/argparse.hpp>
-
-#define NQ 7 // change to: iiwa - 7, hyq - 12, baxter - 19
-
-//static blaze::StaticMatrix<blaze::StaticVector<double, 4>, 6, 6> fk (blaze::StaticVector<blaze::StaticVector<double, 4>, 19>& arg1) {
-//  blaze::StaticVector<blaze::StaticVector<double, 4>, 19>& var0 = arg1;
+#include <vector>
+#include <string>
+#include <stdexcept>
 
 int main(int argc, char ** argv)
 {
@@ -18,6 +16,11 @@ int main(int argc, char ** argv)
 
   program.add_argument("urdf")
       .help("path to the URDF file");
+
+  program.add_argument("--robot")
+      .required()
+      .help("robot name")
+      .choices("iiwa", "hyq", "baxter");
 
   try {
       program.parse_args(argc, argv);
@@ -30,34 +33,26 @@ int main(int argc, char ** argv)
 
   typedef Eigen::Matrix<double, 6, 6> EigenSpatialXform;
   using namespace pinocchio;
+  using namespace ctup_runtime::dispatcher;
 
-  // You should change here to set up your own URDF file or just pass it as an argument of this example.
   const std::string urdf_filename = program.get<std::string>("urdf");
-  std::cout << urdf_filename << "\n";
-  
+  const std::string robot_name = program.get<std::string>("--robot");
+  std::cout << "URDF file: " << urdf_filename << "\n";
+  std::cout << "Robot: " << robot_name << "\n";
+
   // Load the urdf model
   Model model;
-  pinocchio::urdf::buildModel(urdf_filename,model);
+  pinocchio::urdf::buildModel(urdf_filename, model);
   std::cout << "model name: " << model.name << std::endl;
-  
+
   // Sample a random configuration
   Eigen::VectorXd q = randomConfiguration(model);
-
-  blaze::StaticVector<blaze::StaticVector<double, 4>, NQ> q_blaze;
-
-  for (size_t d = 0; d < NQ; ++d) {
-    // broadcasting single double qs[i][d] entry to wide blaze array
-    q_blaze[d] = q[d];
-  }
-
-  blaze::StaticMatrix<blaze::StaticVector<double, 4>, 6, 6> ctup_res;
-  Eigen::Matrix<double, 6, 6> pin_res;
 
   std::cout << "---PINOCCHIO DEBUG---\n";
 
   Data data(model);
-  forwardKinematics(model,data,q);
-  pin_res = data.oMi[model.njoints-1];
+  forwardKinematics(model, data, q);
+  Eigen::Matrix<double, 6, 6> pin_res = data.oMi[model.njoints-1];
 
   for (size_t i = 1; i < (size_t)model.njoints; i++) {
     if (i <= 4) {
@@ -71,24 +66,43 @@ int main(int argc, char ** argv)
 
   std::cout << "-------------------\n";
 
-  std::cout << "---CTUP  DEBUG---\n";
+  std::cout << "---CTUP DEBUG---\n";
 
-  //ctup_gen::set_X_T();
+  Eigen::MatrixXd ctup_res_batched(6, 6);
 
-  ctup_res = ctup_gen::fk(q_blaze);
+  // Dispatch to the appropriate robot batched FK
+  // Using double precision with batch size 8
+  if (robot_name == "iiwa") {
+    auto fk_batched_func = FkDispatcher::get_fk_batched_function<iiwaTraits, double, 8>();
+    ctup_runtime::ConfigurationBlock<ctup_runtime::robots::iiwa, double, 8> q_batched;
+    for (size_t d = 0; d < iiwaTraits::ndof; ++d) {
+      q_batched[d] = q[d];
+    }
+    fk_batched_func(q_batched, ctup_res_batched);
+  } else if (robot_name == "hyq") {
+    auto fk_batched_func = FkDispatcher::get_fk_batched_function<HyqTraits, double, 8>();
+    ctup_runtime::ConfigurationBlock<ctup_runtime::robots::hyq, double, 8> q_batched;
+    for (size_t d = 0; d < HyqTraits::ndof; ++d) {
+      q_batched[d] = q[d];
+    }
+    fk_batched_func(q_batched, ctup_res_batched);
+  } else if (robot_name == "baxter") {
+    auto fk_batched_func = FkDispatcher::get_fk_batched_function<BaxterTraits, double, 8>();
+    ctup_runtime::ConfigurationBlock<ctup_runtime::robots::baxter, double, 8> q_batched;
+    for (size_t d = 0; d < BaxterTraits::ndof; ++d) {
+      q_batched[d] = q[d];
+    }
+    fk_batched_func(q_batched, ctup_res_batched);
+  } else {
+    throw std::runtime_error("Unknown robot: " + robot_name);
+  }
 
   std::cout << "-------------------\n";
 
   std::cout << "--------FINAL RES--------\n";
 
-  // we know ctup_res has broadcasted entries
-  Eigen::Matrix<double, 6, 6> ctup_res_single;
-  for (int i = 0; i < 6; i++)
-    for (int j = 0; j < 6; j++)
-      ctup_res_single(j, i) = ctup_res(i, j)[0];
+  std::cout << "ctup_res (batched, first SIMD lane):\n" << ctup_res_batched << std::endl;
+  std::cout << "pin_res:\n" << pin_res << std::endl;
 
-  std::cout << "ctup_res: \n" << ctup_res_single << std::endl;
-  std::cout << "pin_res: \n" << pin_res << std::endl;
-
+  return 0;
 }
-

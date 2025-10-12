@@ -1,17 +1,118 @@
-#include "pinocchio/codegen/cppadcg.hpp"
-#include "cppad/cg.hpp"
+#include "Eigen/Dense"
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
 #include "pinocchio/utils/timer.hpp"
-#include <cppad/cg/model/llvm/llvm.hpp>
+#include "rla_fk/rla_fk_dispatcher/fk_dispatcher.h"
 #include "blaze/Math.h"
-#include "rla_fk/gen/fk_gen_batched.h"
 #include <iostream>
 #include <argparse/argparse.hpp>
+#include <vector>
+#include <string>
+#include <stdexcept>
 
-#define NQ 7 // change for iiwa - 7, hyq - 12, baxter - 19
-#define SIMD_WIDTH 4
+using namespace ctup_runtime::dispatcher;
+
+// Template function to run batched FK evaluation for any RobotTraits, Scalar, and BatchSize
+template<typename RobotTraits, typename Scalar, size_t BatchSize>
+void run_batched_evaluation(const std::string& urdf_filename,
+                             const std::string& robot_name,
+                             pinocchio::Model& model) {
+  using namespace pinocchio;
+  using RobotType = typename RobotTraits::RobotType;
+
+  PinocchioTicToc timer(PinocchioTicToc::NS);
+  const int NBT = 10000;
+
+  // Sample random configurations
+  PINOCCHIO_ALIGNED_STD_VECTOR(Eigen::VectorXd) qs(NBT);
+  for (size_t i = 0; i < NBT; ++i) {
+    qs[i] = randomConfiguration(model);
+  }
+
+  std::cout << "\n=== Running Performance Evaluation ===\n\n";
+
+  Eigen::MatrixXd rla_res_batched(6, 6);
+  Eigen::Matrix<double, 6, 6> pin_res;
+  Data data(model);
+
+  // Get batched FK function from dispatcher
+  auto fk_batched_func = FkDispatcher::get_fk_batched_function<RobotTraits, Scalar, BatchSize>();
+
+  // Benchmark batched RLA FK
+  timer.tic();
+  SMOOTH(NBT)
+  {
+    ctup_runtime::ConfigurationBlock<RobotType, Scalar, BatchSize> q_batched;
+    for (size_t d = 0; d < RobotTraits::ndof; ++d) {
+      q_batched[d] = qs[_smooth][d];
+    }
+    fk_batched_func(q_batched, rla_res_batched);
+  }
+  std::cout << "RLA batched FK avg time (ns):           \t";
+  timer.toc(std::cout, NBT);
+
+  // Benchmark Pinocchio FK (BatchSize consecutive calls)
+  timer.tic();
+  SMOOTH(NBT)
+  {
+    for (size_t w = 0; w < BatchSize; w++) {
+      forwardKinematics(model, data, qs[_smooth]);
+    }
+  }
+  std::cout << "Pinocchio FK (" << BatchSize << " consecutive calls) avg time (ns): \t";
+  timer.toc(std::cout, NBT);
+
+  // Get final Pinocchio result for comparison
+  forwardKinematics(model, data, qs[NBT-1]);
+  pin_res = data.oMi[model.njoints-1];
+
+  std::cout << "\n=== Final Results (Last Configuration) ===\n\n";
+  std::cout << "Note: RLA batched FK result is currently incomplete/incorrect due to known implementation issues.\n";
+  std::cout << "This evaluation focuses on performance comparison only.\n\n";
+  std::cout << "Pinocchio FK result:\n" << pin_res << "\n";
+}
+
+// Helper to dispatch based on robot name
+template<typename Scalar, size_t BatchSize>
+void dispatch_robot(const std::string& robot_name, const std::string& urdf_filename) {
+  using namespace pinocchio;
+
+  Model model;
+  pinocchio::urdf::buildModel(urdf_filename, model);
+  std::cout << "model name: " << model.name << std::endl;
+
+  if (robot_name == "iiwa") {
+    run_batched_evaluation<iiwaTraits, Scalar, BatchSize>(urdf_filename, robot_name, model);
+  } else if (robot_name == "hyq") {
+    run_batched_evaluation<HyqTraits, Scalar, BatchSize>(urdf_filename, robot_name, model);
+  } else if (robot_name == "baxter") {
+    run_batched_evaluation<BaxterTraits, Scalar, BatchSize>(urdf_filename, robot_name, model);
+  } else {
+    throw std::runtime_error("Unknown robot: " + robot_name);
+  }
+}
+
+// Main dispatcher - only instantiate supported combinations
+static void dispatch_batched_fk(int batch_size, const std::string& dtype, const std::string& robot_name, const std::string& urdf_filename) {
+  // Currently only double with batch size 8 is implemented
+  if (dtype == "double" && batch_size == 8) {
+    dispatch_robot<double, 8>(robot_name, urdf_filename);
+  } else {
+    throw std::runtime_error("Unsupported combination: dtype=" + dtype + ", batch_size=" + std::to_string(batch_size) +
+                              ". Only double with batch_size=8 is currently supported.");
+  }
+
+  // When adding new implementations, add explicit instantiations here:
+  // Example for float with batch_size=4:
+  // else if (dtype == "float" && batch_size == 4) {
+  //   dispatch_robot<float, 4>(robot_name, urdf_filename);
+  // }
+  // Example for double with batch_size=16:
+  // else if (dtype == "double" && batch_size == 16) {
+  //   dispatch_robot<double, 16>(robot_name, urdf_filename);
+  // }
+}
 
 int main(int argc, char ** argv)
 {
@@ -19,6 +120,22 @@ int main(int argc, char ** argv)
 
   program.add_argument("urdf")
       .help("path to the URDF file");
+
+  program.add_argument("--robot")
+      .required()
+      .help("robot name")
+      .choices("iiwa", "hyq", "baxter");
+
+  program.add_argument("--dtype")
+      .default_value(std::string("double"))
+      .help("data type (double or float)")
+      .choices("double", "float");
+
+  program.add_argument("--batch-size")
+      .default_value(8)
+      .scan<'i', int>()
+      .help("SIMD batch size (4, 8, 16, 32)")
+      .choices(4, 8, 16, 32);
 
   try {
       program.parse_args(argc, argv);
@@ -29,138 +146,29 @@ int main(int argc, char ** argv)
       return 1;
   }
 
-  using namespace pinocchio;
-  using namespace CppAD;
-  using namespace CppAD::cg;
-
-  PinocchioTicToc timer(PinocchioTicToc::NS);
-  //const int NBT = 100 * 100;
-  const int NBT = 10000;
-
-  // You should change here to set up your own URDF file or just pass it as an argument of this example.
   const std::string urdf_filename = program.get<std::string>("urdf");
-  std::cout << urdf_filename << "\n";
-  
-  // Load the urdf model
-  Model model;
-  pinocchio::urdf::buildModel(urdf_filename,model);
-  std::cout << "model name: " << model.name << std::endl;
-  
-  // Sample a random configuration
-  PINOCCHIO_ALIGNED_STD_VECTOR(Eigen::VectorXd) qs(NBT);
+  const std::string robot_name = program.get<std::string>("--robot");
+  const std::string dtype = program.get<std::string>("--dtype");
+  const int batch_size = program.get<int>("--batch-size");
 
-  for (size_t i = 0; i < NBT; ++i) {
-    qs[i] = randomConfiguration(model);
+  std::cout << "URDF file: " << urdf_filename << "\n";
+  std::cout << "Robot: " << robot_name << "\n";
+  std::cout << "Dtype: " << dtype << "\n";
+  std::cout << "Batch size: " << batch_size << "\n\n";
+
+  // Check if the requested configuration is supported
+  if (dtype != "double" || batch_size != 8) {
+    std::cerr << "Error: Only double precision with batch size 8 is currently implemented.\n";
+    std::cerr << "Requested: " << dtype << " with batch size " << batch_size << "\n";
+    std::cerr << "This will compile but fail at runtime due to static_assert in dispatcher.\n\n";
   }
 
-  blaze::StaticVector<blaze::StaticVector<double, SIMD_WIDTH>, NQ> qs_blaze[NBT];
-
-  for (size_t i = 0; i < NBT; ++i) {
-    for (size_t d = 0; d < NQ; ++d) {
-      // broadcasting single double qs[i][d] entry to wide blaze array
-      qs_blaze[i][d] = qs[i][d];
-    }
+  try {
+    dispatch_batched_fk(batch_size, dtype, robot_name, urdf_filename);
+  } catch (const std::exception& e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+    return 1;
   }
 
-
-  std::cout << "initializing pinocchio codegen...\n";
-
-  /** Pinocchio codegen start **/
-  // using symbolic scalar for source code gen
-  using CGD = CG<double>;
-  using ADCG = AD<CGD>;
-
-  typedef ModelTpl<ADCG> ADModel;
-  typedef DataTpl<ADCG> ADData;
-  typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 1> ADVectorXs;
-  typedef Eigen::Matrix<ADCG, 6, 6> ADMatrix6x6; 
-
-  // make symbolic model
-  ADModel ad_model = model.cast<ADCG>();
-  ADData ad_data(ad_model);
-  ADVectorXs ad_X = ADVectorXs(ad_model.nq); // input is a function of actuated dofs
-  ADMatrix6x6 ad_Ys[model.njoints]; // output is a function of # robot geoms
-
-  Independent(ad_X);
-
-  forwardKinematics(ad_model, ad_data, ad_X);
-
-  for (int i = 0; i < model.njoints; i++) {
-    ad_Ys[i] = ad_data.oMi[i];
-  }
-
-  ADVectorXs ad_Y_flat(model.njoints * 36);
-  for (int jid = 0; jid < model.njoints; jid++) {
-    int joint_xform_start = jid * 36;
-    for (int i = 0; i < 36; i++)
-      ad_Y_flat(joint_xform_start + i) = ad_Ys[jid](i);
-  }
-      
-  // ADFun only takes ADVectorXs as input
-  ADFun<CGD> fun(ad_X, ad_Y_flat);
-
-  // for JIT
-  ModelCSourceGen<double> cgen(fun, "model");
-  cgen.setCreateForwardZero(true);
-  ModelLibraryCSourceGen<double> libcgen(cgen);
-
-  LlvmModelLibraryProcessor<double> p(libcgen);
-
-  std::unique_ptr<LlvmModelLibrary<double>> llvmModelLib = p.create();
-  SaveFilesModelLibraryProcessor<double> p2(libcgen);
-  p2.saveSources();
-
-  std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
-  /** Pinocchio codegen end **/
-
-  blaze::StaticMatrix<blaze::StaticVector<double, 4>, 6, 6> ctup_res;
-  Eigen::Matrix<double, 6, 6> pin_res, pin_cg_res;
-  Eigen::VectorXd y; // for flattened pin cg output
-
-  //ctup_gen::set_X_T();
-
-  timer.tic();
-  SMOOTH(NBT)
-  {
-    ctup_res = ctup_gen::fk(qs_blaze[_smooth]);
-  }
-  std::cout << "ctup gen avg time taken (ns): \t\t\t\t";
-  timer.toc(std::cout, NBT);
-
-  // we know ctup_res has broadcasted entries
-  Eigen::Matrix<double, 6, 6> ctup_res_single;
-  for (int i = 0; i < 6; i++)
-    for (int j = 0; j < 6; j++)
-      ctup_res_single(j, i) = ctup_res(i, j)[0];
-
-  std::cout << "ctup_res: \n" << ctup_res_single << std::endl;
-
-  std::cout << "running pinocchio...\n";
-
-  Data data(model);
-
-  timer.tic();
-  SMOOTH(NBT)
-  {
-    for (size_t w = 0; w < SIMD_WIDTH; w++)
-      y = g_model->ForwardZero(qs[_smooth]);
-  }
-  std::cout << "pin cg avg time taken (ns): \t\t\t\t";
-  timer.toc(std::cout, NBT);
-
-  timer.tic();
-  SMOOTH(NBT)
-  {
-    for (size_t w = 0; w < SIMD_WIDTH; w++)
-      forwardKinematics(model,data,qs[_smooth]);
-  }
-  std::cout << "pin vanilla avg time taken (ns): \t\t\t\t";
-  timer.toc(std::cout, NBT);
-
-  pin_res = data.oMi[model.njoints-1];
-  pin_cg_res = Eigen::Map<const Eigen::MatrixXd>(y.data() + y.size() - 36, 6, 6);
-
-  std::cout << "pin_cg_res: \n" << pin_cg_res << std::endl;
-  std::cout << "pin_res: \n" << pin_res << std::endl;
+  return 0;
 }
-

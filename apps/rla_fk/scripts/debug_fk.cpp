@@ -1,10 +1,13 @@
+#include "Eigen/Dense"
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
-//#include "fk_gen_dense.h"
-#include "rla_fk/gen/fk_gen_unrolled.h"
+#include "rla_fk/rla_fk_dispatcher/fk_dispatcher.h"
 #include <iostream>
 #include <argparse/argparse.hpp>
+#include <vector>
+#include <string>
+#include <stdexcept>
 
 int main(int argc, char ** argv)
 {
@@ -12,6 +15,11 @@ int main(int argc, char ** argv)
 
   program.add_argument("urdf")
       .help("path to the URDF file");
+
+  program.add_argument("--robot")
+      .required()
+      .help("robot name")
+      .choices("iiwa", "hyq", "baxter");
 
   try {
       program.parse_args(argc, argv);
@@ -24,24 +32,31 @@ int main(int argc, char ** argv)
 
   typedef Eigen::Matrix<double, 6, 6> EigenSpatialXform;
   using namespace pinocchio;
-  // You should change here to set up your own URDF file or just pass it as an argument of this example.
+  using namespace ctup_runtime::dispatcher;
+
+  // Get command-line arguments
   const std::string urdf_filename = program.get<std::string>("urdf");
-  std::cout << urdf_filename << "\n";
-  
+  const std::string robot_name = program.get<std::string>("--robot");
+  std::cout << "URDF file: " << urdf_filename << "\n";
+  std::cout << "Robot: " << robot_name << "\n";
+
+  // Get FK function from dispatcher
+  auto fk_func = FkDispatcher::get_fk_scalar_function(robot_name);
+
   // Load the urdf model
   Model model;
-  pinocchio::urdf::buildModel(urdf_filename,model);
+  pinocchio::urdf::buildModel(urdf_filename, model);
   std::cout << "model name: " << model.name << std::endl;
-  
+
   // Create data required by the algorithms
   Data data(model);
-  
+
   // Sample a random configuration
   Eigen::VectorXd q = randomConfiguration(model);
   std::cout << "q: " << q.transpose() << std::endl;
 
   // Perform the forward kinematics over the kinematic tree
-  forwardKinematics(model,data,q);
+  forwardKinematics(model, data, q);
 
   // Pinocchio debug
 
@@ -63,11 +78,9 @@ int main(int argc, char ** argv)
 
   Eigen::Matrix<double, 6, 6> ctup_res, pin_res;
 
-  //ctup_gen::set_X_T();
+  std::cout << "---CTUP DEBUG---\n";
 
-  std::cout << "---CTUP  DEBUG---\n";
-
-  ctup_res = ctup_gen::fk(q);
+  ctup_res = fk_func(q);
 
   std::cout << "-------------------\n";
 
@@ -78,4 +91,3 @@ int main(int argc, char ** argv)
   std::cout << "ctup_res: \n" << ctup_res << std::endl;
   std::cout << "pin_res: \n" << pin_res << std::endl;
 }
-

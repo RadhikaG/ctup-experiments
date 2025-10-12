@@ -1,14 +1,17 @@
+#include "Eigen/Dense"
 #include "pinocchio/codegen/cppadcg.hpp"
 #include "cppad/cg.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
 #include "pinocchio/utils/timer.hpp"
+#include "rla_fk/rla_fk_dispatcher/fk_dispatcher.h"
 #include <cppad/cg/model/llvm/llvm.hpp>
-//#include "fk_gen_dense.h"
-#include "rla_fk/gen/fk_gen_unrolled.h"
 #include <iostream>
 #include <argparse/argparse.hpp>
+#include <vector>
+#include <string>
+#include <stdexcept>
 
 int main(int argc, char ** argv)
 {
@@ -16,6 +19,11 @@ int main(int argc, char ** argv)
 
   program.add_argument("urdf")
       .help("path to the URDF file");
+
+  program.add_argument("--robot")
+      .required()
+      .help("robot name")
+      .choices("iiwa", "hyq", "baxter");
 
   try {
       program.parse_args(argc, argv);
@@ -29,25 +37,31 @@ int main(int argc, char ** argv)
   using namespace pinocchio;
   using namespace CppAD;
   using namespace CppAD::cg;
+  using namespace ctup_runtime::dispatcher;
+
+  const std::string urdf_filename = program.get<std::string>("urdf");
+  const std::string robot_name = program.get<std::string>("--robot");
+  std::cout << "URDF file: " << urdf_filename << "\n";
+  std::cout << "Robot: " << robot_name << "\n";
+
+  // Get RLA FK function from dispatcher
+  auto rla_fk_func = FkDispatcher::get_fk_scalar_function(robot_name);
 
   PinocchioTicToc timer(PinocchioTicToc::NS);
-  //const int NBT = 100 * 100;
   const int NBT = 10000;
-  
-  // You should change here to set up your own URDF file or just pass it as an argument of this example.
-  const std::string urdf_filename = program.get<std::string>("urdf");
-  std::cout << urdf_filename << "\n";
-  
+
   // Load the urdf model
   Model model;
-  pinocchio::urdf::buildModel(urdf_filename,model);
+  pinocchio::urdf::buildModel(urdf_filename, model);
   std::cout << "model name: " << model.name << std::endl;
-  
-  // Sample a random configuration
-  PINOCCHIO_ALIGNED_STD_VECTOR(Eigen::VectorXd) qs(NBT);
 
-  for (size_t i = 0; i < NBT; ++i)
+  // Sample random configurations
+  PINOCCHIO_ALIGNED_STD_VECTOR(Eigen::VectorXd) qs(NBT);
+  for (size_t i = 0; i < NBT; ++i) {
     qs[i] = randomConfiguration(model);
+  }
+
+  std::cout << "Initializing Pinocchio JIT codegen...\n";
 
   /** Pinocchio codegen start **/
   // using symbolic scalar for source code gen
@@ -57,7 +71,7 @@ int main(int argc, char ** argv)
   typedef ModelTpl<ADCG> ADModel;
   typedef DataTpl<ADCG> ADData;
   typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 1> ADVectorXs;
-  typedef Eigen::Matrix<ADCG, 6, 6> ADMatrix6x6; 
+  typedef Eigen::Matrix<ADCG, 6, 6> ADMatrix6x6;
 
   // make symbolic model
   ADModel ad_model = model.cast<ADCG>();
@@ -79,7 +93,7 @@ int main(int argc, char ** argv)
     for (int i = 0; i < 36; i++)
       ad_Y_flat(joint_xform_start + i) = ad_Ys[jid](i);
   }
-      
+
   // ADFun only takes ADVectorXs as input
   ADFun<CGD> fun(ad_X, ad_Y_flat);
 
@@ -97,42 +111,48 @@ int main(int argc, char ** argv)
   std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
   /** Pinocchio codegen end **/
 
-  Eigen::Matrix<double, 6, 6> ctup_res, pin_res, pin_cg_res;
+  std::cout << "\n=== Running Performance Evaluation ===\n\n";
+
+  Eigen::Matrix<double, 6, 6> rla_res, pin_cg_res, pin_res;
   Eigen::VectorXd y; // for flattened pin cg output
 
   Data data(model);
 
-  //ctup_gen::set_X_T();
-
+  // Benchmark RLA FK
   timer.tic();
   SMOOTH(NBT)
   {
-    ctup_res = ctup_gen::fk(qs[_smooth]);
+    rla_res = rla_fk_func(qs[_smooth]);
   }
-  std::cout << "ctup gen avg time taken (ns): \t\t\t\t";
+  std::cout << "RLA FK avg time (ns):           \t\t";
   timer.toc(std::cout, NBT);
 
+  // Benchmark Pinocchio JIT codegen FK
   timer.tic();
   SMOOTH(NBT)
   {
     y = g_model->ForwardZero(qs[_smooth]);
   }
-  std::cout << "pin cg avg time taken (ns): \t\t\t\t";
+  std::cout << "Pinocchio JIT codegen avg time (ns):    \t";
   timer.toc(std::cout, NBT);
 
+  // Benchmark vanilla Pinocchio FK
   timer.tic();
   SMOOTH(NBT)
   {
-    forwardKinematics(model,data,qs[_smooth]);
+    forwardKinematics(model, data, qs[_smooth]);
   }
-  std::cout << "pin vanilla avg time taken (ns): \t\t\t\t";
+  std::cout << "Pinocchio vanilla avg time (ns):        \t";
   timer.toc(std::cout, NBT);
 
-
+  // Extract final results
   pin_res = data.oMi[model.njoints-1];
   pin_cg_res = Eigen::Map<const Eigen::MatrixXd>(y.data() + y.size() - 36, 6, 6);
 
-  std::cout << "ctup_res: \n" << ctup_res << std::endl;
-  std::cout << "pin_cg_res: \n" << pin_cg_res << std::endl;
-  std::cout << "pin_res: \n" << pin_res << std::endl;
+  std::cout << "\n=== Final Results (Last Configuration) ===\n\n";
+  std::cout << "RLA FK result:\n" << rla_res << "\n\n";
+  std::cout << "Pinocchio JIT codegen result:\n" << pin_cg_res << "\n\n";
+  std::cout << "Pinocchio vanilla result:\n" << pin_res << "\n";
+
+  return 0;
 }
