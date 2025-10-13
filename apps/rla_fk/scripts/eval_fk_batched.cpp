@@ -32,7 +32,7 @@ void run_batched_evaluation(const std::string& urdf_filename,
 
   std::cout << "\n=== Running Performance Evaluation ===\n\n";
 
-  Eigen::MatrixXd rla_res_batched(6, 6);
+  Eigen::MatrixXd rla_res_batched = Eigen::MatrixXd::Zero(BatchSize, 36);
   Eigen::Matrix<double, 6, 6> pin_res;
   Data data(model);
 
@@ -44,8 +44,9 @@ void run_batched_evaluation(const std::string& urdf_filename,
   SMOOTH(NBT)
   {
     ctup_runtime::ConfigurationBlock<RobotType, Scalar, BatchSize> q_batched;
+    // Broadcast each joint value to all SIMD lanes (same config for all 8 batch elements)
     for (size_t d = 0; d < RobotTraits::ndof; ++d) {
-      q_batched[d] = qs[_smooth][d];
+      q_batched[d] = qs[_smooth][d];  // Blaze automatically broadcasts scalar to vector
     }
     fk_batched_func(q_batched, rla_res_batched);
   }
@@ -67,9 +68,16 @@ void run_batched_evaluation(const std::string& urdf_filename,
   forwardKinematics(model, data, qs[NBT-1]);
   pin_res = data.oMi[model.njoints-1];
 
+  // Extract first row of batched result and reshape to 6x6
+  Eigen::Matrix<double, 6, 6> rla_res;
+  for (size_t r = 0; r < 6; ++r) {
+    for (size_t c = 0; c < 6; ++c) {
+      rla_res(r, c) = rla_res_batched(0, r * 6 + c);
+    }
+  }
+
   std::cout << "\n=== Final Results (Last Configuration) ===\n\n";
-  std::cout << "Note: RLA batched FK result is currently incomplete/incorrect due to known implementation issues.\n";
-  std::cout << "This evaluation focuses on performance comparison only.\n\n";
+  std::cout << "RLA batched FK result (first batch):\n" << rla_res << "\n\n";
   std::cout << "Pinocchio FK result:\n" << pin_res << "\n";
 }
 

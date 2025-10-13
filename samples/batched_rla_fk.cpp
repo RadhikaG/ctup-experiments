@@ -79,6 +79,11 @@ using baxter = typename builder::name<baxter_name>;
 constexpr char configuration_block_robot_name[] = "ctup_runtime::ConfigurationBlockRobot";
 template <typename RobotT>
 using configuration_block_robot_t = typename builder::name<configuration_block_robot_name, RobotT>;
+
+builder::dyn_var<void (
+    size_t flattened_idx,
+    blaze_avx512d&, ctup::EigenMatrixXd&
+        )> map_blaze_avxtype_to_eigen_batch_dim = builder::as_global("ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim");
 }
 
 template <typename Scalar>
@@ -87,12 +92,15 @@ static void print_Xmat(std::string prefix, Xform<Scalar> &xform) {
   print_matrix(xform.denseify());
 }
 
-static void toRawMatrix(dyn_var<BlazeStaticMatrix<blaze_avx512d>> &raw_mat, Xform<blaze_avx512d> &xform) {
+static void toRawMatrix(Xform<blaze_avx512d> &xform, dyn_var<ctup::EigenMatrixXd&> &raw_mat) {
   static_var<int> r, c;
 
-  for (r = 0; r < 6; r = r + 1)
-    for (c = 0; c < 6; c = c + 1)
-      raw_mat(r, c) = xform.get_entry(r, c);
+  for (r = 0; r < 6; r = r + 1) {
+    for (c = 0; c < 6; c = c + 1) {
+      if (xform.is_nonzero(r, c))
+        runtime::map_blaze_avxtype_to_eigen_batch_dim(r*6 + c, xform.get_entry(r, c), raw_mat);
+    }
+  }
 }
 
 /** helpers end **/
@@ -116,6 +124,10 @@ static void set_X_T(builder::array<Xform<Prim>> &X_T, const Model &model) {
   }
 }
 
+// computes forward kinematics for 8 robot configurations at once (batch size = 8)
+// returns:
+// result: (batch_size, 36)
+// with 36 entries of each X matrix laid out in row-major order
 template <typename RobotT>
 static void batched_fk(
     const Model &model,
@@ -182,8 +194,7 @@ static void batched_fk(
   //  print_Xmat(prefix + std::to_string(i), X_0[i]);
   //}
 
-  // TODO: Copy final_ans to result (EigenMatrixXd)
-  // This requires a conversion function from BlazeStaticMatrix to EigenMatrixXd
+  toRawMatrix(X_0[model.njoints-1], result);
 }
 
 int main(int argc, char* argv[]) {

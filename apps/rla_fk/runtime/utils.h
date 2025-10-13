@@ -34,7 +34,7 @@ struct hyq {
 };
 
 struct baxter {
-  static constexpr size_t ndof = 14;
+  static constexpr size_t ndof = 19;
 };
 }
 
@@ -45,6 +45,16 @@ using ConfigurationBlock = std::array<SIMDVector<Scalar, BatchSize>, Robot::ndof
 // Legacy alias for backward compatibility (double, batch size 8)
 template <typename Robot>
 using ConfigurationBlockRobot = ConfigurationBlock<Robot, double, 8>;
+
+template <typename Scalar>
+static void map_blaze_avxtype_to_eigen_batch_dim(
+    size_t flattened_idx,
+    const blaze::StaticVector<Scalar, 8> &blaze_sv, 
+    Eigen::MatrixXd &eigen_matrix) {
+  for (size_t i = 0; i < 8; i++) {
+    eigen_matrix(i, flattened_idx) = blaze_sv[i];
+  }
+}
 
 }
 

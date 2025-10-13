@@ -1410,6 +1410,33 @@ static void batched_fk (ctup_runtime::ConfigurationBlockRobot<ctup_runtime::robo
   var1092 = 0;
   var1092 = var1092 + (1.0 * var711);
   var746 = var1092;
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(0, var738, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(1, var739, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(2, var740, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(6, var741, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(7, var742, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(8, var743, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(12, var744, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(13, var745, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(14, var746, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(18, var761, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(19, var762, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(20, var763, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(21, var738, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(22, var739, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(23, var740, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(24, var764, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(25, var765, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(26, var766, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(27, var741, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(28, var742, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(29, var743, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(30, var767, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(31, var768, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(32, var769, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(33, var744, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(34, var745, arg2);
+  ctup_runtime::map_blaze_avxtype_to_eigen_batch_dim(35, var746, arg2);
 }
 
 }
