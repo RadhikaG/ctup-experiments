@@ -1,10 +1,13 @@
 #include "Eigen/Dense"
+#include "pinocchio/codegen/cppadcg.hpp"
+#include "cppad/cg.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
 #include "pinocchio/utils/timer.hpp"
 #include "rla_fk/rla_fk_dispatcher/fk_dispatcher.h"
 #include "blaze/Math.h"
+#include <cppad/cg/model/llvm/llvm.hpp>
 #include <iostream>
 #include <argparse/argparse.hpp>
 #include <vector>
@@ -30,10 +33,64 @@ void run_batched_evaluation(const std::string& urdf_filename,
     qs[i] = randomConfiguration(model);
   }
 
+  std::cout << "Initializing Pinocchio JIT codegen...\n";
+
+  /** Pinocchio codegen start **/
+  using namespace CppAD;
+  using namespace CppAD::cg;
+
+  // using symbolic scalar for source code gen
+  using CGD = CG<double>;
+  using ADCG = AD<CGD>;
+
+  typedef ModelTpl<ADCG> ADModel;
+  typedef DataTpl<ADCG> ADData;
+  typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 1> ADVectorXs;
+  typedef Eigen::Matrix<ADCG, 6, 6> ADMatrix6x6;
+
+  // make symbolic model
+  ADModel ad_model = model.cast<ADCG>();
+  ADData ad_data(ad_model);
+  ADVectorXs ad_X = ADVectorXs(ad_model.nq);
+  ADMatrix6x6 ad_Ys[model.njoints];
+
+  Independent(ad_X);
+
+  forwardKinematics(ad_model, ad_data, ad_X);
+
+  for (int i = 0; i < model.njoints; i++) {
+    ad_Ys[i] = ad_data.oMi[i];
+  }
+
+  ADVectorXs ad_Y_flat(model.njoints * 36);
+  for (int jid = 0; jid < model.njoints; jid++) {
+    int joint_xform_start = jid * 36;
+    for (int i = 0; i < 36; i++)
+      ad_Y_flat(joint_xform_start + i) = ad_Ys[jid](i);
+  }
+
+  // ADFun only takes ADVectorXs as input
+  ADFun<CGD> fun(ad_X, ad_Y_flat);
+
+  // for JIT
+  ModelCSourceGen<double> cgen(fun, "model");
+  cgen.setCreateForwardZero(true);
+  ModelLibraryCSourceGen<double> libcgen(cgen);
+
+  LlvmModelLibraryProcessor<double> p(libcgen);
+
+  std::unique_ptr<LlvmModelLibrary<double>> llvmModelLib = p.create();
+  SaveFilesModelLibraryProcessor<double> p2(libcgen);
+  p2.saveSources();
+
+  std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
+  /** Pinocchio codegen end **/
+
   std::cout << "\n=== Running Performance Evaluation ===\n\n";
 
   Eigen::MatrixXd rla_res_batched = Eigen::MatrixXd::Zero(BatchSize, 36);
-  Eigen::Matrix<double, 6, 6> pin_res;
+  Eigen::Matrix<double, 6, 6> pin_res, pin_cg_res;
+  Eigen::VectorXd y; // for flattened pin cg output
   Data data(model);
 
   // Get batched FK function from dispatcher
@@ -50,10 +107,21 @@ void run_batched_evaluation(const std::string& urdf_filename,
     }
     fk_batched_func(q_batched, rla_res_batched);
   }
-  std::cout << "RLA batched FK avg time (ns):           \t";
+  std::cout << "RLA batched FK avg time (ns):                        \t";
   timer.toc(std::cout, NBT);
 
-  // Benchmark Pinocchio FK (BatchSize consecutive calls)
+  // Benchmark Pinocchio JIT codegen FK (BatchSize consecutive calls)
+  timer.tic();
+  SMOOTH(NBT)
+  {
+    for (size_t w = 0; w < BatchSize; w++) {
+      y = g_model->ForwardZero(qs[_smooth]);
+    }
+  }
+  std::cout << "Pinocchio codegen (" << BatchSize << " consecutive calls) avg time (ns): \t";
+  timer.toc(std::cout, NBT);
+
+  // Benchmark vanilla Pinocchio FK (BatchSize consecutive calls)
   timer.tic();
   SMOOTH(NBT)
   {
@@ -61,12 +129,16 @@ void run_batched_evaluation(const std::string& urdf_filename,
       forwardKinematics(model, data, qs[_smooth]);
     }
   }
-  std::cout << "Pinocchio FK (" << BatchSize << " consecutive calls) avg time (ns): \t";
+  std::cout << "Pinocchio vanilla (" << BatchSize << " consecutive calls) avg time (ns): \t";
   timer.toc(std::cout, NBT);
 
-  // Get final Pinocchio result for comparison
+  // Get final Pinocchio vanilla result for comparison
   forwardKinematics(model, data, qs[NBT-1]);
   pin_res = data.oMi[model.njoints-1];
+
+  // Get final Pinocchio codegen result
+  y = g_model->ForwardZero(qs[NBT-1]);
+  pin_cg_res = Eigen::Map<const Eigen::MatrixXd>(y.data() + y.size() - 36, 6, 6);
 
   // Extract first row of batched result and reshape to 6x6
   Eigen::Matrix<double, 6, 6> rla_res;
@@ -78,7 +150,19 @@ void run_batched_evaluation(const std::string& urdf_filename,
 
   std::cout << "\n=== Final Results (Last Configuration) ===\n\n";
   std::cout << "RLA batched FK result (first batch):\n" << rla_res << "\n\n";
-  std::cout << "Pinocchio FK result:\n" << pin_res << "\n";
+  std::cout << "Pinocchio JIT codegen result:\n" << pin_cg_res << "\n\n";
+  std::cout << "Pinocchio vanilla result:\n" << pin_res << "\n\n";
+
+  // Compare RLA with transpose of Pinocchio outputs
+  std::cout << "\n=== Transpose Comparison ===\n\n";
+  std::cout << "Pinocchio JIT codegen result (transposed):\n" << pin_cg_res.transpose() << "\n\n";
+  std::cout << "Pinocchio vanilla result (transposed):\n" << pin_res.transpose() << "\n\n";
+
+  double error_cg = (rla_res - pin_cg_res.transpose()).norm();
+  double error_vanilla = (rla_res - pin_res.transpose()).norm();
+
+  std::cout << "Error between RLA and Pinocchio JIT codegen (with transpose): " << error_cg << "\n";
+  std::cout << "Error between RLA and Pinocchio vanilla (with transpose): " << error_vanilla << "\n";
 }
 
 // Helper to dispatch based on robot name

@@ -152,7 +152,18 @@ int main(int argc, char ** argv)
   std::cout << "\n=== Final Results (Last Configuration) ===\n\n";
   std::cout << "RLA FK result:\n" << rla_res << "\n\n";
   std::cout << "Pinocchio JIT codegen result:\n" << pin_cg_res << "\n\n";
-  std::cout << "Pinocchio vanilla result:\n" << pin_res << "\n";
+  std::cout << "Pinocchio vanilla result:\n" << pin_res << "\n\n";
+
+  // Compare RLA with transpose of Pinocchio outputs
+  std::cout << "\n=== Transpose Comparison ===\n\n";
+  std::cout << "Pinocchio JIT codegen result (transposed):\n" << pin_cg_res.transpose() << "\n\n";
+  std::cout << "Pinocchio vanilla result (transposed):\n" << pin_res.transpose() << "\n\n";
+
+  double error_cg = (rla_res - pin_cg_res.transpose()).norm();
+  double error_vanilla = (rla_res - pin_res.transpose()).norm();
+
+  std::cout << "Error between RLA and Pinocchio JIT codegen: " << error_cg << "\n";
+  std::cout << "Error between RLA and Pinocchio vanilla: " << error_vanilla << "\n";
 
   return 0;
 }
