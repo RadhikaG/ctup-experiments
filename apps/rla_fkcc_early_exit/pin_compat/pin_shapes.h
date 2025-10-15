@@ -11,7 +11,7 @@ namespace ctup_runtime {
 
 namespace pin_compat {
 
-using Transform3f = coal::Transform3f;
+using Transform3f = coal::Transform3s;
 
 template <typename T>
 std::shared_ptr<coal::CollisionObject> to_fcl_box(const vamp::collision::Cuboid<T> &box)

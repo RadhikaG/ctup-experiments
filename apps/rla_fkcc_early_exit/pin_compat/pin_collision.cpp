@@ -51,26 +51,26 @@ PinFKCC::Impl::Impl(std::string robot_name, const vamp::collision::Environment<f
   std::string srdf_filename;
   std::string pin_model_path;
 
-  // todo: change to relative paths later
-  std::string CTUP_ROOT = "/home/ubuntu/ctup_stuff/ctup-experiments/";
+  // Use compile-time defined models directory
+  std::string models_dir = CTUP_MODELS_DIR;
 
   if (robot_name == "panda") {
-    urdf_filename_coarse = CTUP_ROOT + "models/panda/panda_spherized_1.urdf";
-    urdf_filename_fine = CTUP_ROOT + "models/panda/panda_spherized.urdf";
-    srdf_filename = CTUP_ROOT + "models/panda/panda.srdf";
-    pin_model_path = CTUP_ROOT + "models/panda/";
+    urdf_filename_coarse = models_dir + "/panda/panda_spherized_1.urdf";
+    urdf_filename_fine = models_dir + "/panda/panda_spherized.urdf";
+    srdf_filename = models_dir + "/panda/panda.srdf";
+    pin_model_path = models_dir + "/panda/";
   }
   else if (robot_name == "baxter") {
-    urdf_filename_coarse = CTUP_ROOT + "models/baxter/baxter_spherized_1.urdf";
-    urdf_filename_fine = CTUP_ROOT + "models/baxter/baxter_spherized.urdf";
-    srdf_filename = CTUP_ROOT + "models/baxter/baxter.srdf";
-    pin_model_path = CTUP_ROOT + "models/baxter/";
+    urdf_filename_coarse = models_dir + "/baxter/baxter_spherized_1.urdf";
+    urdf_filename_fine = models_dir + "/baxter/baxter_spherized.urdf";
+    srdf_filename = models_dir + "/baxter/baxter.srdf";
+    pin_model_path = models_dir + "/baxter/";
   }
   else if (robot_name == "fetch") {
-    urdf_filename_coarse = CTUP_ROOT + "models/fetch/fetch_spherized_1.urdf";
-    urdf_filename_fine = CTUP_ROOT + "models/fetch/fetch_spherized.urdf";
-    srdf_filename = CTUP_ROOT + "models/fetch/fetch.srdf";
-    pin_model_path = CTUP_ROOT + "models/fetch/";
+    urdf_filename_coarse = models_dir + "/fetch/fetch_spherized_1.urdf";
+    urdf_filename_fine = models_dir + "/fetch/fetch_spherized.urdf";
+    srdf_filename = models_dir + "/fetch/fetch.srdf";
+    pin_model_path = models_dir + "/fetch/";
   }
   else {
     assert(false && "unimplemented for non-panda robots");
