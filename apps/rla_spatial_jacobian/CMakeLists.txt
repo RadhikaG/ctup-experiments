@@ -1,8 +1,13 @@
+# Add the spatial Jacobian dispatcher static library subdirectory
+add_subdirectory(rla_spatial_jac_dispatcher)
+
 # Find all the script files in the scripts subdirectory
 set(RLA_SPATIAL_JACOBIAN_SCRIPT_SOURCES
     scripts/debug_eef_jac.cpp
     scripts/debug_jacobian.cpp
     scripts/pin_eef_jac_codegen.cpp
+    scripts/eval_jac.cpp
+    scripts/eval_batched_jac.cpp
 )
 
 # Compile each script as a separate executable
@@ -14,6 +19,7 @@ foreach(SCRIPT_SOURCE ${RLA_SPATIAL_JACOBIAN_SCRIPT_SOURCES})
 
     # Link the necessary libraries
     target_link_libraries(${SCRIPT_NAME} PUBLIC
+        rla_spatial_jac_lib
         pinocchio::pinocchio
         argparse::argparse
         ${cppad_LIBRARIES}

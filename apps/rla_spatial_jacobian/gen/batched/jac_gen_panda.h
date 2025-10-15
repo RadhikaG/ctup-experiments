@@ -1,34 +1,15 @@
 // clang-format off
 
-#pragma once
-
 #include "Eigen/Dense"
-
 #include "blaze/Math.h"
-
-#include "ctup/typedefs.h"
-
 #include "rla_spatial_jacobian/runtime/utils.h"
 
-#include <iostream>
+namespace rla_jac_gen_panda {
 
-namespace rla_jac_gen {
+using rla_jac_runtime::print_string;
+using rla_jac_runtime::print_matrix;
 
-static void print_string(const char* str) {
-  std::cout << str << "\n";
-}
-
-template<typename MT>
-static void print_matrix(const blaze::DenseMatrix<MT, blaze::rowMajor>& matrix) {
-  std::cout << matrix << "\n";
-}
-
-template<typename Derived>
-static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {
-  std::cout << matrix << "\n";
-}
-
-static void batched_jac (rla_jac_runtime::ConfigurationBlockRobot<rla_jac_runtime::robots::Panda> const& arg1, Eigen::MatrixXf& arg2) {
+static void batched_jac (rla_jac_runtime::ConfigurationBlockRobot<rla_jac_runtime::robots::Panda> const& arg1, Eigen::MatrixXd& arg2) {
   blaze::StaticVector<float, 8> var47[9];
   blaze::StaticVector<float, 8> var48;
   blaze::StaticVector<float, 8> var49;

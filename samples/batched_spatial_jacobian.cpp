@@ -64,18 +64,25 @@ static void print_Xmat(std::string prefix, Xform<Scalar> &xform) {
 namespace runtime {
 
 namespace robots {
-constexpr char robots_panda_name[] = "cg_sd_runtime::robots::Panda";
-using Panda = typename builder::name<robots_panda_name>;
+constexpr char panda_name[] = "rla_jac_runtime::robots::Panda";
+constexpr char iiwa_name[] = "rla_jac_runtime::robots::iiwa";
+constexpr char hyq_name[] = "rla_jac_runtime::robots::Hyq";
+constexpr char baxter_name[] = "rla_jac_runtime::robots::Baxter";
+
+using Panda = typename builder::name<panda_name>;
+using iiwa = typename builder::name<iiwa_name>;
+using Hyq = typename builder::name<hyq_name>;
+using Baxter = typename builder::name<baxter_name>;
 }
 
-constexpr char configuration_block_robot_name[] = "cg_sd_runtime::ConfigurationBlockRobot";
+constexpr char configuration_block_robot_name[] = "rla_jac_runtime::ConfigurationBlockRobot";
 template <typename RobotT>
 using configuration_block_robot_t = typename builder::name<configuration_block_robot_name, RobotT>;
 
 builder::dyn_var<void (
     size_t flattened_idx,
-    blaze_avx256f&, ctup::EigenMatrix<float, 8, -1>&
-        )> map_blaze_avxtype_to_eigen_batch_dim = builder::as_global("cg_sd_runtime::map_blaze_avxtype_to_eigen_batch_dim");
+    blaze_avx256f&, ctup::EigenMatrixXd&
+        )> map_blaze_avxtype_to_eigen_batch_dim = builder::as_global("rla_jac_runtime::map_blaze_avxtype_to_eigen_batch_dim");
 }
 
 /////////////////////////////////////////////
@@ -148,12 +155,12 @@ static bool is_joint_ancestor(
 // computes EEF jacobian for 8 robot configurations at once (batch size = 8)
 // returns:
 // jacobian: shape: (batch_size, 6 * njoints)
+template <typename RobotT>
 static void batched_jac(
-    const pinocchio::Model &model, 
-    // hack: we need to hardcode the robot template type for now
-    dyn_var<const runtime::configuration_block_robot_t<runtime::robots::Panda>&> q,
+    const pinocchio::Model &model,
+    dyn_var<const runtime::configuration_block_robot_t<RobotT>&> q,
     // modifies jac by reference
-    dyn_var<ctup::EigenMatrix<float, 8, -1>&> jac) 
+    dyn_var<ctup::EigenMatrixXd&> jac) 
 {
 
   typedef typename Model::JointIndex JointIndex;
@@ -253,8 +260,12 @@ int main(int argc, char* argv[]) {
       .help("path to the URDF file");
 
   program.add_argument("-o", "--output")
-      .default_value(std::string("./fk_gen.h"))
+      .default_value(std::string("./jac_gen.h"))
       .help("output header file path");
+
+  program.add_argument("-r", "--robot")
+      .required()
+      .help("robot name (panda, iiwa, hyq, baxter)");
 
   try {
       program.parse_args(argc, argv);
@@ -267,9 +278,11 @@ int main(int argc, char* argv[]) {
 
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string header_filename = program.get<std::string>("--output");
+  const std::string robot_name = program.get<std::string>("--robot");
 
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Output header: " << header_filename << "\n";
+  std::cout << "Robot: " << robot_name << "\n";
 
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
@@ -277,38 +290,42 @@ int main(int argc, char* argv[]) {
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
 
+  // Generate unique namespace per robot
+  std::string namespace_name = "rla_jac_gen_" + robot_name;
+
   of << "// clang-format off\n\n";
-  of << "#pragma once\n\n";
-  of << "#include \"Eigen/Dense\"\n\n";
-  of << "#include \"blaze/Math.h\"\n\n";
-  of << "#include \"ctup/typedefs.h\"\n\n";
-  of << "#include \"ctup_sd/runtime/utils.h\"\n\n";
-  of << "#include <iostream>\n\n";
-  of << "namespace cg_sd_gen {\n\n";
+  of << "#include \"Eigen/Dense\"\n";
+  of << "#include \"blaze/Math.h\"\n";
+  of << "#include \"rla_spatial_jacobian/runtime/utils.h\"\n\n";
+  of << "namespace " << namespace_name << " {\n\n";
 
-  of << "static void print_string(const char* str) {\n";
-  of << "  std::cout << str << \"\\n\";\n";
-  of << "}\n\n";
-
-  of << "template<typename MT>\n";
-  of << "static void print_matrix(const blaze::DenseMatrix<MT, blaze::rowMajor>& matrix) {\n";
-  of << "  std::cout << matrix << \"\\n\";\n";
-  of << "}\n\n";
-
-  of << "template<typename Derived>\n";
-  of << "static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {\n";
-  of << "  std::cout << matrix << \"\\n\";\n";
-  of << "}\n\n";
+  of << "using rla_jac_runtime::print_string;\n";
+  of << "using rla_jac_runtime::print_matrix;\n\n";
 
   builder::builder_context context;
   context.run_rce = true;
 
-  of << "static ";
-  auto ast = context.extract_function_ast(
-          batched_jac, 
-          "batched_jac", 
-          model);
-  block::c_code_generator::generate_code(ast, of, 0);
+  // Instantiate batched_jac function based on robot type
+  if (robot_name == "panda") {
+    auto ast = context.extract_function_ast(batched_jac<runtime::robots::Panda>, "batched_jac", model);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  } else if (robot_name == "iiwa") {
+    auto ast = context.extract_function_ast(batched_jac<runtime::robots::iiwa>, "batched_jac", model);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  } else if (robot_name == "hyq") {
+    auto ast = context.extract_function_ast(batched_jac<runtime::robots::Hyq>, "batched_jac", model);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  } else if (robot_name == "baxter") {
+    auto ast = context.extract_function_ast(batched_jac<runtime::robots::Baxter>, "batched_jac", model);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  } else {
+    std::cerr << "Unknown robot: " << robot_name << "\n";
+    return 1;
+  }
 
   of << "}\n";
 }

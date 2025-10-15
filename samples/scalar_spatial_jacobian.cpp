@@ -157,9 +157,10 @@ static bool is_joint_ancestor(
 }
 
 
-static dyn_var<int> get_eef_world_jacobian(
-    const pinocchio::Model &model, 
-    dyn_var<ctup::EigenVectorXd &> q) {
+static void get_eef_world_jacobian(
+    const pinocchio::Model &model,
+    dyn_var<ctup::EigenVectorXd &> q,
+    dyn_var<ctup::EigenMatrixXd &> jac) {
 
   typedef typename Model::JointIndex JointIndex;
   const JointIndex njoints = (JointIndex)model.njoints;
@@ -255,7 +256,8 @@ static dyn_var<int> get_eef_world_jacobian(
     }
   }
 
-  return J.denseify();
+  // Write result to output parameter instead of returning
+  jac = J.denseify();
 }
 
 int main(int argc, char* argv[]) {
@@ -268,6 +270,10 @@ int main(int argc, char* argv[]) {
       .default_value(std::string("./jac_gen.h"))
       .help("output header file path");
 
+  program.add_argument("-r", "--robot")
+      .required()
+      .help("robot name (panda, iiwa, hyq, baxter)");
+
   try {
       program.parse_args(argc, argv);
   }
@@ -279,8 +285,10 @@ int main(int argc, char* argv[]) {
 
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string header_filename = program.get<std::string>("--output");
+  const std::string robot_name = program.get<std::string>("--robot");
 
   std::cout << "URDF file: " << urdf_filename << "\n";
+  std::cout << "Robot: " << robot_name << "\n";
   std::cout << "Output header: " << header_filename << "\n";
 
   Model model;
@@ -289,18 +297,16 @@ int main(int argc, char* argv[]) {
   std::ofstream of(header_filename);
   block::c_code_generator codegen(of);
 
-  of << "#include \"Eigen/Dense\"\n\n";
+  // Generate unique namespace per robot
+  std::string namespace_name = "rla_jac_gen_" + robot_name;
+
+  of << "#include \"Eigen/Dense\"\n";
+  of << "#include \"rla_spatial_jacobian/runtime/utils.h\"\n\n";
   of << "#include <iostream>\n\n";
-  of << "namespace ctup_gen {\n\n";
+  of << "namespace " << namespace_name << " {\n\n";
 
-  of << "static void print_string(const char* str) {\n";
-  of << "  std::cout << str << \"\\n\";\n";
-  of << "}\n\n";
-
-  of << "template<typename Derived>\n";
-  of << "static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {\n";
-  of << "  std::cout << matrix << \"\\n\";\n";
-  of << "}\n\n";
+  of << "using rla_jac_runtime::print_string;\n";
+  of << "using rla_jac_runtime::print_matrix;\n\n";
 
   builder::builder_context context;
   context.run_rce = true;

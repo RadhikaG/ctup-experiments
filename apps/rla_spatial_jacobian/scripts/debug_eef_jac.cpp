@@ -106,7 +106,7 @@ int main(int argc, char ** argv)
   {
     auto start = std::chrono::steady_clock::now();
     for (size_t i = 0; i < N_IT; ++i) {
-      ctup_res = ctup_gen::get_eef_world_jacobian(q);
+      ctup_gen::get_eef_world_jacobian(q, ctup_res);
     }
     auto end = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
@@ -120,7 +120,7 @@ int main(int argc, char ** argv)
   //=======================================
 
   const size_t SIMD_WIDTH = 8;
-  Eigen::Matrix<float, SIMD_WIDTH, Eigen::Dynamic> batched_ctup_res(SIMD_WIDTH, 6 * model.nv);
+  Eigen::MatrixXf batched_ctup_res(SIMD_WIDTH, 6 * model.nv);
 
   rla_jac_runtime::ConfigurationBlockRobot<rla_jac_runtime::robots::Panda> batched_q;
   for (size_t i = 0; i < (size_t)model.nq; i++) {

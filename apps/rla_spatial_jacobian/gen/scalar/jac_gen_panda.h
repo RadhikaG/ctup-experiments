@@ -1,17 +1,12 @@
 #include "Eigen/Dense"
+#include "rla_spatial_jacobian/runtime/utils.h"
 
 #include <iostream>
 
-namespace ctup_gen {
+namespace rla_jac_gen_panda {
 
-static void print_string(const char* str) {
-  std::cout << str << "\n";
-}
-
-template<typename Derived>
-static void print_matrix(const Eigen::MatrixBase<Derived>& matrix) {
-  std::cout << matrix << "\n";
-}
+using rla_jac_runtime::print_string;
+using rla_jac_runtime::print_matrix;
 
 static void get_eef_world_jacobian (Eigen::VectorXd& arg1, Eigen::MatrixXd& arg2) {
   Eigen::MatrixXd& var0 = arg2;
