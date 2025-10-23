@@ -1,6 +1,25 @@
+# Build the dispatcher library
+add_library(rla_sd_grad_dispatcher STATIC
+    rla_sd_grad_dispatcher/sd_grad_impl.cpp
+)
+
+target_include_directories(rla_sd_grad_dispatcher PUBLIC
+    ${CMAKE_SOURCE_DIR}/apps
+    ${BLAZE_INCLUDE_DIR}
+    ${EIGEN3_INCLUDE_DIR}
+    ${CTUP_RUNTIME_INCLUDES}
+)
+
+target_compile_options(rla_sd_grad_dispatcher PRIVATE
+    -O3 -g -DNDEBUG
+    -ffast-math
+    ${CFLAGS_PEDANTIC}
+)
+
 # Find all the script files in the scripts subdirectory
 set(RLA_GRAD_SELF_COLLISION_SCRIPT_SOURCES
     scripts/debug_sd_grad.cpp
+    scripts/eval_sd_grad.cpp
 )
 
 # Compile each script as a separate executable
@@ -12,6 +31,7 @@ foreach(SCRIPT_SOURCE ${RLA_GRAD_SELF_COLLISION_SCRIPT_SOURCES})
 
     # Link the necessary libraries
     target_link_libraries(${SCRIPT_NAME} PUBLIC
+        rla_sd_grad_dispatcher
         pinocchio::pinocchio
         argparse::argparse
         ${cppad_LIBRARIES}

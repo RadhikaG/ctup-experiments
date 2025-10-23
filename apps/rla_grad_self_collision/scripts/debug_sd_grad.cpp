@@ -13,7 +13,7 @@
 #include <argparse/argparse.hpp>
 
 #include "rla_grad_self_collision/runtime/utils.h"
-#include "rla_grad_self_collision/gen/batched_sd_jac_panda.h"
+#include "rla_grad_self_collision/rla_sd_grad_dispatcher/sd_grad_dispatcher.h"
 
 using namespace pinocchio;
 
@@ -277,35 +277,51 @@ static void run_cg_grad_sd(
     Data &data,
     GeometryModel &geom_model,
     GeometryData &geom_data,
-    Eigen::VectorXd &q)
+    Eigen::VectorXd &q,
+    const std::string &robot_name,
+    const std::string &fidelity)
 {
-  if (cg_sd_runtime::robots::Panda::ndim != q.size()) {
-    std::cout << "robot dims don't match, check URDF input\n";
-  }
-
-  cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::robots::Panda> q_batched;
-  for (size_t i = 0; i < cg_sd_runtime::robots::Panda::ndim; i++) {
-    q_batched[i] = q(i);
-  }
-
   // expected shapes:
   // signed_distances: (batch_dim, n_collision_pairs)
   // constraint_jacobian: (batch_dim * n_collision_pairs, n_dof)
   const size_t SIMD_WIDTH = 8;
   size_t N_CP = geom_model.collisionPairs.size();
 
-  Eigen::MatrixXd signed_distances(SIMD_WIDTH, N_CP);
-  Eigen::MatrixXd constraint_jacobian(SIMD_WIDTH * N_CP, model.nv);
+  Eigen::MatrixXd signed_distances = Eigen::MatrixXd::Zero(SIMD_WIDTH, N_CP);
+  Eigen::MatrixXd constraint_jacobian = Eigen::MatrixXd::Zero(SIMD_WIDTH * N_CP, model.nv);
 
-  {
-    auto start = std::chrono::steady_clock::now();
-    size_t N_IT = 10000;
-    for (size_t i = 0; i < N_IT; ++i) {
-      cg_sd_gen::self_collision_signed_distances_and_jacobians(q_batched, signed_distances, constraint_jacobian);
+  // Dispatch based on robot type
+  if (robot_name == "panda") {
+    auto func = cg_sd_runtime::dispatcher::SdGradDispatcher::get_panda_function(fidelity);
+    if (!func) {
+      std::cerr << "Error: No implementation found for panda with fidelity '" << fidelity << "'\n";
+      return;
     }
-    auto end = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
-    std::cout << "CTUP BATCHED SD JAC (ns): 				" << elapsed.count()/(N_IT)<<std::endl;
+
+    cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::robots::Panda> q_batched;
+    for (size_t i = 0; i < cg_sd_runtime::robots::Panda::ndim; i++) {
+      q_batched[i] = q(i);
+    }
+
+    func(q_batched, signed_distances, constraint_jacobian);
+  }
+  else if (robot_name == "ur5") {
+    auto func = cg_sd_runtime::dispatcher::SdGradDispatcher::get_ur5_function(fidelity);
+    if (!func) {
+      std::cerr << "Error: No implementation found for ur5 with fidelity '" << fidelity << "'\n";
+      return;
+    }
+
+    cg_sd_runtime::ConfigurationBlockRobot<cg_sd_runtime::robots::UR5> q_batched;
+    for (size_t i = 0; i < cg_sd_runtime::robots::UR5::ndim; i++) {
+      q_batched[i] = q(i);
+    }
+
+    func(q_batched, signed_distances, constraint_jacobian);
+  }
+  else {
+    std::cerr << "Error: Unknown robot '" << robot_name << "'\n";
+    return;
   }
 
   std::cout << "cg_grad_sd SD: " << signed_distances.row(0) << "\n";
@@ -319,6 +335,12 @@ int main(int argc, char **argv) {
       .help("path to the URDF file");
   program.add_argument("srdf")
       .help("path to the SRDF file");
+  program.add_argument("--robot")
+      .default_value(std::string("panda"))
+      .help("robot name (panda, ur5)");
+  program.add_argument("--fidelity")
+      .default_value(std::string("spherized_1"))
+      .help("fidelity level (e.g., spherized_1, spherized)");
 
   try {
       program.parse_args(argc, argv);
@@ -331,6 +353,8 @@ int main(int argc, char **argv) {
 
   const std::string urdf_path = program.get<std::string>("urdf");
   const std::string srdf_path = program.get<std::string>("srdf");
+  const std::string robot_name = program.get<std::string>("--robot");
+  const std::string fidelity = program.get<std::string>("--fidelity");
 
   // Load model and geometry
   Model model;
@@ -348,8 +372,19 @@ int main(int argc, char **argv) {
 
   Eigen::VectorXd q;
   // Use reference configuration if available
-  q = model.referenceConfigurations["ready"];
-  //q = randomConfiguration(model);
+  if (model.referenceConfigurations.count("ready") > 0) {
+    q = model.referenceConfigurations["ready"];
+  } else if (model.referenceConfigurations.count("home") > 0) {
+    q = model.referenceConfigurations["home"];
+  } else {
+    std::cerr << "Error: No 'ready' or 'home' configuration found in SRDF.\n";
+    std::cerr << "Available configurations: ";
+    for (const auto& cfg : model.referenceConfigurations) {
+      std::cerr << cfg.first << " ";
+    }
+    std::cerr << "\n";
+    return 1;
+  }
 
   std::cout << "======== config =========\n";
   std::cout << q << "\n";
@@ -383,7 +418,7 @@ int main(int argc, char **argv) {
   std::cout << "Pinocchio SD: " << cp_sd.transpose() << "\n";
   std::cout << "Pinocchio SD grad: " << cp_sd_grad.row(0) << "\n";
 
-  run_cg_grad_sd(model, data, geom_model, geom_data, q);
+  run_cg_grad_sd(model, data, geom_model, geom_data, q, robot_name, fidelity);
 
   return 0;
 }

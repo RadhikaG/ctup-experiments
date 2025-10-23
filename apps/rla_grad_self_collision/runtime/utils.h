@@ -13,6 +13,18 @@ namespace robots {
 struct Panda {
   static constexpr size_t ndim = 7;
 };
+
+struct UR5 {
+  static constexpr size_t ndim = 6;
+};
+
+struct iiwa {
+  static constexpr size_t ndim = 7;
+};
+
+struct Hyq {
+  static constexpr size_t ndim = 12;
+};
 }
 
 template <typename Robot>

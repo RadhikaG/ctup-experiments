@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-namespace cg_sd_gen {
+namespace cg_sd_gen_panda_spherized_1 {
 
 static void print_string(const char* str) {
   std::cout << str << "\n";

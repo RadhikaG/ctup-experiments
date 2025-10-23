@@ -110,7 +110,10 @@ namespace runtime {
 
 namespace robots {
 constexpr char robots_panda_name[] = "cg_sd_runtime::robots::Panda";
+constexpr char robots_ur5_name[] = "cg_sd_runtime::robots::UR5";
+
 using Panda = typename builder::name<robots_panda_name>;
+using UR5 = typename builder::name<robots_ur5_name>;
 }
 
 constexpr char configuration_block_robot_name[] = "cg_sd_runtime::ConfigurationBlockRobot";
@@ -255,11 +258,11 @@ static bool is_joint_ancestor(
 // B1
 //  |-----------------------|
 // Bn-----------------------|
+template <typename RobotT>
 static void self_collision_signed_distances_and_jacobians(
-    const pinocchio::Model &model, 
-    const pinocchio::GeometryModel &geom_model, 
-    // hack: we need to hardcode the robot template type for now
-    dyn_var<const runtime::configuration_block_robot_t<runtime::robots::Panda>&> q,
+    const pinocchio::Model &model,
+    const pinocchio::GeometryModel &geom_model,
+    dyn_var<const runtime::configuration_block_robot_t<RobotT>&> q,
     dyn_var<ctup::EigenMatrixXd&> signed_distances,
     dyn_var<ctup::EigenMatrixXd&> constraint_jacobian) 
 {
@@ -480,6 +483,14 @@ int main(int argc, char* argv[]) {
       .default_value(std::string("./fk_gen.h"))
       .help("output header file path");
 
+  program.add_argument("-r", "--robot")
+      .required()
+      .help("robot name (panda, ur5)");
+
+  program.add_argument("-f", "--fidelity")
+      .required()
+      .help("fidelity name (spherized, spherized_1, etc.)");
+
   try {
       program.parse_args(argc, argv);
   }
@@ -492,6 +503,8 @@ int main(int argc, char* argv[]) {
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string srdf_filename = program.get<std::string>("srdf");
   const std::string header_filename = program.get<std::string>("--output");
+  const std::string robot_name = program.get<std::string>("--robot");
+  const std::string fidelity = program.get<std::string>("--fidelity");
 
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "SRDF file: " << srdf_filename << "\n";
@@ -528,9 +541,9 @@ int main(int argc, char* argv[]) {
   of << "// clang-format off\n\n";
   of << "#include \"Eigen/Dense\"\n\n";
   of << "#include \"ctup/typedefs.h\"\n\n";
-  of << "#include \"ctup_sd/runtime/utils.h\"\n\n";
+  of << "#include \"rla_grad_self_collision/runtime/utils.h\"\n\n";
   of << "#include <iostream>\n\n";
-  of << "namespace cg_sd_gen {\n\n";
+  of << "namespace cg_sd_gen_" << robot_name << "_" << fidelity << " {\n\n";
 
   of << "static void print_string(const char* str) {\n";
   of << "  std::cout << str << \"\\n\";\n";
@@ -549,16 +562,25 @@ int main(int argc, char* argv[]) {
   builder::builder_context context;
   context.run_rce = true;
 
-  //of << "static ";
-  //auto ast = context.extract_function_ast(Sphere_Environment_Collision, "Sphere_Environment_Collision", env_obj);
-  //block::c_code_generator::generate_code(ast, of, 0);
-  //
   of << "static ";
-  auto ast = context.extract_function_ast(
-          self_collision_signed_distances_and_jacobians, 
-          "self_collision_signed_distances_and_jacobians", 
-          model, geom_model);
-  block::c_code_generator::generate_code(ast, of, 0);
+
+  // Instantiate template based on robot type
+  if (robot_name == "panda") {
+    auto ast = context.extract_function_ast(
+            self_collision_signed_distances_and_jacobians<runtime::robots::Panda>,
+            "self_collision_signed_distances_and_jacobians",
+            model, geom_model);
+    block::c_code_generator::generate_code(ast, of, 0);
+  } else if (robot_name == "ur5") {
+    auto ast = context.extract_function_ast(
+            self_collision_signed_distances_and_jacobians<runtime::robots::UR5>,
+            "self_collision_signed_distances_and_jacobians",
+            model, geom_model);
+    block::c_code_generator::generate_code(ast, of, 0);
+  } else {
+    std::cerr << "Unknown robot: " << robot_name << "\n";
+    return 1;
+  }
 
   of << "}\n";
 }
