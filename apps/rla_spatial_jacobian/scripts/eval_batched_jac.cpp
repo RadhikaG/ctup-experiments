@@ -4,8 +4,11 @@
 #include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
 #include "pinocchio/utils/timer.hpp"
+#include "pinocchio/codegen/cppadcg.hpp"
+#include "cppad/cg.hpp"
 #include "rla_spatial_jacobian/rla_spatial_jac_dispatcher/jac_dispatcher.h"
 #include "blaze/Math.h"
+#include <cppad/cg/model/llvm/llvm.hpp>
 #include <iostream>
 #include <argparse/argparse.hpp>
 #include <vector>
@@ -13,6 +16,8 @@
 #include <stdexcept>
 
 using namespace rla_jac_runtime::dispatcher;
+using namespace CppAD;
+using namespace CppAD::cg;
 
 // Template function to run batched Jacobian evaluation for any RobotTraits, Scalar, and BatchSize
 template<typename RobotTraits, typename Scalar, size_t BatchSize>
@@ -36,8 +41,6 @@ void run_batched_evaluation(const std::string& urdf_filename,
   // Result matrices
   // Batched Jacobian output: BatchSize rows x (6 * nv) columns (flattened Jacobians)
   Eigen::MatrixXd rla_res_batched = Eigen::MatrixXd::Zero(BatchSize, 6 * model.nv);
-  Eigen::MatrixXd pin_res(6, model.nv);
-  Data data(model);
 
   // Get batched Jacobian function from dispatcher
   auto jac_batched_func = RobotTraits::jac_batched_float_8;
@@ -61,25 +64,62 @@ void run_batched_evaluation(const std::string& urdf_filename,
     std::cerr << "Skipping RLA benchmark.\n";
   }
 
-  // Benchmark vanilla Pinocchio Jacobian (BatchSize consecutive calls)
+  // Benchmark Pinocchio codegen Jacobian (BatchSize consecutive calls)
+  Eigen::MatrixXd pin_codegen_res(6, model.nv);
+
+  // Setup codegen model (done once outside timing loop)
+  using CGD = CG<double>;
+  using ADCG = AD<CGD>;
+  typedef ModelTpl<ADCG> ADModel;
+  typedef DataTpl<ADCG> ADData;
+  typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 1> ADVectorXs;
+  typedef Eigen::Matrix<ADCG, 6, Eigen::Dynamic> ADMatrixDyn6xN;
+
+  ADModel ad_model = model.cast<ADCG>();
+  ADData ad_data(ad_model);
+  ADVectorXs ad_X = ADVectorXs(ad_model.nq);
+
+  ADMatrixDyn6xN ad_J;
+  ad_J.resize(6, model.nv);
+
+  Independent(ad_X);
+
+  computeJointJacobians(ad_model, ad_data, ad_X);
+  ad_J = getJointJacobian(ad_model, ad_data, model.njoints-1, WORLD);
+
+  // Flatten to output vector (col major storage)
+  ADVectorXs ad_Y_flat(6 * model.nv);
+  for (int jv = 0; jv < model.nv; jv++) {
+    for (int i = 0; i < 6; i++) {
+      ad_Y_flat[jv * 6 + i] = ad_J.coeffRef(i, jv);
+    }
+  }
+
+  ADFun<CGD> fun(ad_X, ad_Y_flat);
+
+  // JIT compilation
+  ModelCSourceGen<double> cgen(fun, "model");
+  cgen.setCreateForwardZero(true);
+  ModelLibraryCSourceGen<double> libcgen(cgen);
+
+  LlvmModelLibraryProcessor<double> p(libcgen);
+  std::unique_ptr<LlvmModelLibrary<double>> llvmModelLib = p.create();
+
+  std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
+
+  // Benchmark codegen (BatchSize consecutive calls)
   timer.tic();
   SMOOTH(NBT)
   {
     for (size_t w = 0; w < BatchSize; w++) {
-      // Compute joint Jacobians
-      computeJointJacobians(model, data, qs[_smooth]);
-      // Get world-frame Jacobian for last joint (end-effector)
-      pin_res = getJointJacobian(model, data, model.njoints - 1, WORLD);
+      Eigen::VectorXd y = g_model->ForwardZero(qs[_smooth]);
+      pin_codegen_res = Eigen::Map<const Eigen::MatrixXd>(y.data(), 6, model.nv);
     }
   }
-  std::cout << "Pinocchio vanilla (" << BatchSize << " consecutive calls) avg time (ns): \t";
+  std::cout << "Pinocchio codegen (" << BatchSize << " consecutive calls) avg time (ns): \t";
   timer.toc(std::cout, NBT);
 
-  // Get final Pinocchio result for comparison
-  computeJointJacobians(model, data, qs[NBT-1]);
-  pin_res = getJointJacobian(model, data, model.njoints - 1, WORLD);
-
-  // Extract first row of batched result and reshape to 6 x nv
+  // Extract first batch of batched result and reshape to 6 x nv
   Eigen::MatrixXd rla_res(6, model.nv);
   for (size_t r = 0; r < 6; ++r) {
     for (size_t c = 0; c < (size_t)model.nv; ++c) {
@@ -88,19 +128,18 @@ void run_batched_evaluation(const std::string& urdf_filename,
   }
 
   // RLA outputs [angular; linear] while Pinocchio outputs [linear; angular]
-  // Reorder Pinocchio to match RLA convention
-  Eigen::MatrixXd pin_res_reordered(6, model.nv);
-  pin_res_reordered.topRows(3) = pin_res.bottomRows(3);     // angular (Pinocchio rows 3-5 -> rows 0-2)
-  pin_res_reordered.bottomRows(3) = pin_res.topRows(3);     // linear (Pinocchio rows 0-2 -> rows 3-5)
+  // Reorder Pinocchio codegen to match RLA convention
+  Eigen::MatrixXd pin_codegen_reordered(6, model.nv);
+  pin_codegen_reordered.topRows(3) = pin_codegen_res.bottomRows(3);     // angular
+  pin_codegen_reordered.bottomRows(3) = pin_codegen_res.topRows(3);     // linear
 
   std::cout << "\n=== Final Results (Last Configuration) ===\n\n";
   std::cout << "RLA batched Jacobian result (first batch, 6x" << model.nv << "):\n" << rla_res << "\n\n";
-  std::cout << "Pinocchio vanilla Jacobian result (6x" << model.nv << "):\n" << pin_res << "\n\n";
-  std::cout << "Pinocchio vanilla Jacobian (reordered to RLA convention):\n" << pin_res_reordered << "\n\n";
+  std::cout << "Pinocchio codegen Jacobian (reordered to RLA convention):\n" << pin_codegen_reordered << "\n\n";
 
-  // Compute error with reordered Pinocchio result
-  double error = (rla_res - pin_res_reordered).norm();
-  std::cout << "Error between RLA and Pinocchio Jacobian: " << error << "\n";
+  // Compute error with reordered Pinocchio codegen result
+  double error = (rla_res - pin_codegen_reordered).norm();
+  std::cout << "Error between RLA batched and Pinocchio codegen: " << error << "\n";
 
   // Check if error is acceptable
   if (error < 1e-5) {

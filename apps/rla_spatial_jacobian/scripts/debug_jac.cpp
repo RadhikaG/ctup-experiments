@@ -2,8 +2,6 @@
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/jacobian.hpp"
-#include "pinocchio/algorithm/kinematics.hpp"
-#include "pinocchio/utils/timer.hpp"
 #include "pinocchio/codegen/cppadcg.hpp"
 #include "cppad/cg.hpp"
 #include "rla_spatial_jacobian/rla_spatial_jac_dispatcher/jac_dispatcher.h"
@@ -16,7 +14,7 @@
 
 int main(int argc, char ** argv)
 {
-  argparse::ArgumentParser program("eval_jac");
+  argparse::ArgumentParser program("debug_jac");
 
   program.add_argument("urdf")
       .help("path to the URDF file");
@@ -45,12 +43,6 @@ int main(int argc, char ** argv)
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Robot: " << robot_name << "\n";
 
-  // Get RLA Jacobian function from dispatcher
-  auto rla_jac_func = JacDispatcher::get_jac_scalar_function(robot_name);
-
-  PinocchioTicToc timer(PinocchioTicToc::NS);
-  const int NBT = 10000;
-
   // Load the urdf model
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
@@ -58,35 +50,39 @@ int main(int argc, char ** argv)
   std::cout << "nq: " << model.nq << std::endl;
   std::cout << "nv: " << model.nv << std::endl;
 
-  // Sample random configurations
-  PINOCCHIO_ALIGNED_STD_VECTOR(Eigen::VectorXd) qs(NBT);
-  for (size_t i = 0; i < NBT; ++i) {
-    qs[i] = randomConfiguration(model);
-  }
+  // Sample random configuration
+  Eigen::VectorXd q = randomConfiguration(model);
+  std::cout << "\nq: " << q.transpose() << std::endl;
 
-  std::cout << "\n=== Running Performance Evaluation ===\n\n";
-
-  Eigen::MatrixXd rla_res = Eigen::MatrixXd::Zero(6, model.nv);
+  // Result matrices
+  Eigen::MatrixXd pin_vanilla_res(6, model.nv);
   Eigen::MatrixXd pin_codegen_res(6, model.nv);
+  Eigen::MatrixXd rla_res(6, model.nv);
 
-  // Benchmark RLA Jacobian
-  try {
-    timer.tic();
-    SMOOTH(NBT)
-    {
-      rla_jac_func(qs[_smooth], rla_res);
-    }
-    std::cout << "RLA scalar Jacobian avg time (ns):                \t";
-    timer.toc(std::cout, NBT);
-  } catch (const std::runtime_error& e) {
-    std::cerr << "Error running RLA Jacobian: " << e.what() << "\n";
-    std::cerr << "Skipping RLA benchmark.\n";
-    // Initialize to zeros for comparison
-    rla_res = Eigen::MatrixXd::Zero(6, model.nv);
-  }
+  std::cout << "\n=== Running Debug Evaluation ===\n\n";
 
-  // Benchmark Pinocchio codegen Jacobian
-  // Setup codegen model (done once outside timing loop)
+  // ============================================
+  // 1. Vanilla Pinocchio Jacobian
+  // ============================================
+  std::cout << "---PINOCCHIO VANILLA DEBUG---\n";
+
+  Data data(model);
+  computeJointJacobians(model, data, q);
+  pin_vanilla_res = getJointJacobian(model, data, model.njoints-1, WORLD);
+
+  // Reorder vanilla Pinocchio to match RLA convention [angular; linear]
+  Eigen::MatrixXd pin_vanilla_reordered(6, model.nv);
+  pin_vanilla_reordered.topRows(3) = pin_vanilla_res.bottomRows(3);     // angular
+  pin_vanilla_reordered.bottomRows(3) = pin_vanilla_res.topRows(3);     // linear
+
+  std::cout << pin_vanilla_reordered << "\n\n";
+
+  // ============================================
+  // 2. Pinocchio Codegen Jacobian
+  // ============================================
+  std::cout << "---PINOCCHIO CODEGEN DEBUG---\n";
+
+  // Using symbolic scalar for source code gen
   using CGD = CG<double>;
   using ADCG = AD<CGD>;
   typedef ModelTpl<ADCG> ADModel;
@@ -94,6 +90,7 @@ int main(int argc, char ** argv)
   typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 1> ADVectorXs;
   typedef Eigen::Matrix<ADCG, 6, Eigen::Dynamic> ADMatrixDyn6xN;
 
+  // Make symbolic model
   ADModel ad_model = model.cast<ADCG>();
   ADData ad_data(ad_model);
   ADVectorXs ad_X = ADVectorXs(ad_model.nq);
@@ -126,36 +123,49 @@ int main(int argc, char ** argv)
 
   std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
 
-  // Benchmark codegen
-  timer.tic();
-  SMOOTH(NBT)
-  {
-    Eigen::VectorXd y = g_model->ForwardZero(qs[_smooth]);
-    pin_codegen_res = Eigen::Map<const Eigen::MatrixXd>(y.data(), 6, model.nv);
-  }
-  std::cout << "Pinocchio codegen Jacobian avg time (ns):         \t";
-  timer.toc(std::cout, NBT);
+  // Single evaluation
+  Eigen::VectorXd y = g_model->ForwardZero(q);
 
-  // RLA outputs [angular; linear] while Pinocchio outputs [linear; angular]
-  // Reorder Pinocchio codegen to match RLA convention
+  // Reshape result
+  pin_codegen_res = Eigen::Map<const Eigen::MatrixXd>(y.data(), 6, model.nv);
+
+  // Reorder Pinocchio codegen to match RLA convention [angular; linear]
   Eigen::MatrixXd pin_codegen_reordered(6, model.nv);
   pin_codegen_reordered.topRows(3) = pin_codegen_res.bottomRows(3);     // angular
   pin_codegen_reordered.bottomRows(3) = pin_codegen_res.topRows(3);     // linear
 
-  std::cout << "\n=== Final Results (Last Configuration) ===\n\n";
-  std::cout << "RLA scalar Jacobian result (6x" << model.nv << "):\n" << rla_res << "\n\n";
-  std::cout << "Pinocchio codegen Jacobian (reordered to RLA convention):\n" << pin_codegen_reordered << "\n\n";
+  std::cout << pin_codegen_reordered << "\n\n";
 
-  // Compute error with reordered Pinocchio codegen result
-  double error = (rla_res - pin_codegen_reordered).norm();
-  std::cout << "Error between RLA scalar and Pinocchio codegen: " << error << "\n";
+  // ============================================
+  // 3. RLA Scalar Jacobian
+  // ============================================
+  std::cout << "---RLA SCALAR DEBUG---\n";
 
-  // Check if error is acceptable
-  if (error < 1e-6) {
-    std::cout << "SUCCESS: Jacobians match within tolerance!\n";
+  auto rla_jac_func = JacDispatcher::get_jac_scalar_function(robot_name);
+
+  try {
+    rla_jac_func(q, rla_res);
+  } catch (const std::runtime_error& e) {
+    std::cerr << "Error running RLA Jacobian: " << e.what() << "\n";
+    return 1;
+  }
+
+  std::cout << rla_res << "\n\n";
+
+  // ============================================
+  // Comparison (only RLA vs vanilla)
+  // ============================================
+  std::cout << "---COMPARISON---\n\n";
+
+  double error = (rla_res - pin_vanilla_reordered).norm();
+  std::cout << "Error between RLA and Pinocchio vanilla: " << error << "\n";
+
+  const double tolerance = 1e-6;
+  if (error < tolerance) {
+    std::cout << "SUCCESS: RLA and vanilla Pinocchio match within tolerance!\n";
     return 0;
   } else {
-    std::cout << "WARNING: Large error between Jacobians!\n";
+    std::cout << "WARNING: Large error between RLA and vanilla Pinocchio!\n";
     return 1;
   }
 }
