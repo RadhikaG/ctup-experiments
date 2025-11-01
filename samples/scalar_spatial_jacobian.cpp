@@ -49,6 +49,7 @@ using ctup::backend::blaze_avx256f;
 using ctup::Xform;
 using ctup::SingletonSpatialVector;
 using ctup::SpatialVector;
+using ctup::ColSparseJacobian;
 
 /////////////////////////////////////////////
 ///// DEBUG HELPERS
@@ -156,6 +157,22 @@ static bool is_joint_ancestor(
   return false;
 }
 
+static std::vector<size_t> get_ancestor_jids(
+    const pinocchio::Model &model, 
+    size_t jid) {
+  std::vector<size_t> ancestor_jids;
+
+  ancestor_jids.push_back(jid);
+  size_t parent = model.parents[jid];
+
+  // joint 0 is "universe"
+  while (parent != 0) {
+    ancestor_jids.push_back(parent);
+    parent = model.parents[parent];
+  }
+  return ancestor_jids;
+}
+
 
 static void get_eef_world_jacobian(
     const pinocchio::Model &model,
@@ -164,6 +181,8 @@ static void get_eef_world_jacobian(
 
   typedef typename Model::JointIndex JointIndex;
   const JointIndex njoints = (JointIndex)model.njoints;
+
+  static_var<JointIndex> i, j;
 
   // joint transforms for FK
   builder::array<Xform<double>> X_T;
@@ -185,17 +204,15 @@ static void get_eef_world_jacobian(
   // i*k rows, j cols
   //matrix_layout<double> J(6 * model.njoints, model.njoints, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED);
 
-  // joint 0 is "universe"
-  matrix_layout<double> J(6, model.njoints-1, ctup::DENSE, ctup::EIGENMATRIX, ctup::UNCOMPRESSED);
-
-  static_var<JointIndex> i, j;
+  std::vector<ColSparseJacobian<double>::Ptr> spatial_jacobians;
+  spatial_jacobians.resize(model.njoints);
 
   set_X_T(X_T, model);
 
   static_var<int> jtype;
   static_var<int> axis;
 
-  for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
+  for (i = 1; i < njoints; i = i+1) {
     jtype = get_jtype(model, i);
     axis = get_joint_axis(model, i);
 
@@ -207,6 +224,18 @@ static void get_eef_world_jacobian(
       X_J[i].set_prismatic_axis(axis);
       S[i].set_prismatic_axis(axis);
     }
+
+    // setting up col-wise sparsity pattern for jacobians
+    std::vector<size_t> ancestor_jids = get_ancestor_jids(model, i);
+    // non empty cols in jacobian will be jids - 1 because
+    // joint 0 is "universe" and the convention is to never include
+    // it in the jacobian matrix
+    // model.nv is often njoints-1, at least for the articulated
+    // robots we consider
+    std::transform(ancestor_jids.begin(), ancestor_jids.end(), 
+        ancestor_jids.begin(), [](size_t x){ return x - 1; });
+
+    spatial_jacobians[i] = std::make_shared<ColSparseJacobian<double>>(model.nv, ancestor_jids);
   }
 
   Xform<double> X_pi;
@@ -232,32 +261,30 @@ static void get_eef_world_jacobian(
       X_0[i] = ctup::blocked_layout_expr_leaf<double>(X_pi);
     }
 
-    // generating jacobian matrix for last joint
-    // todo: add joint name as arg
-    if (i == njoints-1) {
-      for (j = 1; j < njoints; j = j+1) {
-        if (!is_joint_ancestor(model, j, i)) {
-          continue;
-        }
-
-        // since we know j is ancestor of i,
-        // X_0[j] is guaranteed to have been
-        // calculated already.
-        adj.set_rotation_and_translation(X_0[j].get_rotation(), X_0[j].get_translation());
-
-        S_world = adj * S[j];
-
-        for (static_var<size_t> r = 0; r < 6; r = r + 1) {
-          // j-1 because j=0 is universe joint
-          J.set_entry_to_nonconstant(r, j-1, S_world.get_entry(r, 0));
-        }
+    // we calculate jacobians for all the joints and return only
+    // the EEF one.
+    // this is to stay fair to pinocchio computeJointJacobians()
+    for (j = 1; j < njoints; j = j+1) {
+      if (!is_joint_ancestor(model, j, i)) {
+        continue;
       }
-      break;
+
+      // since we know j is ancestor of i,
+      // X_0[j] is guaranteed to have been
+      // calculated already.
+      adj.set_rotation_and_translation(X_0[j].get_rotation(), X_0[j].get_translation());
+
+      S_world = adj * S[j];
+
+      for (static_var<size_t> r = 0; r < 6; r = r + 1) {
+        // j-1 because j=0 is universe joint
+        spatial_jacobians[i]->set_entry_to_nonconstant(r, j-1, S_world.get_entry(r, 0));
+      }
     }
   }
 
   // Write result to output parameter instead of returning
-  jac = J.denseify();
+  jac = spatial_jacobians[model.njoints-1]->denseify();
 }
 
 int main(int argc, char* argv[]) {

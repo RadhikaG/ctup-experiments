@@ -61,7 +61,7 @@ int main(int argc, char ** argv)
 
   std::cout << "\n=== Running Performance Evaluation ===\n\n";
 
-  Eigen::MatrixXd rla_res(6, model.nv);
+  Eigen::MatrixXd rla_res = Eigen::MatrixXd::Zero(6, model.nv);
   Eigen::MatrixXd pin_res(6, model.nv);
 
   Data data(model);

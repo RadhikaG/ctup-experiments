@@ -1,6 +1,9 @@
 #ifndef JACOBIAN_LAYOUTS_H
 #define JACOBIAN_LAYOUTS_H
 
+#include <vector>
+#include <numeric>
+
 #include "backend.h"
 #include "matrix_layout.h"
 #include "matrix_layout_composite.h"
@@ -298,6 +301,37 @@ struct SingletonSpatialVector : public matrix_layout<Scalar> {
       set_entry_to_constant(4, 0, 1);
     else if (motion_subspace_axis == 'Z')
       set_entry_to_constant(5, 0, 1);
+  }
+};
+
+template <typename Scalar>
+struct ColSparseJacobian : public blocked_layout<Scalar> {
+  using blocked_layout<Scalar>::set_entry_to_nonconstant;
+  using blocked_layout<Scalar>::set_partitions;
+  using blocked_layout<Scalar>::set_new_block;
+  using blocked_layout<Scalar>::operator=;
+
+  typedef std::shared_ptr<ColSparseJacobian<Scalar>> Ptr;
+
+  std::vector<typename matrix_layout<Scalar>::Ptr> dense_cols;
+
+  ColSparseJacobian(size_t nv, std::vector<size_t> &dense_col_indices) : 
+      blocked_layout<Scalar>(6, nv) {
+    
+    assert(dense_col_indices.size() <= nv && "number of dense cols cannot be greater than dim tangent space");
+    std::vector<size_t> col_partitions(nv);
+    dense_cols.resize(dense_col_indices.size());
+
+    // generating {0, 1, 2... nv-1} sequence
+    std::iota(col_partitions.begin(), col_partitions.end(), 0);
+
+    set_partitions({0}, col_partitions);
+
+    static_var<size_t> i;
+    for (i = 0; i < dense_col_indices.size(); i = i + 1) {
+      dense_cols[i] = std::make_shared<matrix_layout<Scalar>>(6, 1, DENSE, EIGENMATRIX, UNCOMPRESSED);
+      set_new_block(0, dense_col_indices[i], dense_cols[i]);
+    }
   }
 };
 
