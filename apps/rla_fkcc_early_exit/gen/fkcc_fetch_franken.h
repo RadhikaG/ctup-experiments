@@ -1,189 +1,186 @@
 // clang-format off
 
-#include <vamp/vector.hh>
-
-#include "ctup/typedefs.h"
+#include "vamp/vector.hh"
 
 #include "rla_fkcc_early_exit/runtime/typedefs.h"
 
 #include "rla_fkcc_early_exit/runtime/vamp_collision.h"
 
-namespace ctup_gen {
+namespace ctup_gen_fetch {
 
-template <size_t rake>
-static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> const& arg4, vamp::FloatVector<rake, 8> const& arg5) {
-  vamp::FloatVector<rake> var193;
-  vamp::FloatVector<rake> var198;
-  vamp::FloatVector<rake> var199;
-  vamp::FloatVector<rake> var200;
-  vamp::FloatVector<rake> var201;
-  vamp::FloatVector<rake> var204;
-  vamp::FloatVector<rake> var205;
-  vamp::FloatVector<rake> var216;
-  vamp::FloatVector<rake> var217;
-  vamp::FloatVector<rake> var218;
-  vamp::FloatVector<rake> var220;
-  vamp::FloatVector<rake> var226;
-  vamp::FloatVector<rake> var228;
-  vamp::FloatVector<rake> var234;
-  vamp::FloatVector<rake> var235;
-  vamp::FloatVector<rake> var241;
-  vamp::FloatVector<rake> var242;
-  vamp::FloatVector<rake> var245;
-  vamp::FloatVector<rake> var246;
-  vamp::FloatVector<rake> var252;
-  vamp::FloatVector<rake> var253;
-  vamp::FloatVector<rake> var254;
-  vamp::FloatVector<rake> var256;
-  vamp::FloatVector<rake> var262;
-  vamp::FloatVector<rake> var264;
-  vamp::FloatVector<rake> var270;
-  vamp::FloatVector<rake> var271;
-  vamp::FloatVector<rake> var277;
-  vamp::FloatVector<rake> var278;
-  vamp::FloatVector<rake> var281;
-  vamp::FloatVector<rake> var282;
-  vamp::FloatVector<rake> var288;
-  vamp::FloatVector<rake> var289;
-  vamp::FloatVector<rake> var290;
-  vamp::FloatVector<rake> var292;
-  vamp::FloatVector<rake> var298;
-  vamp::FloatVector<rake> var300;
-  vamp::FloatVector<rake> var306;
-  vamp::FloatVector<rake> var307;
-  vamp::FloatVector<rake> var313;
-  vamp::FloatVector<rake> var314;
-  vamp::FloatVector<rake> var317;
-  vamp::FloatVector<rake> var318;
-  vamp::FloatVector<rake> var324;
-  vamp::FloatVector<rake> var325;
-  vamp::FloatVector<rake> var355;
-  vamp::FloatVector<rake> var362;
-  vamp::FloatVector<rake> var363;
-  vamp::FloatVector<rake> var366;
-  vamp::FloatVector<rake> var367;
-  vamp::FloatVector<rake> var373;
-  vamp::FloatVector<rake> var380;
-  vamp::FloatVector<rake> var381;
-  vamp::FloatVector<rake> var382;
-  vamp::FloatVector<rake> var383;
-  vamp::FloatVector<rake> var384;
-  vamp::FloatVector<rake> var385;
-  vamp::FloatVector<rake> var386;
-  vamp::FloatVector<rake> var387;
-  vamp::FloatVector<rake> var388;
-  vamp::FloatVector<rake> var390;
-  vamp::FloatVector<rake> var391;
-  vamp::FloatVector<rake> var398;
-  vamp::FloatVector<rake> var399;
-  vamp::FloatVector<rake> var400;
-  vamp::FloatVector<rake> var401;
-  vamp::FloatVector<rake> var402;
-  vamp::FloatVector<rake> var403;
-  vamp::FloatVector<rake> var404;
-  vamp::FloatVector<rake> var405;
-  vamp::FloatVector<rake> var406;
-  vamp::FloatVector<rake> var407;
-  vamp::FloatVector<rake> var408;
-  vamp::FloatVector<rake> var409;
-  vamp::FloatVector<rake> var416;
-  vamp::FloatVector<rake> var417;
-  vamp::FloatVector<rake> var418;
-  vamp::FloatVector<rake> var419;
-  vamp::FloatVector<rake> var420;
-  vamp::FloatVector<rake> var421;
-  vamp::FloatVector<rake> var422;
-  vamp::FloatVector<rake> var423;
-  vamp::FloatVector<rake> var424;
-  vamp::FloatVector<rake> var425;
-  vamp::FloatVector<rake> var426;
-  vamp::FloatVector<rake> var427;
-  vamp::FloatVector<rake> var434;
-  vamp::FloatVector<rake> var435;
-  vamp::FloatVector<rake> var436;
-  vamp::FloatVector<rake> var437;
-  vamp::FloatVector<rake> var438;
-  vamp::FloatVector<rake> var439;
-  vamp::FloatVector<rake> var440;
-  vamp::FloatVector<rake> var441;
-  vamp::FloatVector<rake> var442;
-  vamp::FloatVector<rake> var443;
-  vamp::FloatVector<rake> var444;
-  vamp::FloatVector<rake> var445;
-  vamp::FloatVector<rake> var452;
-  vamp::FloatVector<rake> var453;
-  vamp::FloatVector<rake> var454;
-  vamp::FloatVector<rake> var455;
-  vamp::FloatVector<rake> var456;
-  vamp::FloatVector<rake> var457;
-  vamp::FloatVector<rake> var458;
-  vamp::FloatVector<rake> var459;
-  vamp::FloatVector<rake> var460;
-  vamp::FloatVector<rake> var461;
-  vamp::FloatVector<rake> var462;
-  vamp::FloatVector<rake> var463;
-  vamp::FloatVector<rake> var470;
-  vamp::FloatVector<rake> var471;
-  vamp::FloatVector<rake> var472;
-  vamp::FloatVector<rake> var473;
-  vamp::FloatVector<rake> var474;
-  vamp::FloatVector<rake> var475;
-  vamp::FloatVector<rake> var476;
-  vamp::FloatVector<rake> var477;
-  vamp::FloatVector<rake> var478;
-  vamp::FloatVector<rake> var479;
-  vamp::FloatVector<rake> var480;
-  vamp::FloatVector<rake> var481;
-  vamp::FloatVector<rake> var488[15];
-  vamp::FloatVector<rake> var489[15];
-  vamp::FloatVector<rake> var490[15];
+static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<8, 1>> const& arg4, vamp::FloatVector<8, 8>& arg5) {
+  vamp::FloatVector<8, 1> var193;
+  vamp::FloatVector<8, 1> var198;
+  vamp::FloatVector<8, 1> var199;
+  vamp::FloatVector<8, 1> var200;
+  vamp::FloatVector<8, 1> var201;
+  vamp::FloatVector<8, 1> var204;
+  vamp::FloatVector<8, 1> var205;
+  vamp::FloatVector<8, 1> var216;
+  vamp::FloatVector<8, 1> var217;
+  vamp::FloatVector<8, 1> var218;
+  vamp::FloatVector<8, 1> var220;
+  vamp::FloatVector<8, 1> var226;
+  vamp::FloatVector<8, 1> var228;
+  vamp::FloatVector<8, 1> var234;
+  vamp::FloatVector<8, 1> var235;
+  vamp::FloatVector<8, 1> var241;
+  vamp::FloatVector<8, 1> var242;
+  vamp::FloatVector<8, 1> var245;
+  vamp::FloatVector<8, 1> var246;
+  vamp::FloatVector<8, 1> var252;
+  vamp::FloatVector<8, 1> var253;
+  vamp::FloatVector<8, 1> var254;
+  vamp::FloatVector<8, 1> var256;
+  vamp::FloatVector<8, 1> var262;
+  vamp::FloatVector<8, 1> var264;
+  vamp::FloatVector<8, 1> var270;
+  vamp::FloatVector<8, 1> var271;
+  vamp::FloatVector<8, 1> var277;
+  vamp::FloatVector<8, 1> var278;
+  vamp::FloatVector<8, 1> var281;
+  vamp::FloatVector<8, 1> var282;
+  vamp::FloatVector<8, 1> var288;
+  vamp::FloatVector<8, 1> var289;
+  vamp::FloatVector<8, 1> var290;
+  vamp::FloatVector<8, 1> var292;
+  vamp::FloatVector<8, 1> var298;
+  vamp::FloatVector<8, 1> var300;
+  vamp::FloatVector<8, 1> var306;
+  vamp::FloatVector<8, 1> var307;
+  vamp::FloatVector<8, 1> var313;
+  vamp::FloatVector<8, 1> var314;
+  vamp::FloatVector<8, 1> var317;
+  vamp::FloatVector<8, 1> var318;
+  vamp::FloatVector<8, 1> var324;
+  vamp::FloatVector<8, 1> var325;
+  vamp::FloatVector<8, 1> var355;
+  vamp::FloatVector<8, 1> var362;
+  vamp::FloatVector<8, 1> var363;
+  vamp::FloatVector<8, 1> var366;
+  vamp::FloatVector<8, 1> var367;
+  vamp::FloatVector<8, 1> var373;
+  vamp::FloatVector<8, 1> var380;
+  vamp::FloatVector<8, 1> var381;
+  vamp::FloatVector<8, 1> var382;
+  vamp::FloatVector<8, 1> var383;
+  vamp::FloatVector<8, 1> var384;
+  vamp::FloatVector<8, 1> var385;
+  vamp::FloatVector<8, 1> var386;
+  vamp::FloatVector<8, 1> var387;
+  vamp::FloatVector<8, 1> var388;
+  vamp::FloatVector<8, 1> var390;
+  vamp::FloatVector<8, 1> var391;
+  vamp::FloatVector<8, 1> var398;
+  vamp::FloatVector<8, 1> var399;
+  vamp::FloatVector<8, 1> var400;
+  vamp::FloatVector<8, 1> var401;
+  vamp::FloatVector<8, 1> var402;
+  vamp::FloatVector<8, 1> var403;
+  vamp::FloatVector<8, 1> var404;
+  vamp::FloatVector<8, 1> var405;
+  vamp::FloatVector<8, 1> var406;
+  vamp::FloatVector<8, 1> var407;
+  vamp::FloatVector<8, 1> var408;
+  vamp::FloatVector<8, 1> var409;
+  vamp::FloatVector<8, 1> var416;
+  vamp::FloatVector<8, 1> var417;
+  vamp::FloatVector<8, 1> var418;
+  vamp::FloatVector<8, 1> var419;
+  vamp::FloatVector<8, 1> var420;
+  vamp::FloatVector<8, 1> var421;
+  vamp::FloatVector<8, 1> var422;
+  vamp::FloatVector<8, 1> var423;
+  vamp::FloatVector<8, 1> var424;
+  vamp::FloatVector<8, 1> var425;
+  vamp::FloatVector<8, 1> var426;
+  vamp::FloatVector<8, 1> var427;
+  vamp::FloatVector<8, 1> var434;
+  vamp::FloatVector<8, 1> var435;
+  vamp::FloatVector<8, 1> var436;
+  vamp::FloatVector<8, 1> var437;
+  vamp::FloatVector<8, 1> var438;
+  vamp::FloatVector<8, 1> var439;
+  vamp::FloatVector<8, 1> var440;
+  vamp::FloatVector<8, 1> var441;
+  vamp::FloatVector<8, 1> var442;
+  vamp::FloatVector<8, 1> var443;
+  vamp::FloatVector<8, 1> var444;
+  vamp::FloatVector<8, 1> var445;
+  vamp::FloatVector<8, 1> var452;
+  vamp::FloatVector<8, 1> var453;
+  vamp::FloatVector<8, 1> var454;
+  vamp::FloatVector<8, 1> var455;
+  vamp::FloatVector<8, 1> var456;
+  vamp::FloatVector<8, 1> var457;
+  vamp::FloatVector<8, 1> var458;
+  vamp::FloatVector<8, 1> var459;
+  vamp::FloatVector<8, 1> var460;
+  vamp::FloatVector<8, 1> var461;
+  vamp::FloatVector<8, 1> var462;
+  vamp::FloatVector<8, 1> var463;
+  vamp::FloatVector<8, 1> var470;
+  vamp::FloatVector<8, 1> var471;
+  vamp::FloatVector<8, 1> var472;
+  vamp::FloatVector<8, 1> var473;
+  vamp::FloatVector<8, 1> var474;
+  vamp::FloatVector<8, 1> var475;
+  vamp::FloatVector<8, 1> var476;
+  vamp::FloatVector<8, 1> var477;
+  vamp::FloatVector<8, 1> var478;
+  vamp::FloatVector<8, 1> var479;
+  vamp::FloatVector<8, 1> var480;
+  vamp::FloatVector<8, 1> var481;
+  vamp::FloatVector<8, 1> var488[15];
+  vamp::FloatVector<8, 1> var489[15];
+  vamp::FloatVector<8, 1> var490[15];
   float var491[15];
   unsigned long int var492[15];
-  std::array<vamp::FloatVector<rake>, 14> var493;
-  std::array<vamp::FloatVector<rake>, 6> var494;
-  std::array<vamp::FloatVector<rake>, 6> var495;
-  std::array<vamp::FloatVector<rake>, 28> var496;
-  std::array<vamp::FloatVector<rake>, 4> var497;
-  std::array<vamp::FloatVector<rake>, 7> var498;
-  std::array<vamp::FloatVector<rake>, 8> var499;
-  std::array<vamp::FloatVector<rake>, 6> var500;
-  std::array<vamp::FloatVector<rake>, 7> var501;
-  std::array<vamp::FloatVector<rake>, 6> var502;
-  std::array<vamp::FloatVector<rake>, 2> var503;
-  std::array<vamp::FloatVector<rake>, 4> var504;
-  std::array<vamp::FloatVector<rake>, 6> var505;
-  std::array<vamp::FloatVector<rake>, 6> var506;
-  std::array<vamp::FloatVector<rake>, 1> var507;
-  std::array<vamp::FloatVector<rake>, 14> var508;
-  std::array<vamp::FloatVector<rake>, 6> var509;
-  std::array<vamp::FloatVector<rake>, 6> var510;
-  std::array<vamp::FloatVector<rake>, 28> var511;
-  std::array<vamp::FloatVector<rake>, 4> var512;
-  std::array<vamp::FloatVector<rake>, 7> var513;
-  std::array<vamp::FloatVector<rake>, 8> var514;
-  std::array<vamp::FloatVector<rake>, 6> var515;
-  std::array<vamp::FloatVector<rake>, 7> var516;
-  std::array<vamp::FloatVector<rake>, 6> var517;
-  std::array<vamp::FloatVector<rake>, 2> var518;
-  std::array<vamp::FloatVector<rake>, 4> var519;
-  std::array<vamp::FloatVector<rake>, 6> var520;
-  std::array<vamp::FloatVector<rake>, 6> var521;
-  std::array<vamp::FloatVector<rake>, 1> var522;
-  std::array<vamp::FloatVector<rake>, 14> var523;
-  std::array<vamp::FloatVector<rake>, 6> var524;
-  std::array<vamp::FloatVector<rake>, 6> var525;
-  std::array<vamp::FloatVector<rake>, 28> var526;
-  std::array<vamp::FloatVector<rake>, 4> var527;
-  std::array<vamp::FloatVector<rake>, 7> var528;
-  std::array<vamp::FloatVector<rake>, 8> var529;
-  std::array<vamp::FloatVector<rake>, 6> var530;
-  std::array<vamp::FloatVector<rake>, 7> var531;
-  std::array<vamp::FloatVector<rake>, 6> var532;
-  std::array<vamp::FloatVector<rake>, 2> var533;
-  std::array<vamp::FloatVector<rake>, 4> var534;
-  std::array<vamp::FloatVector<rake>, 6> var535;
-  std::array<vamp::FloatVector<rake>, 6> var536;
-  std::array<vamp::FloatVector<rake>, 1> var537;
+  std::array<vamp::FloatVector<8, 1>, 14> var493;
+  std::array<vamp::FloatVector<8, 1>, 6> var494;
+  std::array<vamp::FloatVector<8, 1>, 6> var495;
+  std::array<vamp::FloatVector<8, 1>, 28> var496;
+  std::array<vamp::FloatVector<8, 1>, 4> var497;
+  std::array<vamp::FloatVector<8, 1>, 7> var498;
+  std::array<vamp::FloatVector<8, 1>, 8> var499;
+  std::array<vamp::FloatVector<8, 1>, 6> var500;
+  std::array<vamp::FloatVector<8, 1>, 7> var501;
+  std::array<vamp::FloatVector<8, 1>, 6> var502;
+  std::array<vamp::FloatVector<8, 1>, 2> var503;
+  std::array<vamp::FloatVector<8, 1>, 4> var504;
+  std::array<vamp::FloatVector<8, 1>, 6> var505;
+  std::array<vamp::FloatVector<8, 1>, 6> var506;
+  std::array<vamp::FloatVector<8, 1>, 1> var507;
+  std::array<vamp::FloatVector<8, 1>, 14> var508;
+  std::array<vamp::FloatVector<8, 1>, 6> var509;
+  std::array<vamp::FloatVector<8, 1>, 6> var510;
+  std::array<vamp::FloatVector<8, 1>, 28> var511;
+  std::array<vamp::FloatVector<8, 1>, 4> var512;
+  std::array<vamp::FloatVector<8, 1>, 7> var513;
+  std::array<vamp::FloatVector<8, 1>, 8> var514;
+  std::array<vamp::FloatVector<8, 1>, 6> var515;
+  std::array<vamp::FloatVector<8, 1>, 7> var516;
+  std::array<vamp::FloatVector<8, 1>, 6> var517;
+  std::array<vamp::FloatVector<8, 1>, 2> var518;
+  std::array<vamp::FloatVector<8, 1>, 4> var519;
+  std::array<vamp::FloatVector<8, 1>, 6> var520;
+  std::array<vamp::FloatVector<8, 1>, 6> var521;
+  std::array<vamp::FloatVector<8, 1>, 1> var522;
+  std::array<vamp::FloatVector<8, 1>, 14> var523;
+  std::array<vamp::FloatVector<8, 1>, 6> var524;
+  std::array<vamp::FloatVector<8, 1>, 6> var525;
+  std::array<vamp::FloatVector<8, 1>, 28> var526;
+  std::array<vamp::FloatVector<8, 1>, 4> var527;
+  std::array<vamp::FloatVector<8, 1>, 7> var528;
+  std::array<vamp::FloatVector<8, 1>, 8> var529;
+  std::array<vamp::FloatVector<8, 1>, 6> var530;
+  std::array<vamp::FloatVector<8, 1>, 7> var531;
+  std::array<vamp::FloatVector<8, 1>, 6> var532;
+  std::array<vamp::FloatVector<8, 1>, 2> var533;
+  std::array<vamp::FloatVector<8, 1>, 4> var534;
+  std::array<vamp::FloatVector<8, 1>, 6> var535;
+  std::array<vamp::FloatVector<8, 1>, 6> var536;
+  std::array<vamp::FloatVector<8, 1>, 1> var537;
   std::array<float, 14> var538;
   std::array<float, 6> var539;
   std::array<float, 6> var540;
@@ -199,16 +196,16 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   std::array<float, 6> var550;
   std::array<float, 6> var551;
   std::array<float, 1> var552;
-  vamp::FloatVector<rake> var553;
-  vamp::FloatVector<rake> var554;
-  vamp::FloatVector<rake> var555;
-  vamp::FloatVector<rake> var557;
-  vamp::FloatVector<rake> var558;
-  vamp::FloatVector<rake> var559;
-  vamp::FloatVector<rake> var561;
-  vamp::FloatVector<rake> var562;
-  vamp::FloatVector<rake> var563;
-  vamp::FloatVector<rake> var564;
+  vamp::FloatVector<8, 1> var553;
+  vamp::FloatVector<8, 1> var554;
+  vamp::FloatVector<8, 1> var555;
+  vamp::FloatVector<8, 1> var557;
+  vamp::FloatVector<8, 1> var558;
+  vamp::FloatVector<8, 1> var559;
+  vamp::FloatVector<8, 1> var561;
+  vamp::FloatVector<8, 1> var562;
+  vamp::FloatVector<8, 1> var563;
+  vamp::FloatVector<8, 1> var564;
   var488[0ll] = ((1.0f * -0.0199999995529652f) + (0.0f * 0.0f)) + (0.0f * 0.187999993562698f);
   var489[0ll] = ((0.0f * -0.0199999995529652f) + (1.0f * 0.0f)) + (0.0f * 0.187999993562698f);
   var490[0ll] = ((0.0f * -0.0199999995529652f) + (0.0f * 0.0f)) + (1.0f * 0.187999993562698f);
@@ -365,11 +362,11 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var509[5ll] = var509[5ll] + 0.0f;
   var524[5ll] = var524[5ll] + 0.0f;
   var539[5ll] = 0.119999997317791f;
-  vamp::FloatVector<rake> var573 = arg5[0ll];
+  vamp::FloatVector<8, 1> var573 = arg5[0ll];
   var198 = var573.sin();
   var199 = var573.cos();
   var193 = var573;
-  vamp::FloatVector<rake> var574;
+  vamp::FloatVector<8, 1> var574;
   var574 = var574 + (1.0f * var193);
   var574 = var574 + (0.377429991960526f * 1.0f);
   var564 = var574;
@@ -424,9 +421,9 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var510[5ll] = var510[5ll] + 0.0f;
   var525[5ll] = var525[5ll] + var355;
   var540[5ll] = 0.150000005960464f;
-  int var575;
-  var575 = ctup_runtime::link_vs_environment_collision(var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, arg4);
-  if (var575)
+  int var576;
+  var576 = ctup_runtime::link_vs_environment_collision(var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, arg4);
+  if (var576)
     return 0;
   var488[3ll] = ((1.0f * 0.100124999880791f) + (0.0f * 0.0f)) + (0.0f * 0.662001430988312f);
   var489[3ll] = ((0.0f * 0.100124999880791f) + (1.0f * 0.0f)) + (0.0f * 0.662001430988312f);
@@ -632,9 +629,9 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var511[27ll] = var511[27ll] + 0.0f;
   var526[27ll] = var526[27ll] + var355;
   var541[27ll] = 0.0299999993294477f;
-  int var576;
-  var576 = ctup_runtime::link_vs_environment_collision(var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, arg4);
-  if (var576)
+  int var577;
+  var577 = ctup_runtime::link_vs_environment_collision(var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, arg4);
+  if (var577)
     return 0;
   var488[14ll] = ((1.0f * 0.100000001490116f) + (0.0f * 0.0f)) + (0.0f * 0.239999994635582f);
   var489[14ll] = ((0.0f * 0.100000001490116f) + (1.0f * 0.0f)) + (0.0f * 0.239999994635582f);
@@ -651,72 +648,72 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var522[0ll] = var522[0ll] + 0.0f;
   var537[0ll] = var537[0ll] + var355;
   var552[0ll] = 0.0700000002980232f;
-  int var577;
-  var577 = ctup_runtime::self_collision_link_vs_link(5ll, var488[5ll], var489[5ll], var490[5ll], var491[5ll], var492[5ll], var498, var513, var528, var543, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
-  if (var577)
+  int var578;
+  var578 = ctup_runtime::self_collision_link_vs_link(5ll, var488[5ll], var489[5ll], var490[5ll], var491[5ll], var492[5ll], var498, var513, var528, var543, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
+  if (var578)
     return 0; //collision pair: 5,14 : shoulder_lift_link_0,torso_lift_link_collision_2_0
-  var577 = ctup_runtime::self_collision_link_vs_link(6ll, var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
-  if (var577)
+  var578 = ctup_runtime::self_collision_link_vs_link(6ll, var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
+  if (var578)
     return 0; //collision pair: 6,14 : upperarm_roll_link_0,torso_lift_link_collision_2_0
-  var577 = ctup_runtime::self_collision_link_vs_link(7ll, var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
-  if (var577)
+  var578 = ctup_runtime::self_collision_link_vs_link(7ll, var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
+  if (var578)
     return 0; //collision pair: 7,14 : elbow_flex_link_0,torso_lift_link_collision_2_0
-  var577 = ctup_runtime::self_collision_link_vs_link(8ll, var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
-  if (var577)
+  var578 = ctup_runtime::self_collision_link_vs_link(8ll, var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
+  if (var578)
     return 0; //collision pair: 8,14 : forearm_roll_link_0,torso_lift_link_collision_2_0
-  var577 = ctup_runtime::self_collision_link_vs_link(9ll, var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
-  if (var577)
+  var578 = ctup_runtime::self_collision_link_vs_link(9ll, var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
+  if (var578)
     return 0; //collision pair: 9,14 : wrist_flex_link_0,torso_lift_link_collision_2_0
-  var577 = ctup_runtime::self_collision_link_vs_link(10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
-  if (var577)
+  var578 = ctup_runtime::self_collision_link_vs_link(10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
+  if (var578)
     return 0; //collision pair: 10,14 : wrist_roll_link_0,torso_lift_link_collision_2_0
-  var577 = ctup_runtime::self_collision_link_vs_link(11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
-  if (var577)
+  var578 = ctup_runtime::self_collision_link_vs_link(11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
+  if (var578)
     return 0; //collision pair: 11,14 : gripper_link_0,torso_lift_link_collision_2_0
-  var577 = ctup_runtime::self_collision_link_vs_link(12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
-  if (var577)
+  var578 = ctup_runtime::self_collision_link_vs_link(12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
+  if (var578)
     return 0; //collision pair: 12,14 : l_gripper_finger_link_0,torso_lift_link_collision_2_0
-  var577 = ctup_runtime::self_collision_link_vs_link(13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
-  if (var577)
+  var578 = ctup_runtime::self_collision_link_vs_link(13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551, 14ll, var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552);
+  if (var578)
     return 0; //collision pair: 13,14 : r_gripper_finger_link_0,torso_lift_link_collision_2_0
-  var577 = ctup_runtime::link_vs_environment_collision(var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552, arg4);
-  if (var577)
+  var578 = ctup_runtime::link_vs_environment_collision(var488[14ll], var489[14ll], var490[14ll], var491[14ll], var492[14ll], var507, var522, var537, var552, arg4);
+  if (var578)
     return 0;
-  vamp::FloatVector<rake> var578 = arg5[1ll];
-  var216 = var578.sin();
-  var217 = var578.cos();
+  vamp::FloatVector<8, 1> var579 = arg5[1ll];
+  var216 = var579.sin();
+  var217 = var579.cos();
   var200 = var217;
   var201 = -(var216);
   var204 = var216;
   var205 = var217;
-  vamp::FloatVector<rake> var579;
-  var579 = var579 + (1.0f * var200);
-  var553 = var579;
-  vamp::FloatVector<rake> var580;
-  var580 = var580 + (1.0f * var201);
-  var554 = var580;
-  vamp::FloatVector<rake> var581;
-  var581 = var581 + (1.0f * var204);
-  var557 = var581;
-  vamp::FloatVector<rake> var582;
-  var582 = var582 + (1.0f * var205);
-  var558 = var582;
-  vamp::FloatVector<rake> var583;
-  var583 = var583 + (1.0f * var553);
-  var362 = var583;
-  vamp::FloatVector<rake> var584;
-  var584 = var584 + (1.0f * var554);
-  var363 = var584;
-  vamp::FloatVector<rake> var585;
-  var585 = var585 + (1.0f * var557);
-  var366 = var585;
-  vamp::FloatVector<rake> var586;
-  var586 = var586 + (1.0f * var558);
-  var367 = var586;
-  vamp::FloatVector<rake> var587;
-  var587 = var587 + (1.0f * 0.348580002784729f);
-  var587 = var587 + (var355 * 1.0f);
-  var373 = var587;
+  vamp::FloatVector<8, 1> var580;
+  var580 = var580 + (1.0f * var200);
+  var553 = var580;
+  vamp::FloatVector<8, 1> var582;
+  var582 = var582 + (1.0f * var201);
+  var554 = var582;
+  vamp::FloatVector<8, 1> var584;
+  var584 = var584 + (1.0f * var204);
+  var557 = var584;
+  vamp::FloatVector<8, 1> var586;
+  var586 = var586 + (1.0f * var205);
+  var558 = var586;
+  vamp::FloatVector<8, 1> var588;
+  var588 = var588 + (1.0f * var553);
+  var362 = var588;
+  vamp::FloatVector<8, 1> var590;
+  var590 = var590 + (1.0f * var554);
+  var363 = var590;
+  vamp::FloatVector<8, 1> var592;
+  var592 = var592 + (1.0f * var557);
+  var366 = var592;
+  vamp::FloatVector<8, 1> var594;
+  var594 = var594 + (1.0f * var558);
+  var367 = var594;
+  vamp::FloatVector<8, 1> var596;
+  var596 = var596 + (1.0f * 0.348580002784729f);
+  var596 = var596 + (var355 * 1.0f);
+  var373 = var596;
   var488[4ll] = ((var362 * 0.0599999986588955f) + (var363 * -0.0149999996647239f)) + (0.0f * 0.0299999993294477f);
   var489[4ll] = ((var366 * 0.0599999986588955f) + (var367 * -0.0149999996647239f)) + (0.0f * 0.0299999993294477f);
   var490[4ll] = ((0.0f * 0.0599999986588955f) + (0.0f * -0.0149999996647239f)) + (1.0f * 0.0299999993294477f);
@@ -753,64 +750,64 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var512[3ll] = var512[3ll] + 0.0f;
   var527[3ll] = var527[3ll] + var373;
   var542[3ll] = 0.0549999997019768f;
-  int var588;
-  var588 = ctup_runtime::link_vs_environment_collision(var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, arg4);
-  if (var588)
+  int var598;
+  var598 = ctup_runtime::link_vs_environment_collision(var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, arg4);
+  if (var598)
     return 0;
-  vamp::FloatVector<rake> var589 = arg5[2ll];
-  var234 = var589.sin();
-  var235 = var589.cos();
+  vamp::FloatVector<8, 1> var599 = arg5[2ll];
+  var234 = var599.sin();
+  var235 = var599.cos();
   var218 = var235;
   var220 = var234;
   var226 = -(var234);
   var228 = var235;
-  vamp::FloatVector<rake> var590;
-  var590 = var590 + (1.0f * var218);
-  var553 = var590;
-  vamp::FloatVector<rake> var591;
-  var591 = var591 + (1.0f * var220);
-  var555 = var591;
-  vamp::FloatVector<rake> var592;
-  var592 = var592 + (1.0f * var226);
-  var561 = var592;
-  vamp::FloatVector<rake> var593;
-  var593 = var593 + (1.0f * var228);
-  var563 = var593;
-  vamp::FloatVector<rake> var594;
-  var594 = var594 + (var362 * var553);
-  var380 = var594;
-  vamp::FloatVector<rake> var595;
-  var595 = var595 + (var363 * 1.0f);
-  var381 = var595;
-  vamp::FloatVector<rake> var596;
-  var596 = var596 + (var362 * var555);
-  var382 = var596;
-  vamp::FloatVector<rake> var597;
-  var597 = var597 + (var362 * 0.116999998688698f);
-  var597 = var597 + (0.032650001347065f * 1.0f);
-  var383 = var597;
-  vamp::FloatVector<rake> var598;
-  var598 = var598 + (var366 * var553);
-  var384 = var598;
-  vamp::FloatVector<rake> var599;
-  var599 = var599 + (var367 * 1.0f);
-  var385 = var599;
-  vamp::FloatVector<rake> var600;
-  var600 = var600 + (var366 * var555);
-  var386 = var600;
-  vamp::FloatVector<rake> var601;
-  var601 = var601 + (var366 * 0.116999998688698f);
-  var387 = var601;
-  vamp::FloatVector<rake> var602;
-  var602 = var602 + (1.0f * var561);
-  var388 = var602;
-  vamp::FloatVector<rake> var603;
-  var603 = var603 + (1.0f * var563);
-  var390 = var603;
-  vamp::FloatVector<rake> var604;
-  var604 = var604 + (1.0f * 0.0599999986588955f);
-  var604 = var604 + (var373 * 1.0f);
-  var391 = var604;
+  vamp::FloatVector<8, 1> var600;
+  var600 = var600 + (1.0f * var218);
+  var553 = var600;
+  vamp::FloatVector<8, 1> var602;
+  var602 = var602 + (1.0f * var220);
+  var555 = var602;
+  vamp::FloatVector<8, 1> var604;
+  var604 = var604 + (1.0f * var226);
+  var561 = var604;
+  vamp::FloatVector<8, 1> var606;
+  var606 = var606 + (1.0f * var228);
+  var563 = var606;
+  vamp::FloatVector<8, 1> var608;
+  var608 = var608 + (var362 * var553);
+  var380 = var608;
+  vamp::FloatVector<8, 1> var610;
+  var610 = var610 + (var363 * 1.0f);
+  var381 = var610;
+  vamp::FloatVector<8, 1> var612;
+  var612 = var612 + (var362 * var555);
+  var382 = var612;
+  vamp::FloatVector<8, 1> var614;
+  var614 = var614 + (var362 * 0.116999998688698f);
+  var614 = var614 + (0.032650001347065f * 1.0f);
+  var383 = var614;
+  vamp::FloatVector<8, 1> var616;
+  var616 = var616 + (var366 * var553);
+  var384 = var616;
+  vamp::FloatVector<8, 1> var618;
+  var618 = var618 + (var367 * 1.0f);
+  var385 = var618;
+  vamp::FloatVector<8, 1> var620;
+  var620 = var620 + (var366 * var555);
+  var386 = var620;
+  vamp::FloatVector<8, 1> var622;
+  var622 = var622 + (var366 * 0.116999998688698f);
+  var387 = var622;
+  vamp::FloatVector<8, 1> var624;
+  var624 = var624 + (1.0f * var561);
+  var388 = var624;
+  vamp::FloatVector<8, 1> var626;
+  var626 = var626 + (1.0f * var563);
+  var390 = var626;
+  vamp::FloatVector<8, 1> var628;
+  var628 = var628 + (1.0f * 0.0599999986588955f);
+  var628 = var628 + (var373 * 1.0f);
+  var391 = var628;
   var488[5ll] = ((var380 * 0.063000001013279f) + (var381 * 0.0189999993890524f)) + (var382 * 0.0f);
   var489[5ll] = ((var384 * 0.063000001013279f) + (var385 * 0.0189999993890524f)) + (var386 * 0.0f);
   var490[5ll] = ((var388 * 0.063000001013279f) + (0.0f * 0.0189999993890524f)) + (var390 * 0.0f);
@@ -868,72 +865,72 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var513[6ll] = var513[6ll] + var387;
   var528[6ll] = var528[6ll] + var391;
   var543[6ll] = 0.0549999997019768f;
-  int var605;
-  var605 = ctup_runtime::link_vs_environment_collision(var488[5ll], var489[5ll], var490[5ll], var491[5ll], var492[5ll], var498, var513, var528, var543, arg4);
-  if (var605)
+  int var630;
+  var630 = ctup_runtime::link_vs_environment_collision(var488[5ll], var489[5ll], var490[5ll], var491[5ll], var492[5ll], var498, var513, var528, var543, arg4);
+  if (var630)
     return 0;
-  vamp::FloatVector<rake> var606 = arg5[3ll];
-  var252 = var606.sin();
-  var253 = var606.cos();
+  vamp::FloatVector<8, 1> var631 = arg5[3ll];
+  var252 = var631.sin();
+  var253 = var631.cos();
   var241 = var253;
   var242 = -(var252);
   var245 = var252;
   var246 = var253;
-  vamp::FloatVector<rake> var607;
-  var607 = var607 + (1.0f * var241);
-  var558 = var607;
-  vamp::FloatVector<rake> var608;
-  var608 = var608 + (1.0f * var242);
-  var559 = var608;
-  vamp::FloatVector<rake> var609;
-  var609 = var609 + (1.0f * var245);
-  var562 = var609;
-  vamp::FloatVector<rake> var610;
-  var610 = var610 + (1.0f * var246);
-  var563 = var610;
-  vamp::FloatVector<rake> var611;
-  var611 = var611 + (var380 * 1.0f);
-  var398 = var611;
-  vamp::FloatVector<rake> var612;
-  var612 = var612 + (var381 * var558);
-  var612 = var612 + (var382 * var562);
-  var399 = var612;
-  vamp::FloatVector<rake> var613;
-  var613 = var613 + (var381 * var559);
-  var613 = var613 + (var382 * var563);
-  var400 = var613;
-  vamp::FloatVector<rake> var614;
-  var614 = var614 + (var380 * 0.218999996781349f);
-  var614 = var614 + (var383 * 1.0f);
-  var401 = var614;
-  vamp::FloatVector<rake> var615;
-  var615 = var615 + (var384 * 1.0f);
-  var402 = var615;
-  vamp::FloatVector<rake> var616;
-  var616 = var616 + (var385 * var558);
-  var616 = var616 + (var386 * var562);
-  var403 = var616;
-  vamp::FloatVector<rake> var617;
-  var617 = var617 + (var385 * var559);
-  var617 = var617 + (var386 * var563);
-  var404 = var617;
-  vamp::FloatVector<rake> var618;
-  var618 = var618 + (var384 * 0.218999996781349f);
-  var618 = var618 + (var387 * 1.0f);
-  var405 = var618;
-  vamp::FloatVector<rake> var619;
-  var619 = var619 + (var388 * 1.0f);
-  var406 = var619;
-  vamp::FloatVector<rake> var620;
-  var620 = var620 + (var390 * var562);
-  var407 = var620;
-  vamp::FloatVector<rake> var621;
-  var621 = var621 + (var390 * var563);
-  var408 = var621;
-  vamp::FloatVector<rake> var622;
-  var622 = var622 + (var388 * 0.218999996781349f);
-  var622 = var622 + (var391 * 1.0f);
-  var409 = var622;
+  vamp::FloatVector<8, 1> var632;
+  var632 = var632 + (1.0f * var241);
+  var558 = var632;
+  vamp::FloatVector<8, 1> var634;
+  var634 = var634 + (1.0f * var242);
+  var559 = var634;
+  vamp::FloatVector<8, 1> var636;
+  var636 = var636 + (1.0f * var245);
+  var562 = var636;
+  vamp::FloatVector<8, 1> var638;
+  var638 = var638 + (1.0f * var246);
+  var563 = var638;
+  vamp::FloatVector<8, 1> var640;
+  var640 = var640 + (var380 * 1.0f);
+  var398 = var640;
+  vamp::FloatVector<8, 1> var642;
+  var642 = var642 + (var381 * var558);
+  var642 = var642 + (var382 * var562);
+  var399 = var642;
+  vamp::FloatVector<8, 1> var644;
+  var644 = var644 + (var381 * var559);
+  var644 = var644 + (var382 * var563);
+  var400 = var644;
+  vamp::FloatVector<8, 1> var646;
+  var646 = var646 + (var380 * 0.218999996781349f);
+  var646 = var646 + (var383 * 1.0f);
+  var401 = var646;
+  vamp::FloatVector<8, 1> var648;
+  var648 = var648 + (var384 * 1.0f);
+  var402 = var648;
+  vamp::FloatVector<8, 1> var650;
+  var650 = var650 + (var385 * var558);
+  var650 = var650 + (var386 * var562);
+  var403 = var650;
+  vamp::FloatVector<8, 1> var652;
+  var652 = var652 + (var385 * var559);
+  var652 = var652 + (var386 * var563);
+  var404 = var652;
+  vamp::FloatVector<8, 1> var654;
+  var654 = var654 + (var384 * 0.218999996781349f);
+  var654 = var654 + (var387 * 1.0f);
+  var405 = var654;
+  vamp::FloatVector<8, 1> var656;
+  var656 = var656 + (var388 * 1.0f);
+  var406 = var656;
+  vamp::FloatVector<8, 1> var658;
+  var658 = var658 + (var390 * var562);
+  var407 = var658;
+  vamp::FloatVector<8, 1> var660;
+  var660 = var660 + (var390 * var563);
+  var408 = var660;
+  vamp::FloatVector<8, 1> var662;
+  var662 = var662 + (var388 * 0.218999996781349f);
+  var662 = var662 + (var391 * 1.0f);
+  var409 = var662;
   var488[6ll] = ((var398 * 0.0560000017285347f) + (var399 * -0.0199999995529652f)) + (var400 * 0.0f);
   var489[6ll] = ((var402 * 0.0560000017285347f) + (var403 * -0.0199999995529652f)) + (var404 * 0.0f);
   var490[6ll] = ((var406 * 0.0560000017285347f) + (var407 * -0.0199999995529652f)) + (var408 * 0.0f);
@@ -998,86 +995,86 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var514[7ll] = var514[7ll] + var405;
   var529[7ll] = var529[7ll] + var409;
   var544[7ll] = 0.0549999997019768f;
-  int var623;
-  var623 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 6ll, var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544);
-  if (var623)
+  int var664;
+  var664 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 6ll, var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544);
+  if (var664)
     return 0; //collision pair: 1,6 : torso_fixed_link_0,upperarm_roll_link_0
-  var623 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 6ll, var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544);
-  if (var623)
+  var664 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 6ll, var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544);
+  if (var664)
     return 0; //collision pair: 2,6 : torso_lift_link_0,upperarm_roll_link_0
-  var623 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 6ll, var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544);
-  if (var623)
+  var664 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 6ll, var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544);
+  if (var664)
     return 0; //collision pair: 3,6 : head_pan_link_0,upperarm_roll_link_0
-  var623 = ctup_runtime::self_collision_link_vs_link(4ll, var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, 6ll, var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544);
-  if (var623)
+  var664 = ctup_runtime::self_collision_link_vs_link(4ll, var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, 6ll, var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544);
+  if (var664)
     return 0; //collision pair: 4,6 : shoulder_pan_link_0,upperarm_roll_link_0
-  var623 = ctup_runtime::link_vs_environment_collision(var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544, arg4);
-  if (var623)
+  var664 = ctup_runtime::link_vs_environment_collision(var488[6ll], var489[6ll], var490[6ll], var491[6ll], var492[6ll], var499, var514, var529, var544, arg4);
+  if (var664)
     return 0;
-  vamp::FloatVector<rake> var624 = arg5[4ll];
-  var270 = var624.sin();
-  var271 = var624.cos();
+  vamp::FloatVector<8, 1> var665 = arg5[4ll];
+  var270 = var665.sin();
+  var271 = var665.cos();
   var254 = var271;
   var256 = var270;
   var262 = -(var270);
   var264 = var271;
-  vamp::FloatVector<rake> var625;
-  var625 = var625 + (1.0f * var254);
-  var553 = var625;
-  vamp::FloatVector<rake> var626;
-  var626 = var626 + (1.0f * var256);
-  var555 = var626;
-  vamp::FloatVector<rake> var627;
-  var627 = var627 + (1.0f * var262);
-  var561 = var627;
-  vamp::FloatVector<rake> var628;
-  var628 = var628 + (1.0f * var264);
-  var563 = var628;
-  vamp::FloatVector<rake> var629;
-  var629 = var629 + (var398 * var553);
-  var629 = var629 + (var400 * var561);
-  var416 = var629;
-  vamp::FloatVector<rake> var630;
-  var630 = var630 + (var399 * 1.0f);
-  var417 = var630;
-  vamp::FloatVector<rake> var631;
-  var631 = var631 + (var398 * var555);
-  var631 = var631 + (var400 * var563);
-  var418 = var631;
-  vamp::FloatVector<rake> var632;
-  var632 = var632 + (var398 * 0.133000001311302f);
-  var632 = var632 + (var401 * 1.0f);
-  var419 = var632;
-  vamp::FloatVector<rake> var633;
-  var633 = var633 + (var402 * var553);
-  var633 = var633 + (var404 * var561);
-  var420 = var633;
-  vamp::FloatVector<rake> var634;
-  var634 = var634 + (var403 * 1.0f);
-  var421 = var634;
-  vamp::FloatVector<rake> var635;
-  var635 = var635 + (var402 * var555);
-  var635 = var635 + (var404 * var563);
-  var422 = var635;
-  vamp::FloatVector<rake> var636;
-  var636 = var636 + (var402 * 0.133000001311302f);
-  var636 = var636 + (var405 * 1.0f);
-  var423 = var636;
-  vamp::FloatVector<rake> var637;
-  var637 = var637 + (var406 * var553);
-  var637 = var637 + (var408 * var561);
-  var424 = var637;
-  vamp::FloatVector<rake> var638;
-  var638 = var638 + (var407 * 1.0f);
-  var425 = var638;
-  vamp::FloatVector<rake> var639;
-  var639 = var639 + (var406 * var555);
-  var639 = var639 + (var408 * var563);
-  var426 = var639;
-  vamp::FloatVector<rake> var640;
-  var640 = var640 + (var406 * 0.133000001311302f);
-  var640 = var640 + (var409 * 1.0f);
-  var427 = var640;
+  vamp::FloatVector<8, 1> var666;
+  var666 = var666 + (1.0f * var254);
+  var553 = var666;
+  vamp::FloatVector<8, 1> var668;
+  var668 = var668 + (1.0f * var256);
+  var555 = var668;
+  vamp::FloatVector<8, 1> var670;
+  var670 = var670 + (1.0f * var262);
+  var561 = var670;
+  vamp::FloatVector<8, 1> var672;
+  var672 = var672 + (1.0f * var264);
+  var563 = var672;
+  vamp::FloatVector<8, 1> var674;
+  var674 = var674 + (var398 * var553);
+  var674 = var674 + (var400 * var561);
+  var416 = var674;
+  vamp::FloatVector<8, 1> var676;
+  var676 = var676 + (var399 * 1.0f);
+  var417 = var676;
+  vamp::FloatVector<8, 1> var678;
+  var678 = var678 + (var398 * var555);
+  var678 = var678 + (var400 * var563);
+  var418 = var678;
+  vamp::FloatVector<8, 1> var680;
+  var680 = var680 + (var398 * 0.133000001311302f);
+  var680 = var680 + (var401 * 1.0f);
+  var419 = var680;
+  vamp::FloatVector<8, 1> var682;
+  var682 = var682 + (var402 * var553);
+  var682 = var682 + (var404 * var561);
+  var420 = var682;
+  vamp::FloatVector<8, 1> var684;
+  var684 = var684 + (var403 * 1.0f);
+  var421 = var684;
+  vamp::FloatVector<8, 1> var686;
+  var686 = var686 + (var402 * var555);
+  var686 = var686 + (var404 * var563);
+  var422 = var686;
+  vamp::FloatVector<8, 1> var688;
+  var688 = var688 + (var402 * 0.133000001311302f);
+  var688 = var688 + (var405 * 1.0f);
+  var423 = var688;
+  vamp::FloatVector<8, 1> var690;
+  var690 = var690 + (var406 * var553);
+  var690 = var690 + (var408 * var561);
+  var424 = var690;
+  vamp::FloatVector<8, 1> var692;
+  var692 = var692 + (var407 * 1.0f);
+  var425 = var692;
+  vamp::FloatVector<8, 1> var694;
+  var694 = var694 + (var406 * var555);
+  var694 = var694 + (var408 * var563);
+  var426 = var694;
+  vamp::FloatVector<8, 1> var696;
+  var696 = var696 + (var406 * 0.133000001311302f);
+  var696 = var696 + (var409 * 1.0f);
+  var427 = var696;
   var488[7ll] = ((var416 * 0.0710000023245811f) + (var417 * 0.0209999997168779f)) + (var418 * 0.0f);
   var489[7ll] = ((var420 * 0.0710000023245811f) + (var421 * 0.0209999997168779f)) + (var422 * 0.0f);
   var490[7ll] = ((var424 * 0.0710000023245811f) + (var425 * 0.0209999997168779f)) + (var426 * 0.0f);
@@ -1128,86 +1125,86 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var515[5ll] = var515[5ll] + var423;
   var530[5ll] = var530[5ll] + var427;
   var545[5ll] = 0.0549999997019768f;
-  int var641;
-  var641 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 7ll, var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545);
-  if (var641)
+  int var698;
+  var698 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 7ll, var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545);
+  if (var698)
     return 0; //collision pair: 0,7 : base_link_0,elbow_flex_link_0
-  var641 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 7ll, var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545);
-  if (var641)
+  var698 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 7ll, var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545);
+  if (var698)
     return 0; //collision pair: 1,7 : torso_fixed_link_0,elbow_flex_link_0
-  var641 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 7ll, var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545);
-  if (var641)
+  var698 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 7ll, var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545);
+  if (var698)
     return 0; //collision pair: 2,7 : torso_lift_link_0,elbow_flex_link_0
-  var641 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 7ll, var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545);
-  if (var641)
+  var698 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 7ll, var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545);
+  if (var698)
     return 0; //collision pair: 3,7 : head_pan_link_0,elbow_flex_link_0
-  var641 = ctup_runtime::link_vs_environment_collision(var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545, arg4);
-  if (var641)
+  var698 = ctup_runtime::link_vs_environment_collision(var488[7ll], var489[7ll], var490[7ll], var491[7ll], var492[7ll], var500, var515, var530, var545, arg4);
+  if (var698)
     return 0;
-  vamp::FloatVector<rake> var642 = arg5[5ll];
-  var288 = var642.sin();
-  var289 = var642.cos();
+  vamp::FloatVector<8, 1> var699 = arg5[5ll];
+  var288 = var699.sin();
+  var289 = var699.cos();
   var277 = var289;
   var278 = -(var288);
   var281 = var288;
   var282 = var289;
-  vamp::FloatVector<rake> var643;
-  var643 = var643 + (1.0f * var277);
-  var558 = var643;
-  vamp::FloatVector<rake> var644;
-  var644 = var644 + (1.0f * var278);
-  var559 = var644;
-  vamp::FloatVector<rake> var645;
-  var645 = var645 + (1.0f * var281);
-  var562 = var645;
-  vamp::FloatVector<rake> var646;
-  var646 = var646 + (1.0f * var282);
-  var563 = var646;
-  vamp::FloatVector<rake> var647;
-  var647 = var647 + (var416 * 1.0f);
-  var434 = var647;
-  vamp::FloatVector<rake> var648;
-  var648 = var648 + (var417 * var558);
-  var648 = var648 + (var418 * var562);
-  var435 = var648;
-  vamp::FloatVector<rake> var649;
-  var649 = var649 + (var417 * var559);
-  var649 = var649 + (var418 * var563);
-  var436 = var649;
-  vamp::FloatVector<rake> var650;
-  var650 = var650 + (var416 * 0.196999996900558f);
-  var650 = var650 + (var419 * 1.0f);
-  var437 = var650;
-  vamp::FloatVector<rake> var651;
-  var651 = var651 + (var420 * 1.0f);
-  var438 = var651;
-  vamp::FloatVector<rake> var652;
-  var652 = var652 + (var421 * var558);
-  var652 = var652 + (var422 * var562);
-  var439 = var652;
-  vamp::FloatVector<rake> var653;
-  var653 = var653 + (var421 * var559);
-  var653 = var653 + (var422 * var563);
-  var440 = var653;
-  vamp::FloatVector<rake> var654;
-  var654 = var654 + (var420 * 0.196999996900558f);
-  var654 = var654 + (var423 * 1.0f);
-  var441 = var654;
-  vamp::FloatVector<rake> var655;
-  var655 = var655 + (var424 * 1.0f);
-  var442 = var655;
-  vamp::FloatVector<rake> var656;
-  var656 = var656 + (var425 * var558);
-  var656 = var656 + (var426 * var562);
-  var443 = var656;
-  vamp::FloatVector<rake> var657;
-  var657 = var657 + (var425 * var559);
-  var657 = var657 + (var426 * var563);
-  var444 = var657;
-  vamp::FloatVector<rake> var658;
-  var658 = var658 + (var424 * 0.196999996900558f);
-  var658 = var658 + (var427 * 1.0f);
-  var445 = var658;
+  vamp::FloatVector<8, 1> var700;
+  var700 = var700 + (1.0f * var277);
+  var558 = var700;
+  vamp::FloatVector<8, 1> var702;
+  var702 = var702 + (1.0f * var278);
+  var559 = var702;
+  vamp::FloatVector<8, 1> var704;
+  var704 = var704 + (1.0f * var281);
+  var562 = var704;
+  vamp::FloatVector<8, 1> var706;
+  var706 = var706 + (1.0f * var282);
+  var563 = var706;
+  vamp::FloatVector<8, 1> var708;
+  var708 = var708 + (var416 * 1.0f);
+  var434 = var708;
+  vamp::FloatVector<8, 1> var710;
+  var710 = var710 + (var417 * var558);
+  var710 = var710 + (var418 * var562);
+  var435 = var710;
+  vamp::FloatVector<8, 1> var712;
+  var712 = var712 + (var417 * var559);
+  var712 = var712 + (var418 * var563);
+  var436 = var712;
+  vamp::FloatVector<8, 1> var714;
+  var714 = var714 + (var416 * 0.196999996900558f);
+  var714 = var714 + (var419 * 1.0f);
+  var437 = var714;
+  vamp::FloatVector<8, 1> var716;
+  var716 = var716 + (var420 * 1.0f);
+  var438 = var716;
+  vamp::FloatVector<8, 1> var718;
+  var718 = var718 + (var421 * var558);
+  var718 = var718 + (var422 * var562);
+  var439 = var718;
+  vamp::FloatVector<8, 1> var720;
+  var720 = var720 + (var421 * var559);
+  var720 = var720 + (var422 * var563);
+  var440 = var720;
+  vamp::FloatVector<8, 1> var722;
+  var722 = var722 + (var420 * 0.196999996900558f);
+  var722 = var722 + (var423 * 1.0f);
+  var441 = var722;
+  vamp::FloatVector<8, 1> var724;
+  var724 = var724 + (var424 * 1.0f);
+  var442 = var724;
+  vamp::FloatVector<8, 1> var726;
+  var726 = var726 + (var425 * var558);
+  var726 = var726 + (var426 * var562);
+  var443 = var726;
+  vamp::FloatVector<8, 1> var728;
+  var728 = var728 + (var425 * var559);
+  var728 = var728 + (var426 * var563);
+  var444 = var728;
+  vamp::FloatVector<8, 1> var730;
+  var730 = var730 + (var424 * 0.196999996900558f);
+  var730 = var730 + (var427 * 1.0f);
+  var445 = var730;
   var488[8ll] = ((var434 * 0.0640000030398369f) + (var435 * -0.0260000005364418f)) + (var436 * 0.0f);
   var489[8ll] = ((var438 * 0.0640000030398369f) + (var439 * -0.0260000005364418f)) + (var440 * 0.0f);
   var490[8ll] = ((var442 * 0.0640000030398369f) + (var443 * -0.0260000005364418f)) + (var444 * 0.0f);
@@ -1265,86 +1262,86 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var516[6ll] = var516[6ll] + var441;
   var531[6ll] = var531[6ll] + var445;
   var546[6ll] = 0.0299999993294477f;
-  int var659;
-  var659 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 8ll, var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546);
-  if (var659)
+  int var732;
+  var732 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 8ll, var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546);
+  if (var732)
     return 0; //collision pair: 0,8 : base_link_0,forearm_roll_link_0
-  var659 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 8ll, var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546);
-  if (var659)
+  var732 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 8ll, var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546);
+  if (var732)
     return 0; //collision pair: 1,8 : torso_fixed_link_0,forearm_roll_link_0
-  var659 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 8ll, var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546);
-  if (var659)
+  var732 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 8ll, var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546);
+  if (var732)
     return 0; //collision pair: 2,8 : torso_lift_link_0,forearm_roll_link_0
-  var659 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 8ll, var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546);
-  if (var659)
+  var732 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 8ll, var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546);
+  if (var732)
     return 0; //collision pair: 3,8 : head_pan_link_0,forearm_roll_link_0
-  var659 = ctup_runtime::link_vs_environment_collision(var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546, arg4);
-  if (var659)
+  var732 = ctup_runtime::link_vs_environment_collision(var488[8ll], var489[8ll], var490[8ll], var491[8ll], var492[8ll], var501, var516, var531, var546, arg4);
+  if (var732)
     return 0;
-  vamp::FloatVector<rake> var660 = arg5[6ll];
-  var306 = var660.sin();
-  var307 = var660.cos();
+  vamp::FloatVector<8, 1> var733 = arg5[6ll];
+  var306 = var733.sin();
+  var307 = var733.cos();
   var290 = var307;
   var292 = var306;
   var298 = -(var306);
   var300 = var307;
-  vamp::FloatVector<rake> var661;
-  var661 = var661 + (1.0f * var290);
-  var553 = var661;
-  vamp::FloatVector<rake> var662;
-  var662 = var662 + (1.0f * var292);
-  var555 = var662;
-  vamp::FloatVector<rake> var663;
-  var663 = var663 + (1.0f * var298);
-  var561 = var663;
-  vamp::FloatVector<rake> var664;
-  var664 = var664 + (1.0f * var300);
-  var563 = var664;
-  vamp::FloatVector<rake> var665;
-  var665 = var665 + (var434 * var553);
-  var665 = var665 + (var436 * var561);
-  var452 = var665;
-  vamp::FloatVector<rake> var666;
-  var666 = var666 + (var435 * 1.0f);
-  var453 = var666;
-  vamp::FloatVector<rake> var667;
-  var667 = var667 + (var434 * var555);
-  var667 = var667 + (var436 * var563);
-  var454 = var667;
-  vamp::FloatVector<rake> var668;
-  var668 = var668 + (var434 * 0.124499998986721f);
-  var668 = var668 + (var437 * 1.0f);
-  var455 = var668;
-  vamp::FloatVector<rake> var669;
-  var669 = var669 + (var438 * var553);
-  var669 = var669 + (var440 * var561);
-  var456 = var669;
-  vamp::FloatVector<rake> var670;
-  var670 = var670 + (var439 * 1.0f);
-  var457 = var670;
-  vamp::FloatVector<rake> var671;
-  var671 = var671 + (var438 * var555);
-  var671 = var671 + (var440 * var563);
-  var458 = var671;
-  vamp::FloatVector<rake> var672;
-  var672 = var672 + (var438 * 0.124499998986721f);
-  var672 = var672 + (var441 * 1.0f);
-  var459 = var672;
-  vamp::FloatVector<rake> var673;
-  var673 = var673 + (var442 * var553);
-  var673 = var673 + (var444 * var561);
-  var460 = var673;
-  vamp::FloatVector<rake> var674;
-  var674 = var674 + (var443 * 1.0f);
-  var461 = var674;
-  vamp::FloatVector<rake> var675;
-  var675 = var675 + (var442 * var555);
-  var675 = var675 + (var444 * var563);
-  var462 = var675;
-  vamp::FloatVector<rake> var676;
-  var676 = var676 + (var442 * 0.124499998986721f);
-  var676 = var676 + (var445 * 1.0f);
-  var463 = var676;
+  vamp::FloatVector<8, 1> var734;
+  var734 = var734 + (1.0f * var290);
+  var553 = var734;
+  vamp::FloatVector<8, 1> var736;
+  var736 = var736 + (1.0f * var292);
+  var555 = var736;
+  vamp::FloatVector<8, 1> var738;
+  var738 = var738 + (1.0f * var298);
+  var561 = var738;
+  vamp::FloatVector<8, 1> var740;
+  var740 = var740 + (1.0f * var300);
+  var563 = var740;
+  vamp::FloatVector<8, 1> var742;
+  var742 = var742 + (var434 * var553);
+  var742 = var742 + (var436 * var561);
+  var452 = var742;
+  vamp::FloatVector<8, 1> var744;
+  var744 = var744 + (var435 * 1.0f);
+  var453 = var744;
+  vamp::FloatVector<8, 1> var746;
+  var746 = var746 + (var434 * var555);
+  var746 = var746 + (var436 * var563);
+  var454 = var746;
+  vamp::FloatVector<8, 1> var748;
+  var748 = var748 + (var434 * 0.124499998986721f);
+  var748 = var748 + (var437 * 1.0f);
+  var455 = var748;
+  vamp::FloatVector<8, 1> var750;
+  var750 = var750 + (var438 * var553);
+  var750 = var750 + (var440 * var561);
+  var456 = var750;
+  vamp::FloatVector<8, 1> var752;
+  var752 = var752 + (var439 * 1.0f);
+  var457 = var752;
+  vamp::FloatVector<8, 1> var754;
+  var754 = var754 + (var438 * var555);
+  var754 = var754 + (var440 * var563);
+  var458 = var754;
+  vamp::FloatVector<8, 1> var756;
+  var756 = var756 + (var438 * 0.124499998986721f);
+  var756 = var756 + (var441 * 1.0f);
+  var459 = var756;
+  vamp::FloatVector<8, 1> var758;
+  var758 = var758 + (var442 * var553);
+  var758 = var758 + (var444 * var561);
+  var460 = var758;
+  vamp::FloatVector<8, 1> var760;
+  var760 = var760 + (var443 * 1.0f);
+  var461 = var760;
+  vamp::FloatVector<8, 1> var762;
+  var762 = var762 + (var442 * var555);
+  var762 = var762 + (var444 * var563);
+  var462 = var762;
+  vamp::FloatVector<8, 1> var764;
+  var764 = var764 + (var442 * 0.124499998986721f);
+  var764 = var764 + (var445 * 1.0f);
+  var463 = var764;
   var488[9ll] = ((var452 * 0.028999999165535f) + (var453 * 0.017000000923872f)) + (var454 * 0.0f);
   var489[9ll] = ((var456 * 0.028999999165535f) + (var457 * 0.017000000923872f)) + (var458 * 0.0f);
   var490[9ll] = ((var460 * 0.028999999165535f) + (var461 * 0.017000000923872f)) + (var462 * 0.0f);
@@ -1395,86 +1392,86 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var517[5ll] = var517[5ll] + var459;
   var532[5ll] = var532[5ll] + var463;
   var547[5ll] = 0.0299999993294477f;
-  int var677;
-  var677 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 9ll, var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547);
-  if (var677)
+  int var766;
+  var766 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 9ll, var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547);
+  if (var766)
     return 0; //collision pair: 0,9 : base_link_0,wrist_flex_link_0
-  var677 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 9ll, var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547);
-  if (var677)
+  var766 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 9ll, var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547);
+  if (var766)
     return 0; //collision pair: 1,9 : torso_fixed_link_0,wrist_flex_link_0
-  var677 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 9ll, var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547);
-  if (var677)
+  var766 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 9ll, var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547);
+  if (var766)
     return 0; //collision pair: 2,9 : torso_lift_link_0,wrist_flex_link_0
-  var677 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 9ll, var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547);
-  if (var677)
+  var766 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 9ll, var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547);
+  if (var766)
     return 0; //collision pair: 3,9 : head_pan_link_0,wrist_flex_link_0
-  var677 = ctup_runtime::link_vs_environment_collision(var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547, arg4);
-  if (var677)
+  var766 = ctup_runtime::link_vs_environment_collision(var488[9ll], var489[9ll], var490[9ll], var491[9ll], var492[9ll], var502, var517, var532, var547, arg4);
+  if (var766)
     return 0;
-  vamp::FloatVector<rake> var678 = arg5[7ll];
-  var324 = var678.sin();
-  var325 = var678.cos();
+  vamp::FloatVector<8, 1> var767 = arg5[7ll];
+  var324 = var767.sin();
+  var325 = var767.cos();
   var313 = var325;
   var314 = -(var324);
   var317 = var324;
   var318 = var325;
-  vamp::FloatVector<rake> var679;
-  var679 = var679 + (1.0f * var313);
-  var558 = var679;
-  vamp::FloatVector<rake> var680;
-  var680 = var680 + (1.0f * var314);
-  var559 = var680;
-  vamp::FloatVector<rake> var681;
-  var681 = var681 + (1.0f * var317);
-  var562 = var681;
-  vamp::FloatVector<rake> var682;
-  var682 = var682 + (1.0f * var318);
-  var563 = var682;
-  vamp::FloatVector<rake> var683;
-  var683 = var683 + (var452 * 1.0f);
-  var470 = var683;
-  vamp::FloatVector<rake> var684;
-  var684 = var684 + (var453 * var558);
-  var684 = var684 + (var454 * var562);
-  var471 = var684;
-  vamp::FloatVector<rake> var685;
-  var685 = var685 + (var453 * var559);
-  var685 = var685 + (var454 * var563);
-  var472 = var685;
-  vamp::FloatVector<rake> var686;
-  var686 = var686 + (var452 * 0.13850000500679f);
-  var686 = var686 + (var455 * 1.0f);
-  var473 = var686;
-  vamp::FloatVector<rake> var687;
-  var687 = var687 + (var456 * 1.0f);
-  var474 = var687;
-  vamp::FloatVector<rake> var688;
-  var688 = var688 + (var457 * var558);
-  var688 = var688 + (var458 * var562);
-  var475 = var688;
-  vamp::FloatVector<rake> var689;
-  var689 = var689 + (var457 * var559);
-  var689 = var689 + (var458 * var563);
-  var476 = var689;
-  vamp::FloatVector<rake> var690;
-  var690 = var690 + (var456 * 0.13850000500679f);
-  var690 = var690 + (var459 * 1.0f);
-  var477 = var690;
-  vamp::FloatVector<rake> var691;
-  var691 = var691 + (var460 * 1.0f);
-  var478 = var691;
-  vamp::FloatVector<rake> var692;
-  var692 = var692 + (var461 * var558);
-  var692 = var692 + (var462 * var562);
-  var479 = var692;
-  vamp::FloatVector<rake> var693;
-  var693 = var693 + (var461 * var559);
-  var693 = var693 + (var462 * var563);
-  var480 = var693;
-  vamp::FloatVector<rake> var694;
-  var694 = var694 + (var460 * 0.13850000500679f);
-  var694 = var694 + (var463 * 1.0f);
-  var481 = var694;
+  vamp::FloatVector<8, 1> var768;
+  var768 = var768 + (1.0f * var313);
+  var558 = var768;
+  vamp::FloatVector<8, 1> var770;
+  var770 = var770 + (1.0f * var314);
+  var559 = var770;
+  vamp::FloatVector<8, 1> var772;
+  var772 = var772 + (1.0f * var317);
+  var562 = var772;
+  vamp::FloatVector<8, 1> var774;
+  var774 = var774 + (1.0f * var318);
+  var563 = var774;
+  vamp::FloatVector<8, 1> var776;
+  var776 = var776 + (var452 * 1.0f);
+  var470 = var776;
+  vamp::FloatVector<8, 1> var778;
+  var778 = var778 + (var453 * var558);
+  var778 = var778 + (var454 * var562);
+  var471 = var778;
+  vamp::FloatVector<8, 1> var780;
+  var780 = var780 + (var453 * var559);
+  var780 = var780 + (var454 * var563);
+  var472 = var780;
+  vamp::FloatVector<8, 1> var782;
+  var782 = var782 + (var452 * 0.13850000500679f);
+  var782 = var782 + (var455 * 1.0f);
+  var473 = var782;
+  vamp::FloatVector<8, 1> var784;
+  var784 = var784 + (var456 * 1.0f);
+  var474 = var784;
+  vamp::FloatVector<8, 1> var786;
+  var786 = var786 + (var457 * var558);
+  var786 = var786 + (var458 * var562);
+  var475 = var786;
+  vamp::FloatVector<8, 1> var788;
+  var788 = var788 + (var457 * var559);
+  var788 = var788 + (var458 * var563);
+  var476 = var788;
+  vamp::FloatVector<8, 1> var790;
+  var790 = var790 + (var456 * 0.13850000500679f);
+  var790 = var790 + (var459 * 1.0f);
+  var477 = var790;
+  vamp::FloatVector<8, 1> var792;
+  var792 = var792 + (var460 * 1.0f);
+  var478 = var792;
+  vamp::FloatVector<8, 1> var794;
+  var794 = var794 + (var461 * var558);
+  var794 = var794 + (var462 * var562);
+  var479 = var794;
+  vamp::FloatVector<8, 1> var796;
+  var796 = var796 + (var461 * var559);
+  var796 = var796 + (var462 * var563);
+  var480 = var796;
+  vamp::FloatVector<8, 1> var798;
+  var798 = var798 + (var460 * 0.13850000500679f);
+  var798 = var798 + (var463 * 1.0f);
+  var481 = var798;
   var488[10ll] = ((var470 * -0.0149999996647239f) + (var471 * 0.0f)) + (var472 * 0.0f);
   var489[10ll] = ((var474 * -0.0149999996647239f) + (var475 * 0.0f)) + (var476 * 0.0f);
   var490[10ll] = ((var478 * -0.0149999996647239f) + (var479 * 0.0f)) + (var480 * 0.0f);
@@ -1497,24 +1494,24 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var518[1ll] = var518[1ll] + var477;
   var533[1ll] = var533[1ll] + var481;
   var548[1ll] = 0.0549999997019768f;
-  int var695;
-  var695 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548);
-  if (var695)
+  int var800;
+  var800 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548);
+  if (var800)
     return 0; //collision pair: 0,10 : base_link_0,wrist_roll_link_0
-  var695 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548);
-  if (var695)
+  var800 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548);
+  if (var800)
     return 0; //collision pair: 1,10 : torso_fixed_link_0,wrist_roll_link_0
-  var695 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548);
-  if (var695)
+  var800 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548);
+  if (var800)
     return 0; //collision pair: 2,10 : torso_lift_link_0,wrist_roll_link_0
-  var695 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548);
-  if (var695)
+  var800 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548);
+  if (var800)
     return 0; //collision pair: 3,10 : head_pan_link_0,wrist_roll_link_0
-  var695 = ctup_runtime::self_collision_link_vs_link(4ll, var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, 10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548);
-  if (var695)
+  var800 = ctup_runtime::self_collision_link_vs_link(4ll, var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, 10ll, var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548);
+  if (var800)
     return 0; //collision pair: 4,10 : shoulder_pan_link_0,wrist_roll_link_0
-  var695 = ctup_runtime::link_vs_environment_collision(var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548, arg4);
-  if (var695)
+  var800 = ctup_runtime::link_vs_environment_collision(var488[10ll], var489[10ll], var490[10ll], var491[10ll], var492[10ll], var503, var518, var533, var548, arg4);
+  if (var800)
     return 0;
   var488[11ll] = ((var470 * 0.0814500004053116f) + (var471 * 0.0f)) + (var472 * 0.0f);
   var489[11ll] = ((var474 * 0.0814500004053116f) + (var475 * 0.0f)) + (var476 * 0.0f);
@@ -1552,27 +1549,27 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var519[3ll] = var519[3ll] + var477;
   var534[3ll] = var534[3ll] + var481;
   var549[3ll] = 0.0500000007450581f;
-  int var696;
-  var696 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
-  if (var696)
+  int var801;
+  var801 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
+  if (var801)
     return 0; //collision pair: 0,11 : base_link_0,gripper_link_0
-  var696 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
-  if (var696)
+  var801 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
+  if (var801)
     return 0; //collision pair: 1,11 : torso_fixed_link_0,gripper_link_0
-  var696 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
-  if (var696)
+  var801 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
+  if (var801)
     return 0; //collision pair: 2,11 : torso_lift_link_0,gripper_link_0
-  var696 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
-  if (var696)
+  var801 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
+  if (var801)
     return 0; //collision pair: 3,11 : head_pan_link_0,gripper_link_0
-  var696 = ctup_runtime::self_collision_link_vs_link(4ll, var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
-  if (var696)
+  var801 = ctup_runtime::self_collision_link_vs_link(4ll, var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
+  if (var801)
     return 0; //collision pair: 4,11 : shoulder_pan_link_0,gripper_link_0
-  var696 = ctup_runtime::self_collision_link_vs_link(5ll, var488[5ll], var489[5ll], var490[5ll], var491[5ll], var492[5ll], var498, var513, var528, var543, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
-  if (var696)
+  var801 = ctup_runtime::self_collision_link_vs_link(5ll, var488[5ll], var489[5ll], var490[5ll], var491[5ll], var492[5ll], var498, var513, var528, var543, 11ll, var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549);
+  if (var801)
     return 0; //collision pair: 5,11 : shoulder_lift_link_0,gripper_link_0
-  var696 = ctup_runtime::link_vs_environment_collision(var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549, arg4);
-  if (var696)
+  var801 = ctup_runtime::link_vs_environment_collision(var488[11ll], var489[11ll], var490[11ll], var491[11ll], var492[11ll], var504, var519, var534, var549, arg4);
+  if (var801)
     return 0;
   var488[12ll] = ((var470 * 0.166449993848801f) + (var471 * -0.0564250014722347f)) + (var472 * 0.0f);
   var489[12ll] = ((var474 * 0.166449993848801f) + (var475 * -0.0564250014722347f)) + (var476 * 0.0f);
@@ -1624,27 +1621,27 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var520[5ll] = var520[5ll] + var477;
   var535[5ll] = var535[5ll] + var481;
   var550[5ll] = 0.0120000001043081f;
-  int var697;
-  var697 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
-  if (var697)
+  int var802;
+  var802 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
+  if (var802)
     return 0; //collision pair: 0,12 : base_link_0,l_gripper_finger_link_0
-  var697 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
-  if (var697)
+  var802 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
+  if (var802)
     return 0; //collision pair: 1,12 : torso_fixed_link_0,l_gripper_finger_link_0
-  var697 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
-  if (var697)
+  var802 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
+  if (var802)
     return 0; //collision pair: 2,12 : torso_lift_link_0,l_gripper_finger_link_0
-  var697 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
-  if (var697)
+  var802 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
+  if (var802)
     return 0; //collision pair: 3,12 : head_pan_link_0,l_gripper_finger_link_0
-  var697 = ctup_runtime::self_collision_link_vs_link(4ll, var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
-  if (var697)
+  var802 = ctup_runtime::self_collision_link_vs_link(4ll, var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
+  if (var802)
     return 0; //collision pair: 4,12 : shoulder_pan_link_0,l_gripper_finger_link_0
-  var697 = ctup_runtime::self_collision_link_vs_link(5ll, var488[5ll], var489[5ll], var490[5ll], var491[5ll], var492[5ll], var498, var513, var528, var543, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
-  if (var697)
+  var802 = ctup_runtime::self_collision_link_vs_link(5ll, var488[5ll], var489[5ll], var490[5ll], var491[5ll], var492[5ll], var498, var513, var528, var543, 12ll, var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550);
+  if (var802)
     return 0; //collision pair: 5,12 : shoulder_lift_link_0,l_gripper_finger_link_0
-  var697 = ctup_runtime::link_vs_environment_collision(var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550, arg4);
-  if (var697)
+  var802 = ctup_runtime::link_vs_environment_collision(var488[12ll], var489[12ll], var490[12ll], var491[12ll], var492[12ll], var505, var520, var535, var550, arg4);
+  if (var802)
     return 0;
   var488[13ll] = ((var470 * 0.166449993848801f) + (var471 * 0.0564250014722347f)) + (var472 * 0.0f);
   var489[13ll] = ((var474 * 0.166449993848801f) + (var475 * 0.0564250014722347f)) + (var476 * 0.0f);
@@ -1696,27 +1693,27 @@ static int fkcc_franken (vamp::collision::Environment<vamp::FloatVector<rake>> c
   var521[5ll] = var521[5ll] + var477;
   var536[5ll] = var536[5ll] + var481;
   var551[5ll] = 0.0120000001043081f;
-  int var698;
-  var698 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
-  if (var698)
+  int var803;
+  var803 = ctup_runtime::self_collision_link_vs_link(0ll, var488[0ll], var489[0ll], var490[0ll], var491[0ll], var492[0ll], var493, var508, var523, var538, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
+  if (var803)
     return 0; //collision pair: 0,13 : base_link_0,r_gripper_finger_link_0
-  var698 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
-  if (var698)
+  var803 = ctup_runtime::self_collision_link_vs_link(1ll, var488[1ll], var489[1ll], var490[1ll], var491[1ll], var492[1ll], var494, var509, var524, var539, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
+  if (var803)
     return 0; //collision pair: 1,13 : torso_fixed_link_0,r_gripper_finger_link_0
-  var698 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
-  if (var698)
+  var803 = ctup_runtime::self_collision_link_vs_link(2ll, var488[2ll], var489[2ll], var490[2ll], var491[2ll], var492[2ll], var495, var510, var525, var540, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
+  if (var803)
     return 0; //collision pair: 2,13 : torso_lift_link_0,r_gripper_finger_link_0
-  var698 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
-  if (var698)
+  var803 = ctup_runtime::self_collision_link_vs_link(3ll, var488[3ll], var489[3ll], var490[3ll], var491[3ll], var492[3ll], var496, var511, var526, var541, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
+  if (var803)
     return 0; //collision pair: 3,13 : head_pan_link_0,r_gripper_finger_link_0
-  var698 = ctup_runtime::self_collision_link_vs_link(4ll, var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
-  if (var698)
+  var803 = ctup_runtime::self_collision_link_vs_link(4ll, var488[4ll], var489[4ll], var490[4ll], var491[4ll], var492[4ll], var497, var512, var527, var542, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
+  if (var803)
     return 0; //collision pair: 4,13 : shoulder_pan_link_0,r_gripper_finger_link_0
-  var698 = ctup_runtime::self_collision_link_vs_link(5ll, var488[5ll], var489[5ll], var490[5ll], var491[5ll], var492[5ll], var498, var513, var528, var543, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
-  if (var698)
+  var803 = ctup_runtime::self_collision_link_vs_link(5ll, var488[5ll], var489[5ll], var490[5ll], var491[5ll], var492[5ll], var498, var513, var528, var543, 13ll, var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551);
+  if (var803)
     return 0; //collision pair: 5,13 : shoulder_lift_link_0,r_gripper_finger_link_0
-  var698 = ctup_runtime::link_vs_environment_collision(var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551, arg4);
-  if (var698)
+  var803 = ctup_runtime::link_vs_environment_collision(var488[13ll], var489[13ll], var490[13ll], var491[13ll], var492[13ll], var506, var521, var536, var551, arg4);
+  if (var803)
     return 0;
   return 1;
 }

@@ -1,0 +1,783 @@
+// ignore unused header warning in IDE, this is needed
+#include "matrix_layout.h"
+#include "pinocchio/multibody/joint/joint-collection.hpp"
+#include "pinocchio/multibody/model.hpp"
+#include "pinocchio/algorithm/geometry.hpp"
+#include "pinocchio/collision/collision.hpp"
+#include "pinocchio/parsers/urdf.hpp"
+#include "assert.h"
+#include <coal/collision_object.h>
+#include <coal/shape/geometric_shapes.h>
+#include <memory>
+#include <ostream>
+#include <pinocchio/multibody/fwd.hpp>
+#include <pinocchio/multibody/geometry.hpp>
+#include <pinocchio/spatial/fwd.hpp>
+#include <string>
+#include "pinocchio/parsers/srdf.hpp"
+#include "pinocchio/algorithm/joint-configuration.hpp"
+#include <iostream>
+#include <yaml-cpp/yaml.h>
+#include <map>
+#include <argparse/argparse.hpp>
+
+#include "blocks/block_visitor.h"
+#include "blocks/c_code_generator.h"
+#include "builder/builder_base.h"
+#include "builder/builder_context.h"
+#include "builder/dyn_var.h"
+#include "builder/forward_declarations.h"
+#include "builder/static_var.h"
+#include "builder/lib/utils.h"
+#include "builder/array.h"
+
+#include "matrix_layout_composite.h"
+#include "matrix_operators.h"
+#include "backend.h"
+
+using builder::dyn_var;
+using builder::static_var;
+
+using pinocchio::Model;
+using pinocchio::GeometryModel;
+
+using ctup::backend::vamp_avx256f;
+
+/////////////////////////////////////////////
+
+struct LinkSpheres {
+  float coarse_x;
+  float coarse_y;
+  float coarse_z;
+  float coarse_r;
+  std::vector<float> fine_x;
+  std::vector<float> fine_y;
+  std::vector<float> fine_z;
+  std::vector<float> fine_r;
+};
+
+namespace ctup {
+template <typename Scalar>
+struct Xform : public matrix_layout<Scalar> {
+  using matrix_layout<Scalar>::set_entry_to_constant;
+  using matrix_layout<Scalar>::set_entry_to_nonconstant;
+  dyn_var<Scalar> sinq;
+  dyn_var<Scalar> cosq;
+
+  static_var<int> joint_type;
+  static_var<int> joint_xform_axis;
+
+  Xform() : matrix_layout<Scalar>(4, 4, SPARSE, UNROLLED, UNCOMPRESSED) {
+    matrix_layout<Scalar>::set_identity();
+  }
+
+  void set_revolute_axis(char axis) {
+    assert((axis == 'X' || axis == 'Y' || axis == 'Z') && "axis must be X,Y,Z");
+    joint_xform_axis = axis;
+    joint_type = 'R';
+  }
+
+  void set_prismatic_axis(char axis) {
+    assert((axis == 'X' || axis == 'Y' || axis == 'Z') && "axis must be X,Y,Z");
+    joint_xform_axis = axis;
+    joint_type = 'P';
+  }
+
+  void jcalc(dyn_var<Scalar> q_i) {
+    if constexpr (ctup::is_vamp_float_vector_type<Scalar>::value) {
+      sinq = q_i.sin();
+      cosq = q_i.cos();
+    }
+    else {
+      sinq = backend::sin<Scalar>(q_i);
+      cosq = backend::cos<Scalar>(q_i);
+    }
+
+    if (joint_type == 'R') {
+      // switching to pinocchio transpose repr because
+      // regular featherstone notation isn't working with
+      // homogeneous transforms for some godforesaken reason.
+      // suspect it has sth to do with the X_T that pinocchio
+      // is spitting out.
+      // reverse the signs of the sines for feath (hah)
+      if (joint_xform_axis == 'X') {
+        set_entry_to_nonconstant(1, 1, cosq);
+        set_entry_to_nonconstant(1, 2, -sinq);
+        set_entry_to_nonconstant(2, 1, sinq);
+        set_entry_to_nonconstant(2, 2, cosq);
+      }
+      else if (joint_xform_axis == 'Y') {
+        set_entry_to_nonconstant(0, 0, cosq);
+        set_entry_to_nonconstant(0, 2, sinq);
+        set_entry_to_nonconstant(2, 0, -sinq);
+        set_entry_to_nonconstant(2, 2, cosq);
+      }
+      else if (joint_xform_axis == 'Z') {
+        set_entry_to_nonconstant(0, 0, cosq);
+        set_entry_to_nonconstant(0, 1, -sinq);
+        set_entry_to_nonconstant(1, 0, sinq);
+        set_entry_to_nonconstant(1, 1, cosq);
+      }
+    }
+    else if (joint_type == 'P') {
+      if (joint_xform_axis == 'X') {
+        set_entry_to_nonconstant(0, 3, q_i);
+      }
+      else if (joint_xform_axis == 'Y') {
+        set_entry_to_nonconstant(1, 3, q_i);
+      }
+      else if (joint_xform_axis == 'Z') {
+        set_entry_to_nonconstant(2, 3, q_i);
+      }
+    }
+    else {
+      assert(false && "jcalc called on non joint xform or joint unset");
+    }
+  }
+
+  using matrix_layout<Scalar>::operator=;
+};
+}
+
+template <typename Scalar>
+using Xform = ctup::Xform<Scalar>;
+
+/////////////////////////////////////////////
+///// DEBUG HELPERS
+
+builder::dyn_var<void(ctup::BlazeStaticMatrix<float> &)> print_matrix = builder::as_global("print_matrix");
+builder::dyn_var<void(char *)> print_string = builder::as_global("print_string");
+
+template <typename Scalar>
+static void print_Xmat(std::string prefix, Xform<Scalar> &xform) {
+  print_string(prefix.c_str());
+  print_matrix(xform.denseify());
+}
+
+/////////////////////////////////////////////
+
+namespace backend {
+
+template <typename T>
+void set_inner_size_arr(dyn_var<ctup::std_array_t<T>[]> &arr, size_t std_array_size) {
+  auto type_inner = block::to<block::array_type>(arr.block_var->var_type);
+  auto type = block::to<block::named_type>(type_inner->element_type);
+  auto s = std::make_shared<block::named_type>();
+  s->type_name = std::to_string(std_array_size);
+  type->template_args.push_back(s);
+}
+
+template <typename T>
+void set_std_array_size(dyn_var<ctup::std_array_t<T>> &arr, size_t std_array_size) {
+  auto type = block::to<block::named_type>(arr.block_var->var_type);
+  auto s = std::make_shared<block::named_type>();
+  s->type_name = std::to_string(std_array_size);
+  type->template_args.push_back(s);
+}
+
+} // namespace backend
+
+using ctup::std_array_t;
+
+namespace runtime {
+namespace robots {
+
+struct Panda {
+  static const size_t dof = 7;
+};
+struct Fetch {
+  static const size_t dof = 8;
+};
+struct Baxter {
+  static const size_t dof = 14;
+};
+struct UR5 {
+  static const size_t dof = 6;
+};
+}
+
+constexpr char environment_t_name[] = "vamp::collision::Environment";
+template <typename DataT>
+using environment_t = typename builder::name<environment_t_name, DataT>;
+
+template <typename RobotT>
+using vamp_config_block_t = typename ctup::VampFloatVector<8, RobotT::dof>;
+
+builder::dyn_var<int (
+    // geom_id_1, helpful for debug
+    size_t,
+    // coarse sph 1
+    vamp_avx256f&, vamp_avx256f&, vamp_avx256f&, float,
+    // # of fine sphs 1
+    size_t,
+    // fine sph 1
+    std_array_t<vamp_avx256f>&, std_array_t<vamp_avx256f>&, std_array_t<vamp_avx256f>&, std_array_t<float>&,
+    // geom_id_2, helpful for debug
+    size_t,
+    // coarse sph 2 
+    vamp_avx256f&, vamp_avx256f&, vamp_avx256f&, float,
+    // # of fine sphs 2
+    size_t,
+    // fine sph 2
+    std_array_t<vamp_avx256f>&, std_array_t<vamp_avx256f>&, std_array_t<vamp_avx256f>&, std_array_t<float>&
+        )> 
+    self_collision_link_vs_link = builder::as_global("ctup_runtime::self_collision_link_vs_link");
+
+builder::dyn_var<int (
+    // coarse sph
+    vamp_avx256f&, vamp_avx256f&, vamp_avx256f&, float,
+    // # of fine sphs
+    size_t,
+    // fine sphs
+    std_array_t<vamp_avx256f>&, std_array_t<vamp_avx256f>&, std_array_t<vamp_avx256f>&, std_array_t<float>&,
+    // vamp environment type
+    environment_t<vamp_avx256f>
+        )>
+    link_vs_environment_collision = builder::as_global("ctup_runtime::link_vs_environment_collision");
+
+} // namespace runtime
+
+/////////////////////////////////////////////
+
+static std::map<size_t, LinkSpheres> joint_to_child_spheres(
+    const pinocchio::Model &model_coarse, 
+    const pinocchio::GeometryModel &geom_model_coarse, 
+    const pinocchio::Model &model_fine, 
+    const pinocchio::GeometryModel &geom_model_fine,
+    const std::string joint_name) {
+  using namespace pinocchio;
+
+  JointIndex jid = model_coarse.getJointId(joint_name);
+
+  std::map<size_t, LinkSpheres> link_spheres;
+
+  std::map<std::string, size_t> rel_link_num;
+  for (size_t i = 0; i < geom_model_coarse.geometryObjects.size(); i++) {
+    LinkSpheres ls;
+
+    const GeometryObject &geom_obj = geom_model_coarse.geometryObjects[i];
+    // this function does pick out the "true" actuated parent, not the fixed joint parent
+    const JointIndex parent_joint_id = geom_obj.parentJoint;
+
+    if (parent_joint_id != jid)
+      continue;
+
+    coal::NODE_TYPE node_type = geom_obj.geometry->getNodeType();
+    assert(node_type == coal::GEOM_SPHERE && "we don't support non sphere geoms inside robot");
+
+    Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
+    float sphere_radius = std::dynamic_pointer_cast<coal::Sphere>(geom_obj.geometry)->radius;
+    ls.coarse_x = sphere_xyz[0];
+    ls.coarse_y = sphere_xyz[1];
+    ls.coarse_z = sphere_xyz[2]; 
+    ls.coarse_r = sphere_radius;
+
+    link_spheres[i] = ls;
+
+    rel_link_num[(model_coarse.frames[geom_obj.parentFrame].name)] = i;
+  }
+
+  jid = model_fine.getJointId(joint_name);
+  for (size_t i = 0; i < geom_model_fine.geometryObjects.size(); i++) {
+    const GeometryObject &geom_obj = geom_model_fine.geometryObjects[i];
+    // this function does correctly pick out the "true" actuated parent, 
+    // not the fixed joint parent
+    const JointIndex parent_joint_id = geom_obj.parentJoint;
+
+    if (parent_joint_id != jid)
+      continue;
+
+    coal::NODE_TYPE node_type = geom_obj.geometry->getNodeType();
+    assert(node_type == coal::GEOM_SPHERE && 
+            "we don't support non sphere geoms inside robot");
+
+    Eigen::Vector3d sphere_xyz = geom_obj.placement.translation();
+    float sphere_radius = std::dynamic_pointer_cast<coal::Sphere>(
+            geom_obj.geometry)->radius;
+
+    size_t link_id = rel_link_num[(model_fine.frames[geom_obj.parentFrame].name)];
+
+    bool no_sphere_overlap = 
+        sphere_xyz[0] != link_spheres[link_id].coarse_x || 
+        sphere_xyz[1] != link_spheres[link_id].coarse_y || 
+        sphere_xyz[2] != link_spheres[link_id].coarse_z || 
+        sphere_radius != link_spheres[link_id].coarse_r;
+
+    if (no_sphere_overlap) {
+      link_spheres[link_id].fine_x.push_back(sphere_xyz[0]);
+      link_spheres[link_id].fine_y.push_back(sphere_xyz[1]);
+      link_spheres[link_id].fine_z.push_back(sphere_xyz[2]);
+      link_spheres[link_id].fine_r.push_back(sphere_radius);
+    }
+  }
+
+  return link_spheres;
+}
+
+static int get_jtype(const Model &model, Model::JointIndex i) {
+  std::string joint_name = model.joints[i].shortname();
+
+  bool is_revolute = joint_name.find("JointModelR") != std::string::npos;
+  bool is_prismatic = joint_name.find("JointModelP") != std::string::npos;
+
+  if (is_revolute)
+    return 'R';
+  if (is_prismatic)
+    return 'P';
+  else
+    return 'N';
+}
+
+static int get_joint_axis(const Model &model, Model::JointIndex i) {
+  std::string joint_name = model.joints[i].shortname();
+  char axis = joint_name.back();
+
+  switch(axis) {
+    case 'X': return 'X';
+    case 'Y': return 'Y';
+    case 'Z': return 'Z';
+    default: assert(false && "should never happen"); return -1;
+  }
+}
+
+static size_t get_max_n_fine_sph(
+    const pinocchio::Model &model_coarse, 
+    const pinocchio::GeometryModel &geom_model_coarse, 
+    const pinocchio::Model &model_fine, 
+    const pinocchio::GeometryModel &geom_model_fine) {
+  typedef typename Model::JointIndex JointIndex;
+
+  size_t max_n_fine_sph = 0;
+
+  for (JointIndex i = 1; i < (JointIndex)model_coarse.njoints; i++) {
+    std::string joint_name = model_coarse.names[i];
+    std::map<size_t, LinkSpheres> link_spheres = joint_to_child_spheres(
+            model_coarse, geom_model_coarse,
+            model_fine, geom_model_fine,
+            joint_name);
+    // each joint may have multiple links associated with it
+    for (const auto &pair : link_spheres) {
+      size_t link_id = pair.first; 
+      size_t curr_n_fine_sph = link_spheres[link_id].fine_r.size();
+      if (curr_n_fine_sph > max_n_fine_sph) {
+        max_n_fine_sph = curr_n_fine_sph;
+      }
+    }
+  }
+  return max_n_fine_sph;
+}
+
+static void set_X_T(builder::array<Xform<vamp_avx256f>>& X_T, const Model &model) {
+  typedef typename Model::JointIndex JointIndex;
+  static_var<JointIndex> i;
+
+  static_var<size_t> r;
+  static_var<size_t> c;
+
+  for (i = 1; i < (JointIndex)model.njoints; i = i+1) {
+    // todo: understand what the heck is this outputing
+    // for homogeneous transforms
+    Eigen::Matrix<double, 4, 4> pin_X_T = model.jointPlacements[i].toHomogeneousMatrix();
+
+    // setting E
+    for (r = 0; r < 4; r = r + 1) {
+      for (c = 0; c < 4; c = c + 1) {
+        float entry = pin_X_T.coeffRef(r, c);
+        if (std::abs(entry) < 1e-5)
+          X_T[i].set_entry_to_constant(r, c, 0);
+        else
+          X_T[i].set_entry_to_constant(r, c, entry);
+      }
+    }
+  }
+}
+
+// return 0 (invalid) if collision, 1 (valid) if collision-free
+template <typename RobotT>
+static dyn_var<int> fkcc_franken(
+    const pinocchio::Model &model_coarse, 
+    const pinocchio::GeometryModel &geom_model_coarse, 
+    const pinocchio::Model &model_fine, 
+    const pinocchio::GeometryModel &geom_model_fine,
+    dyn_var<const runtime::environment_t<vamp_avx256f>&> environment,
+    // hack: we need to hardcode the robot template type for now
+    dyn_var<runtime::vamp_config_block_t<RobotT>&> q) {
+
+  typedef typename Model::JointIndex JointIndex;
+
+  // joint transforms for FK
+  builder::array<Xform<vamp_avx256f>> X_T;
+  builder::array<Xform<vamp_avx256f>> X_J;
+  builder::array<Xform<vamp_avx256f>> X_0;
+
+  X_T.set_size(model_coarse.njoints);
+  X_J.set_size(model_coarse.njoints);
+  X_0.set_size(model_coarse.njoints);
+
+  // coarse collision geom sphere positions
+  // storing one coarse sphere per link
+  dyn_var<vamp_avx256f[]> coarse_x_0, coarse_y_0, coarse_z_0;
+  // one coarse sph only has single radius
+  // indexed as: coarse[link_id]
+  dyn_var<float[]> coarse_r;
+
+  size_t n_coarse_sph = geom_model_coarse.geometryObjects.size();
+  resize_arr(coarse_x_0, n_coarse_sph);
+  resize_arr(coarse_y_0, n_coarse_sph);
+  resize_arr(coarse_z_0, n_coarse_sph);
+  resize_arr(coarse_r, n_coarse_sph);
+
+  // storing number of fine sphs per link
+  // indexed as: n_fine_sph_per_link[link_id]
+  dyn_var<size_t[]> n_fine_sph_for_link;
+  resize_arr(n_fine_sph_for_link, n_coarse_sph);
+
+  // we know max number of fine sphs for a link at compile-time
+  //size_t max_n_fine_sph = get_max_n_fine_sph(
+  //        model_coarse, geom_model_coarse, model_fine, geom_model_fine);
+
+  static_var<JointIndex> i;
+
+  // fine collision geom sphere positions
+  builder::array<dyn_var<std_array_t<vamp_avx256f>>> fine_x_0, fine_y_0, fine_z_0;
+  builder::array<dyn_var<std_array_t<float>>> fine_r;
+  // storing info for each fine sph for each link
+  // indexed as: fine[link_id][sph_id_for_link_id]
+  // within each fine_xyz[link_id][sph_id_for_link_id], 
+  // all the values will be different (since different x,y,zs for each vector of fine sphs)
+  // but fine_r[sph_id_for_link_id] will be a single value, 
+  // since radius of all the fine sphs will be the same
+  fine_x_0.set_size(n_coarse_sph);
+  fine_y_0.set_size(n_coarse_sph);
+  fine_z_0.set_size(n_coarse_sph);
+  fine_r.set_size(n_coarse_sph);
+
+  for (i = 0; i < (JointIndex)model_coarse.njoints; i = i+1) {
+    std::string joint_name = model_coarse.names[i];
+    std::map<size_t, LinkSpheres> link_spheres = joint_to_child_spheres(
+            model_coarse, geom_model_coarse,
+            model_fine, geom_model_fine,
+            joint_name);
+    // each joint may have multiple links associated with it
+    for (const auto &pair : link_spheres) {
+      size_t link_id = pair.first; 
+      // number of fine sph for link_id
+      size_t curr_n_fine_sph = link_spheres[link_id].fine_r.size();
+      backend::set_std_array_size(fine_x_0[link_id], curr_n_fine_sph);
+      backend::set_std_array_size(fine_y_0[link_id], curr_n_fine_sph);
+      backend::set_std_array_size(fine_z_0[link_id], curr_n_fine_sph);
+      backend::set_std_array_size(fine_r[link_id], curr_n_fine_sph);
+    }
+  }
+
+  set_X_T(X_T, model_coarse);
+
+  static_var<int> jtype;
+  static_var<int> axis;
+
+  for (i = 1; i < (JointIndex)model_coarse.njoints; i = i+1) {
+    jtype = get_jtype(model_coarse, i);
+    axis = get_joint_axis(model_coarse, i);
+
+    if (jtype == 'R') {
+      X_J[i].set_revolute_axis(axis);
+    }
+    if (jtype == 'P') {
+      X_J[i].set_prismatic_axis(axis);
+    }
+  }
+
+  Xform<vamp_avx256f> X_pi;
+
+  static_var<JointIndex> parent;
+  std::string joint_name;
+
+  for (i = 0; i < (JointIndex)model_coarse.njoints; i = i+1) {
+    if (i == 0) {
+      // special case different from generic FK
+      // the "universe" joint has child spheres associated with it, that we
+      // must process prior to running self collision checks for
+      // collision pairs assoc. with child sphs of joint 1 against
+      // child sphs of "universe"/joint 0
+      X_0[i].set_identity();
+    }
+    else {
+      X_J[i].jcalc(q[i-1]);
+
+      // todo: figure out why standard featherstone matmul
+      // ordering not working with X_T from pinocchio
+      //X_pi = X_J[i] * X_T[i]; // feath
+      X_pi = X_T[i] * X_J[i]; // pin
+      parent = model_coarse.parents[i];
+      if (parent > 0) {
+        //X_0[i] = X_pi * X_0[parent]; // feath
+        X_0[i] = X_0[parent] * X_pi; // pin
+      }
+      else {
+        X_0[i] = ctup::matrix_layout_expr_leaf<vamp_avx256f>(X_pi);
+      }
+    }
+
+    joint_name = model_coarse.names[i];
+
+    // X_0 now contains the global transform of the joint wrt the world
+
+    // joint_to_child_spheres returns a map:
+    // link_spheres[link_id] = {coarse sph, list of fine sphs}
+    std::map<size_t, LinkSpheres> link_spheres = joint_to_child_spheres(
+            model_coarse, geom_model_coarse,
+            model_fine, geom_model_fine,
+            joint_name);
+
+    std::map<size_t, LinkSpheres>::iterator outerIt;
+
+    // we now transform the nominal transform of each sphere wrt its joint by X_0
+    // to get the global transform of each sphere wrt the world
+    // X_0_sph = X_0_j * X_j_sph
+    //
+    // in code: 
+    // coarse_0[link_id] = X_0 * link_spheres[link_id]
+    // But, we only care about the translation component so:
+    // coarse_0[link_id].trans = X_0.rot * link_spheres[link_id].trans + X_0.trans
+
+    for (static_var<size_t> pair_idx = 0; pair_idx < link_spheres.size(); pair_idx = pair_idx+1) {
+      outerIt = link_spheres.begin();
+      std::advance(outerIt, pair_idx);
+      static_var<size_t> link_id = outerIt->first;
+      // child link of joint_name
+      // joint_name is always a true actuated joint, child links can be 
+      // connected via fixed joints to joint_name as well.
+      //std::cout << "child link: " << link_id << std::endl;
+
+      //std::cout << link_spheres[link_id].coarse_x << " " <<
+      //      link_spheres[link_id].coarse_y << " " <<
+      //      link_spheres[link_id].coarse_z << "\n";
+
+      coarse_x_0[link_id] = 
+          X_0[i].get_entry(0,0) * link_spheres[link_id].coarse_x +
+          X_0[i].get_entry(0,1) * link_spheres[link_id].coarse_y +
+          X_0[i].get_entry(0,2) * link_spheres[link_id].coarse_z;
+
+      coarse_y_0[link_id] = 
+          X_0[i].get_entry(1,0) * link_spheres[link_id].coarse_x +
+          X_0[i].get_entry(1,1) * link_spheres[link_id].coarse_y +
+          X_0[i].get_entry(1,2) * link_spheres[link_id].coarse_z;
+
+      coarse_z_0[link_id] = 
+          X_0[i].get_entry(2,0) * link_spheres[link_id].coarse_x +
+          X_0[i].get_entry(2,1) * link_spheres[link_id].coarse_y +
+          X_0[i].get_entry(2,2) * link_spheres[link_id].coarse_z;
+
+      // translation component
+      coarse_x_0[link_id] += X_0[i].get_entry(0,3);
+      coarse_y_0[link_id] += X_0[i].get_entry(1,3);
+      coarse_z_0[link_id] += X_0[i].get_entry(2,3);
+
+      coarse_r[link_id] = link_spheres[link_id].coarse_r;
+
+      static_var<size_t> n_fine_sph = link_spheres[link_id].fine_r.size();
+      n_fine_sph_for_link[link_id] = n_fine_sph;
+
+      // for fine grained sphere geoms
+      for(static_var<size_t> k = 0; k < n_fine_sph; k = k+1) {
+        fine_x_0[link_id][k] = 
+            X_0[i].get_entry(0,0) * link_spheres[link_id].fine_x[k] +
+            X_0[i].get_entry(0,1) * link_spheres[link_id].fine_y[k] +
+            X_0[i].get_entry(0,2) * link_spheres[link_id].fine_z[k];
+
+        fine_y_0[link_id][k] = 
+            X_0[i].get_entry(1,0) * link_spheres[link_id].fine_x[k] +
+            X_0[i].get_entry(1,1) * link_spheres[link_id].fine_y[k] +
+            X_0[i].get_entry(1,2) * link_spheres[link_id].fine_z[k];
+
+        fine_z_0[link_id][k] = 
+            X_0[i].get_entry(2,0) * link_spheres[link_id].fine_x[k] +
+            X_0[i].get_entry(2,1) * link_spheres[link_id].fine_y[k] +
+            X_0[i].get_entry(2,2) * link_spheres[link_id].fine_z[k];
+
+        fine_x_0[link_id][k] += X_0[i].get_entry(0,3);
+        fine_y_0[link_id][k] += X_0[i].get_entry(1,3);
+        fine_z_0[link_id][k] += X_0[i].get_entry(2,3);
+
+        fine_r[link_id][k] = link_spheres[link_id].fine_r[k];
+      }
+
+      dyn_var<int> cc_res;
+
+      // for each child link of joint_name, we perform self collision checks
+      // against previously cached FK geometries higher up the kinematic chain
+      for(static_var<size_t> cp_it = 0; cp_it < geom_model_coarse.collisionPairs.size(); cp_it = cp_it+1) {
+        const pinocchio::CollisionPair & cp = geom_model_coarse.collisionPairs[cp_it];
+        if (cp.second == link_id) {
+          //std::cout << "collision pair: " << cp.first << "," << cp.second << std::endl;
+          std::string cp_str = "collision pair: ";
+          cp_str += std::to_string(cp.first) + "," + std::to_string(cp.second);
+          cp_str += " : " + geom_model_coarse.geometryObjects[cp.first].name + "," + geom_model_coarse.geometryObjects[cp.second].name;
+          builder::annotate(cp_str.c_str());
+
+          // 2-level self collision checking per link
+          // we first CC the two coarse spheres associated w the cp
+          // if they're in collision, we CC two sets of fine spheres
+          // associated w the cp
+          cc_res = runtime::self_collision_link_vs_link(
+              cp.first,
+              // coarse sphere assoc. w cp.first
+              coarse_x_0[cp.first], coarse_y_0[cp.first], coarse_z_0[cp.first], coarse_r[cp.first], 
+              // # of fine spheres assoc. w cp.first
+              n_fine_sph_for_link[cp.first],
+              // fine spheres assoc. w cp.first
+              fine_x_0[cp.first], fine_y_0[cp.first], fine_z_0[cp.first], fine_r[cp.first],
+              cp.second,
+              // coarse sphere assoc. w cp.second
+              coarse_x_0[cp.second], coarse_y_0[cp.second], coarse_z_0[cp.second], coarse_r[cp.second], 
+              // # of fine spheres assoc. w cp.second
+              n_fine_sph_for_link[cp.second],
+              // fine spheres assoc. w cp.second
+              fine_x_0[cp.second], fine_y_0[cp.second], fine_z_0[cp.second], fine_r[cp.second]
+          );
+
+          //if (cc_res)
+          //  return 0; // can't do this because static_var bug
+        }
+      }
+
+      if (i > 0) {
+        // no link vs. environment CC for universe joint
+        // if we find no self collision, we do a two-level CC of each link against the environment
+        cc_res = runtime::link_vs_environment_collision(
+                coarse_x_0[link_id], coarse_y_0[link_id], coarse_z_0[link_id], coarse_r[link_id],
+                n_fine_sph_for_link[link_id],
+                fine_x_0[link_id], fine_y_0[link_id], fine_z_0[link_id], fine_r[link_id],
+                environment);
+        //if (cc_res)
+        //  return 0; // can't do this because static_var bug
+      }
+    }
+  }
+
+  return 1;
+}
+
+int main(int argc, char* argv[]) {
+  argparse::ArgumentParser program("franken_batched_fkcc_early_exit");
+
+  program.add_argument("urdf_coarse")
+      .help("path to the coarse URDF file");
+
+  program.add_argument("urdf_fine")
+      .help("path to the fine URDF file");
+
+  program.add_argument("srdf")
+      .help("path to the SRDF file");
+
+  program.add_argument("-r", "--robot")
+      .required()
+      .help("robot name (iiwa, hyq, baxter)");
+
+  program.add_argument("-o", "--output")
+      .default_value(std::string("./fk_gen.h"))
+      .help("output header file path");
+
+  try {
+      program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+      std::cerr << err.what() << std::endl;
+      std::cerr << program;
+      return 1;
+  }
+
+  const std::string urdf_filename_coarse = program.get<std::string>("urdf_coarse");
+  const std::string urdf_filename_fine = program.get<std::string>("urdf_fine");
+  const std::string srdf_filename = program.get<std::string>("srdf");
+  const std::string header_filename = program.get<std::string>("--output");
+  const std::string robot_name = program.get<std::string>("--robot");
+
+  std::cout << "URDF coarse: " << urdf_filename_coarse << "\n";
+  std::cout << "URDF fine: " << urdf_filename_fine << "\n";
+  std::cout << "SRDF file: " << srdf_filename << "\n";
+  std::cout << "Output header: " << header_filename << "\n";
+  std::cout << "Robot: " << robot_name << "\n";
+
+  Model model_coarse;
+  pinocchio::urdf::buildModel(urdf_filename_coarse, model_coarse);
+  GeometryModel geom_model_coarse;
+  pinocchio::urdf::buildGeom(model_coarse, urdf_filename_coarse, pinocchio::COLLISION, geom_model_coarse);
+
+  /////
+  //for (std::size_t i = 0; i < geom_model_coarse.geometryObjects.size(); ++i)
+  //{
+  //  const pinocchio::GeometryObject & geom_obj = geom_model_coarse.geometryObjects[i];
+  //  const pinocchio::SE3 & placement = geom_obj.placement;
+
+  //  std::string joint_name = model_coarse.names[geom_obj.parentJoint];
+
+  //  std::cout << "Geometry: " << geom_obj.name << std::endl;
+  //  std::cout << "  Parent joint: " << joint_name << std::endl;
+  //  std::cout << "  Placement translation: ["
+  //            << placement.translation().transpose() << "]" << std::endl;
+  //  std::cout << std::endl;
+  //}
+  //return 0;
+  //////
+
+  geom_model_coarse.addAllCollisionPairs();
+  pinocchio::srdf::removeCollisionPairs(model_coarse, geom_model_coarse, srdf_filename);
+
+  Model model_fine;
+  GeometryModel geom_model_fine;
+  pinocchio::urdf::buildModel(urdf_filename_fine, model_fine);
+  pinocchio::urdf::buildGeom(model_fine, urdf_filename_fine, pinocchio::COLLISION, geom_model_fine);
+
+  //joint_to_spheres(model_coarse, geom_model_coarse, model_fine, geom_model_fine, "wrist_3_joint");
+  //std::cout<<"---------------"<<std::endl;
+  /*
+  for(size_t k = 0; k < geom_model_coarse.collisionPairs.size(); ++k)
+  {
+    const pinocchio::CollisionPair & cp = geom_model_coarse.collisionPairs[k];
+    std::cout << "collision pair: " << cp.first << " , " << cp.second<<std::endl;
+  }
+  */
+
+  std::ofstream of(header_filename);
+  block::c_code_generator codegen(of);
+
+  // Generate unique namespace per robot
+  std::string namespace_name = "ctup_gen_" + robot_name;
+
+  of << "// clang-format off\n\n";
+  of << "#include \"vamp/vector.hh\"\n\n";
+  of << "#include \"rla_fkcc_early_exit/runtime/typedefs.h\"\n\n";
+  of << "#include \"rla_fkcc_early_exit/runtime/vamp_collision.h\"\n\n";
+  of << "namespace " << namespace_name << " {\n\n";
+
+  builder::builder_context context;
+  context.run_rce = true;
+
+  if (robot_name == "panda") {
+    auto ast = context.extract_function_ast(fkcc_franken<runtime::robots::Panda>, "fkcc_franken", model_coarse, geom_model_coarse, model_fine, geom_model_fine);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  }
+  else if (robot_name == "fetch") {
+    auto ast = context.extract_function_ast(fkcc_franken<runtime::robots::Fetch>, "fkcc_franken", model_coarse, geom_model_coarse, model_fine, geom_model_fine);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  }
+  else if (robot_name == "baxter") {
+    auto ast = context.extract_function_ast(fkcc_franken<runtime::robots::Baxter>, "fkcc_franken", model_coarse, geom_model_coarse, model_fine, geom_model_fine);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  }
+  else if (robot_name == "ur5") {
+    auto ast = context.extract_function_ast(fkcc_franken<runtime::robots::UR5>, "fkcc_franken", model_coarse, geom_model_coarse, model_fine, geom_model_fine);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  }
+  else {
+    std::cerr << "Unknown robot: " << robot_name << "\n";
+    return 1;
+  }
+
+  of << "}\n";
+}
