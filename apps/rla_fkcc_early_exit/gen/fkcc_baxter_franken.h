@@ -5,7 +5,7 @@
 
 #include "rla_fkcc_early_exit/runtime/typedefs.h"
 
-#include "rla_fkcc_early_exit/runtime/vamp_collision_stda.h"
+#include "rla_fkcc_early_exit/runtime/vamp_collision.h"
 
 namespace ctup_gen {
 
