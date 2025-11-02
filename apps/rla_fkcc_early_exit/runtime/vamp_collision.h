@@ -13,27 +13,27 @@ namespace ctup_runtime {
 
 
 template<size_t rake, size_t N_FINE_SPH_1, size_t N_FINE_SPH_2>
-static bool self_collision_link_vs_link(
+static constexpr inline bool self_collision_link_vs_link(
     size_t geom_id_1,
-    vamp::FloatVector<rake>& coarse_1_x, 
-    vamp::FloatVector<rake>& coarse_1_y, 
-    vamp::FloatVector<rake>& coarse_1_z, 
+    const vamp::FloatVector<rake>& coarse_1_x, 
+    const vamp::FloatVector<rake>& coarse_1_y, 
+    const vamp::FloatVector<rake>& coarse_1_z, 
     float coarse_1_r,
     size_t n_fine_1,
-    std::array<vamp::FloatVector<rake>, N_FINE_SPH_1>& fine_1_x, 
-    std::array<vamp::FloatVector<rake>, N_FINE_SPH_1>& fine_1_y, 
-    std::array<vamp::FloatVector<rake>, N_FINE_SPH_1>& fine_1_z, 
-    std::array<float, N_FINE_SPH_1>& fine_1_r,
+    const std::array<vamp::FloatVector<rake>, N_FINE_SPH_1>& fine_1_x, 
+    const std::array<vamp::FloatVector<rake>, N_FINE_SPH_1>& fine_1_y, 
+    const std::array<vamp::FloatVector<rake>, N_FINE_SPH_1>& fine_1_z, 
+    const std::array<float, N_FINE_SPH_1>& fine_1_r,
     size_t geom_id_2,
-    vamp::FloatVector<rake>& coarse_2_x, 
-    vamp::FloatVector<rake>& coarse_2_y, 
-    vamp::FloatVector<rake>& coarse_2_z, 
+    const vamp::FloatVector<rake>& coarse_2_x, 
+    const vamp::FloatVector<rake>& coarse_2_y, 
+    const vamp::FloatVector<rake>& coarse_2_z, 
     float coarse_2_r,
     size_t n_fine_2,
-    std::array<vamp::FloatVector<rake>, N_FINE_SPH_2>& fine_2_x, 
-    std::array<vamp::FloatVector<rake>, N_FINE_SPH_2>& fine_2_y, 
-    std::array<vamp::FloatVector<rake>, N_FINE_SPH_2>& fine_2_z, 
-    std::array<float, N_FINE_SPH_2>& fine_2_r) {
+    const std::array<vamp::FloatVector<rake>, N_FINE_SPH_2>& fine_2_x, 
+    const std::array<vamp::FloatVector<rake>, N_FINE_SPH_2>& fine_2_y, 
+    const std::array<vamp::FloatVector<rake>, N_FINE_SPH_2>& fine_2_z, 
+    const std::array<float, N_FINE_SPH_2>& fine_2_r) {
 
   bool is_coarse_collide, is_fine_collide;
   is_coarse_collide = false;
@@ -58,11 +58,11 @@ static bool self_collision_link_vs_link(
 
   if (is_coarse_collide) {
     // no fine spheres for either link, link geoms do intersect
-    if(n_fine_1 == 0 and n_fine_2 == 0) {
+    if constexpr (N_FINE_SPH_1 == 0 && N_FINE_SPH_2 == 0) {
       return true;
     }
-    else if (n_fine_1 == 0) {
-      for (size_t j = 0; j < n_fine_2; j++) {
+    else if (N_FINE_SPH_1 == 0) {
+      for (size_t j = 0; j < N_FINE_SPH_2; j++) {
         sv_2_r = static_cast<vamp::FloatVector<rake>>(fine_2_r[j]);
 
         is_fine_collide = vamp::sphere_sphere_self_collision<vamp::FloatVector<rake>>(
@@ -74,8 +74,8 @@ static bool self_collision_link_vs_link(
           return true;
       }
     }
-    else if (n_fine_2 == 0) {
-      for(size_t i = 0; i < n_fine_1; i++) {
+    else if (N_FINE_SPH_2 == 0) {
+      for(size_t i = 0; i < N_FINE_SPH_1; i++) {
         sv_1_r = static_cast<vamp::FloatVector<rake>>(fine_1_r[i]);
 
         is_fine_collide = vamp::sphere_sphere_self_collision<vamp::FloatVector<rake>>(
@@ -88,10 +88,10 @@ static bool self_collision_link_vs_link(
       }
     }
     else {
-      for (size_t j = 0; j < n_fine_2; j++) {
+      for (size_t j = 0; j < N_FINE_SPH_2; j++) {
         sv_2_r = static_cast<vamp::FloatVector<rake>>(fine_2_r[j]);
 
-        for (size_t i = 0; i < n_fine_1; i++) {
+        for (size_t i = 0; i < N_FINE_SPH_1; i++) {
           sv_1_r = static_cast<vamp::FloatVector<rake>>(fine_1_r[i]);
 
           is_fine_collide = vamp::sphere_sphere_self_collision<vamp::FloatVector<rake>>(
@@ -111,22 +111,22 @@ static bool self_collision_link_vs_link(
 }
 
 template<size_t rake, size_t N_FINE_SPH>
-static bool link_vs_environment_collision(
-    vamp::FloatVector<rake>& coarse_x, 
-    vamp::FloatVector<rake>& coarse_y, 
-    vamp::FloatVector<rake>& coarse_z, 
+static constexpr inline bool link_vs_environment_collision(
+    const vamp::FloatVector<rake>& coarse_x, 
+    const vamp::FloatVector<rake>& coarse_y, 
+    const vamp::FloatVector<rake>& coarse_z, 
     float coarse_r,
     size_t n_fine_sph,
-    std::array<vamp::FloatVector<rake>, N_FINE_SPH>& fine_x, 
-    std::array<vamp::FloatVector<rake>, N_FINE_SPH>& fine_y, 
-    std::array<vamp::FloatVector<rake>, N_FINE_SPH>& fine_z, 
-    std::array<float, N_FINE_SPH>& fine_r,
+    const std::array<vamp::FloatVector<rake>, N_FINE_SPH>& fine_x, 
+    const std::array<vamp::FloatVector<rake>, N_FINE_SPH>& fine_y, 
+    const std::array<vamp::FloatVector<rake>, N_FINE_SPH>& fine_z, 
+    const std::array<float, N_FINE_SPH>& fine_r,
     const vamp::collision::Environment<vamp::FloatVector<rake>> &environment) {
 
   vamp::FloatVector<rake> sv_coarse_r = static_cast<vamp::FloatVector<rake>>(coarse_r);
   //if (vamp::sphere_environment_in_collision(environment, coarse_x, coarse_y, coarse_z, coarse_r)) {
   if (vamp::sphere_environment_in_collision<vamp::FloatVector<rake>>(environment, coarse_x, coarse_y, coarse_z, sv_coarse_r)) {
-    for (size_t i = 0; i < n_fine_sph; i++) {
+    for (size_t i = 0; i < N_FINE_SPH; i++) {
       vamp::FloatVector<rake> sv_fine_r = static_cast<vamp::FloatVector<rake>>(fine_r[i]);
       //if (vamp::sphere_environment_in_collision(environment, fine_x[i], fine_y[i], fine_z[i], fine_r[i])) {
       if (vamp::sphere_environment_in_collision<vamp::FloatVector<rake>>(environment, fine_x[i], fine_y[i], fine_z[i], sv_fine_r)) {
@@ -140,4 +140,5 @@ static bool link_vs_environment_collision(
 }
 
 #endif
+
 

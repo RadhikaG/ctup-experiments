@@ -1,5 +1,5 @@
 #include "ctup/typedefs.h"
-#include "rla_fkcc_early_exit/gen/cc_simd_panda.h"
+#include "rla_fkcc_early_exit/gen/fkcc_panda.h"
 #include "vamp/vector.hh"
 #include "vamp/utils.hh"
 #include "vamp/robots/panda/fk.hh"
