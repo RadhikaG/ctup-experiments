@@ -2,10 +2,15 @@
 
 # Script to generate FK headers for multiple robots using different generators
 
+# Get the directory where this script is located
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+# RLA experiments root is one level up from helper_scripts
+RLA_EXP_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # Create output directories if they don't exist
-mkdir -p apps/rla_fk/gen/scalar
-mkdir -p apps/rla_fk/gen/eigenmatrix
-mkdir -p apps/rla_fk/gen/batched
+mkdir -p "$RLA_EXP_ROOT/apps/rla_fk/gen/scalar"
+mkdir -p "$RLA_EXP_ROOT/apps/rla_fk/gen/eigenmatrix"
+mkdir -p "$RLA_EXP_ROOT/apps/rla_fk/gen/batched"
 
 # Robot names
 ROBOT_NAMES=("baxter" "hyq" "iiwa")
@@ -33,12 +38,12 @@ for i in "${!ROBOT_NAMES[@]}"; do
     for j in "${!GENERATORS[@]}"; do
         generator="${GENERATORS[$j]}"
         output_dir="${OUTPUT_DIRS[$j]}"
-        output_path="apps/rla_fk/gen/${output_dir}/fk_gen_${robot}.h"
+        output_path="$RLA_EXP_ROOT/apps/rla_fk/gen/${output_dir}/fk_gen_${robot}.h"
 
         echo "  [${generator}] Generating ${output_path}..."
 
         # All generators now require --robot parameter
-        ./build/${generator} "${urdf_path}" -o "${output_path}" -r "${robot}"
+        "$RLA_EXP_ROOT/build/${generator}" "$RLA_EXP_ROOT/${urdf_path}" -o "${output_path}" -r "${robot}"
 
         if [ $? -ne 0 ]; then
             echo "  ✗ Failed to generate ${output_path}"

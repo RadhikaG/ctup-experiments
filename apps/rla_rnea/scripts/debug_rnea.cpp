@@ -2,7 +2,10 @@
 #include "pinocchio/parsers/urdf.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/rnea.hpp"
+#include "pinocchio/codegen/cppadcg.hpp"
+#include "cppad/cg.hpp"
 #include "rla_rnea/runtime/runtime_dispatcher.h"
+#include <cppad/cg/model/llvm/llvm.hpp>
 #include <iostream>
 #include <argparse/argparse.hpp>
 #include <vector>
@@ -32,6 +35,8 @@ int main(int argc, char ** argv)
 
   //typedef Eigen::Matrix<double, 6, 6> EigenSpatialXform;
   using namespace pinocchio;
+  using namespace CppAD;
+  using namespace CppAD::cg;
   // You should change here to set up your own URDF file or just pass it as an argument of this example.
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string robot_name = program.get<std::string>("--robot");
@@ -75,6 +80,49 @@ int main(int argc, char ** argv)
   //  std::cout << "v " << i << "\n" << data.v[i] << "\n";
   //  std::cout << "a " << i << "\n" << data.a[i] << "\n";
   //}
+
+  std::cout << "-------------------\n";
+
+  // Pinocchio Codegen debug
+
+  std::cout << "---PINOCCHIO CODEGEN DEBUG---\n";
+
+  // Using symbolic scalar for source code gen
+  using CGD = CG<double>;
+  using ADCG = AD<CGD>;
+  typedef ModelTpl<ADCG> ADModel;
+  typedef DataTpl<ADCG> ADData;
+  typedef Eigen::Matrix<ADCG, Eigen::Dynamic, 1> ADVectorXs;
+
+  // Make symbolic model
+  ADModel ad_model = model.cast<ADCG>();
+  ADData ad_data(ad_model);
+  ADVectorXs ad_X, ad_Y;
+  ad_X = ADVectorXs(ad_model.nq + ad_model.nv);
+  ad_Y = ADVectorXs(ad_model.nv);
+  ADVectorXs zeros = ADVectorXs::Zero(ad_model.nv);
+  Independent(ad_X);
+  pinocchio::rnea(
+    ad_model, ad_data, ad_X.head(ad_model.nq), ad_X.segment(ad_model.nq, ad_model.nv), zeros);
+  ad_Y = ad_data.tau;
+  ADFun<CGD> fun(ad_X, ad_Y);
+
+  // JIT compilation
+  ModelCSourceGen<double> cgen(fun, "model");
+  cgen.setCreateForwardZero(true);
+  ModelLibraryCSourceGen<double> libcgen(cgen);
+
+  LlvmModelLibraryProcessor<double> p(libcgen);
+  std::unique_ptr<LlvmModelLibrary<double>> llvmModelLib = p.create();
+
+  std::unique_ptr<GenericModel<double>> g_model = llvmModelLib->model("model");
+
+  // Evaluate with the same q and qd
+  Eigen::VectorXd joined(q.size() + qd.size());
+  joined << q, qd;
+  Eigen::VectorXd pin_codegen_res = g_model->ForwardZero(joined);
+
+  std::cout << "pin_codegen_res: \n" << pin_codegen_res << std::endl;
 
   std::cout << "-------------------\n";
 
