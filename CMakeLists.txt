@@ -83,8 +83,10 @@ set(SAMPLES_SOURCES
     samples/scalar_rla_fk.cpp
     samples/scalar_rla_rnea.cpp
     samples/batched_rla_fk.cpp
+    samples/batched_fk_sweep.cpp
     samples/batched_rla_fk_no_tt_sparsity.cpp
     samples/batched_fkcc_early_exit.cpp
+    samples/franken_batched_fkcc_early_exit.cpp
     samples/scalar_spatial_jacobian.cpp
     samples/batched_grad_self_collision.cpp
     samples/batched_spatial_jacobian.cpp
@@ -153,11 +155,41 @@ list(APPEND CTUP_RUNTIME_INCLUDES
     ${CMAKE_SOURCE_DIR}/deps/compile-time-urdf-parser/runtime
 )
 
-add_subdirectory(apps/rla_fk)
-add_subdirectory(apps/rla_rnea)
-add_subdirectory(apps/rla_spatial_jacobian)
-add_subdirectory(apps/rla_fkcc_early_exit)
-add_subdirectory(apps/rla_grad_self_collision)
+# Try to find VAMP automatically
+if(NOT DEFINED VAMP_DIR)
+    # Check common locations
+    set(VAMP_SEARCH_PATHS
+        "${CMAKE_SOURCE_DIR}/../vamp"
+        "${CMAKE_SOURCE_DIR}/../../vamp"
+        "$ENV{HOME}/vamp"
+    )
+
+    foreach(SEARCH_PATH ${VAMP_SEARCH_PATHS})
+        if(EXISTS "${SEARCH_PATH}/src/impl")
+            set(VAMP_DIR "${SEARCH_PATH}")
+            message(STATUS "Found VAMP at: ${VAMP_DIR}")
+            break()
+        endif()
+    endforeach()
+endif()
+
+option(BUILD_APPS "Build the apps/ subdirectories" ON)
+
+if(BUILD_APPS)
+    add_subdirectory(apps/rla_fk)
+    add_subdirectory(apps/rla_rnea)
+    add_subdirectory(apps/rla_spatial_jacobian)
+
+    # Only build rla_fkcc_early_exit and rla_fk_intrin if VAMP is available
+    if(DEFINED VAMP_DIR AND EXISTS "${VAMP_DIR}/src/impl")
+        add_subdirectory(apps/rla_fkcc_early_exit)
+        add_subdirectory(apps/rla_fk_intrin)
+    else()
+        message(WARNING "VAMP not found. Skipping apps/rla_fkcc_early_exit and apps/rla_fk_intrin. Set VAMP_DIR to enable.")
+    endif()
+
+    add_subdirectory(apps/rla_grad_self_collision)
+endif()
 
 #set(BATCHED_SCRIPT_SOURCES
 #  scripts/ctup_fk_batched.cpp

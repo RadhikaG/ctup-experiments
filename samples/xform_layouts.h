@@ -85,8 +85,14 @@ struct Rotation : public matrix_layout<Scalar> {
   }
 
   void jcalc(const dyn_var<Scalar> &q_i) {
-    sinq = backend::sin<Scalar>(q_i);
-    cosq = backend::cos<Scalar>(q_i);
+    if constexpr (ctup::is_vamp_float_vector_type<Scalar>::value) {
+      sinq = const_cast<dyn_var<Scalar>&>(q_i).sin();
+      cosq = const_cast<dyn_var<Scalar>&>(q_i).cos();
+    }
+    else {
+      sinq = backend::sin<Scalar>(q_i);
+      cosq = backend::cos<Scalar>(q_i);
+    }
 
     if (joint_xform_axis == 'X') {
       set_entry_to_nonconstant(1, 1, cosq);
@@ -191,8 +197,14 @@ struct XformNonBlocked : public matrix_layout<Scalar> {
   }
 
   void jcalc(const dyn_var<Scalar> &q_i) {
-    sinq = backend::sin<Scalar>(q_i);
-    cosq = backend::cos<Scalar>(q_i);
+    if constexpr (ctup::is_vamp_float_vector_type<Scalar>::value) {
+      sinq = const_cast<dyn_var<Scalar>>(q_i).sin();
+      cosq = const_cast<dyn_var<Scalar>>(q_i).cos();
+    }
+    else {
+      sinq = backend::sin<Scalar>(q_i);
+      cosq = backend::cos<Scalar>(q_i);
+    }
 
     if (joint_type == 'R') {
       if (joint_xform_axis == 'X') {
