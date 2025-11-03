@@ -2,7 +2,6 @@
 set(RLA_RNEA_SCRIPT_SOURCES
     scripts/debug_rnea.cpp
     scripts/eval_rnea.cpp
-    scripts/pin_rnea_codegen.cpp
 )
 
 # Compile each script as a separate executable

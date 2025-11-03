@@ -4,6 +4,7 @@ add_subdirectory(rla_fk_intrin_dispatcher)
 # Find all the script files in the scripts subdirectory
 set(RLA_FK_INTRIN_SCRIPT_SOURCES
     scripts/debug_fk_intrin.cpp
+    scripts/eval_fk_intrin.cpp
 )
 
 # Compile each script as a separate executable
