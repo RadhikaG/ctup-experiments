@@ -10,7 +10,8 @@ Setup instructions:
 
 1. Make a top-level directory that holds all your project-related repos, say `$ mkdir -p ctup_stuff && cd ctup_stuff`
 2. `$ git clone git@github.com:RadhikaG/ctup-experiments.git`
-3. Optionally: `$ git clone git@github.com:RadhikaG/vamp.git`. Within vamp: `$ git checkout pin-int`
+3. Optionally: `$ git clone git@github.com:RadhikaG/vamp.git`.
+Within vamp: `$ git checkout pin-int`, then follow this [section](https://github.com/RadhikaG/vamp/tree/pin-int?tab=readme-ov-file#python) of the build instructions.
 4. `$ cd ctup-experiments`
 5. `$ git submodule update --init --recursive`
 6. BuildIt needs a fix to compile with stricter cflags: `$ git apply --directory='deps/compile-time-urdf-parser/deps/buildit' helper_scripts/cpp17-warning-fix.patch`
