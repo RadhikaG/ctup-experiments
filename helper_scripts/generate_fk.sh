@@ -12,14 +12,22 @@ mkdir -p "$RLA_EXP_ROOT/apps/rla_fk/gen/scalar"
 mkdir -p "$RLA_EXP_ROOT/apps/rla_fk/gen/eigenmatrix"
 mkdir -p "$RLA_EXP_ROOT/apps/rla_fk/gen/batched"
 
-# Robot names
-ROBOT_NAMES=("baxter" "hyq" "iiwa")
+# Robot names (for -r parameter)
+ROBOT_NAMES=("baxter" "hyq" "iiwa" "synth_12" "synth_12" "synth_12" "synth_12" "synth_12")
+
+# Output file base names (for generated header filenames)
+OUTPUT_NAMES=("baxter" "hyq" "iiwa" "serial_12dof" "dual_6dof" "triple_4dof" "quad_3dof" "tree_2_5_5")
 
 # Corresponding URDF paths
 URDF_PATHS=(
     "models/baxter/baxter_simple.urdf"
     "models/hyq/hyq_simple.urdf"
     "models/iiwa/iiwa_rbd_accel.urdf"
+    "models/synth_12/serial_12dof.urdf"
+    "models/synth_12/dual_6dof.urdf"
+    "models/synth_12/triple_4dof.urdf"
+    "models/synth_12/quad_3dof.urdf"
+    "models/synth_12/tree_2_5_5.urdf"
 )
 
 # Generator names and output directories
@@ -29,16 +37,17 @@ OUTPUT_DIRS=("scalar" "eigenmatrix" "batched")
 # Generate headers for each robot with each generator
 for i in "${!ROBOT_NAMES[@]}"; do
     robot="${ROBOT_NAMES[$i]}"
+    output_name="${OUTPUT_NAMES[$i]}"
     urdf_path="${URDF_PATHS[$i]}"
 
-    echo "=== Generating FK headers for ${robot} ==="
+    echo "=== Generating FK headers for ${output_name} (robot=${robot}) ==="
     echo "  URDF: ${urdf_path}"
     echo
 
     for j in "${!GENERATORS[@]}"; do
         generator="${GENERATORS[$j]}"
         output_dir="${OUTPUT_DIRS[$j]}"
-        output_path="$RLA_EXP_ROOT/apps/rla_fk/gen/${output_dir}/fk_gen_${robot}.h"
+        output_path="$RLA_EXP_ROOT/apps/rla_fk/gen/${output_dir}/fk_gen_${output_name}.h"
 
         echo "  [${generator}] Generating ${output_path}..."
 

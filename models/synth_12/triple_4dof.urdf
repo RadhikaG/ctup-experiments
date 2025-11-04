@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="triple_4dof">
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <mass value="12.0"/>
+      <inertia ixx="0.6" ixy="0.0" ixz="0.0" iyy="0.6" iyz="0.0" izz="0.6"/>
+    </inertial>
+  </link>
+
+  <!-- Chain 1 - 4 DOF -->
+  <link name="chain1_link_1">
+    <inertial>
+      <origin xyz="0.0 0.03 0.1" rpy="0.0 0.0 0.0"/>
+      <mass value="3.0"/>
+      <inertia ixx="0.075" ixy="0.0" ixz="0.0" iyy="0.07" iyz="0.0" izz="0.015"/>
+    </inertial>
+  </link>
+  <link name="chain1_link_2">
+    <inertial>
+      <origin xyz="0.0 0.05 0.035" rpy="0.0 0.0 0.0"/>
+      <mass value="2.5"/>
+      <inertia ixx="0.04" ixy="0.0" ixz="0.0" iyy="0.014" iyz="0.0" izz="0.035"/>
+    </inertial>
+  </link>
+  <link name="chain1_link_3">
+    <inertial>
+      <origin xyz="0.0 0.025 0.09" rpy="0.0 0.0 0.0"/>
+      <mass value="2.0"/>
+      <inertia ixx="0.055" ixy="0.0" ixz="0.0" iyy="0.05" iyz="0.0" izz="0.008"/>
+    </inertial>
+  </link>
+  <link name="chain1_link_4">
+    <inertial>
+      <origin xyz="0.0 0.015 0.025" rpy="0.0 0.0 0.0"/>
+      <mass value="1.2"/>
+      <inertia ixx="0.008" ixy="0.0" ixz="0.0" iyy="0.007" iyz="0.0" izz="0.004"/>
+    </inertial>
+  </link>
+
+  <!-- Chain 2 - 4 DOF -->
+  <link name="chain2_link_1">
+    <inertial>
+      <origin xyz="0.0 0.03 0.1" rpy="0.0 0.0 0.0"/>
+      <mass value="3.0"/>
+      <inertia ixx="0.075" ixy="0.0" ixz="0.0" iyy="0.07" iyz="0.0" izz="0.015"/>
+    </inertial>
+  </link>
+  <link name="chain2_link_2">
+    <inertial>
+      <origin xyz="0.0 0.05 0.035" rpy="0.0 0.0 0.0"/>
+      <mass value="2.5"/>
+      <inertia ixx="0.04" ixy="0.0" ixz="0.0" iyy="0.014" iyz="0.0" izz="0.035"/>
+    </inertial>
+  </link>
+  <link name="chain2_link_3">
+    <inertial>
+      <origin xyz="0.0 0.025 0.09" rpy="0.0 0.0 0.0"/>
+      <mass value="2.0"/>
+      <inertia ixx="0.055" ixy="0.0" ixz="0.0" iyy="0.05" iyz="0.0" izz="0.008"/>
+    </inertial>
+  </link>
+  <link name="chain2_link_4">
+    <inertial>
+      <origin xyz="0.0 0.015 0.025" rpy="0.0 0.0 0.0"/>
+      <mass value="1.2"/>
+      <inertia ixx="0.008" ixy="0.0" ixz="0.0" iyy="0.007" iyz="0.0" izz="0.004"/>
+    </inertial>
+  </link>
+
+  <!-- Chain 3 - 4 DOF -->
+  <link name="chain3_link_1">
+    <inertial>
+      <origin xyz="0.0 0.03 0.1" rpy="0.0 0.0 0.0"/>
+      <mass value="3.0"/>
+      <inertia ixx="0.075" ixy="0.0" ixz="0.0" iyy="0.07" iyz="0.0" izz="0.015"/>
+    </inertial>
+  </link>
+  <link name="chain3_link_2">
+    <inertial>
+      <origin xyz="0.0 0.05 0.035" rpy="0.0 0.0 0.0"/>
+      <mass value="2.5"/>
+      <inertia ixx="0.04" ixy="0.0" ixz="0.0" iyy="0.014" iyz="0.0" izz="0.035"/>
+    </inertial>
+  </link>
+  <link name="chain3_link_3">
+    <inertial>
+      <origin xyz="0.0 0.025 0.09" rpy="0.0 0.0 0.0"/>
+      <mass value="2.0"/>
+      <inertia ixx="0.055" ixy="0.0" ixz="0.0" iyy="0.05" iyz="0.0" izz="0.008"/>
+    </inertial>
+  </link>
+  <link name="chain3_link_4">
+    <inertial>
+      <origin xyz="0.0 0.015 0.025" rpy="0.0 0.0 0.0"/>
+      <mass value="1.2"/>
+      <inertia ixx="0.008" ixy="0.0" ixz="0.0" iyy="0.007" iyz="0.0" izz="0.004"/>
+    </inertial>
+  </link>
+
+  <!-- Chain 1 joints -->
+  <joint name="chain1_joint_1" type="revolute">
+    <parent link="base_link"/>
+    <child link="chain1_link_1"/>
+    <origin xyz="0.3 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.8" upper="2.8" effort="30.0" velocity="1.0"/>
+  </joint>
+  <joint name="chain1_joint_2" type="revolute">
+    <parent link="chain1_link_1"/>
+    <child link="chain1_link_2"/>
+    <origin xyz="0.0 0.0 0.18" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.0" upper="2.0" effort="28.0" velocity="1.0"/>
+  </joint>
+  <joint name="chain1_joint_3" type="revolute">
+    <parent link="chain1_link_2"/>
+    <child link="chain1_link_3"/>
+    <origin xyz="0.0 0.17 0.0" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.6" upper="2.6" effort="25.0" velocity="1.0"/>
+  </joint>
+  <joint name="chain1_joint_4" type="revolute">
+    <parent link="chain1_link_3"/>
+    <child link="chain1_link_4"/>
+    <origin xyz="0.0 0.0 0.16" rpy="1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.4" upper="2.4" effort="20.0" velocity="1.0"/>
+  </joint>
+
+  <!-- Chain 2 joints -->
+  <joint name="chain2_joint_1" type="revolute">
+    <parent link="base_link"/>
+    <child link="chain2_link_1"/>
+    <origin xyz="-0.15 0.26 0.0" rpy="0.0 0.0 2.0944"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.8" upper="2.8" effort="30.0" velocity="1.0"/>
+  </joint>
+  <joint name="chain2_joint_2" type="revolute">
+    <parent link="chain2_link_1"/>
+    <child link="chain2_link_2"/>
+    <origin xyz="0.0 0.0 0.18" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.0" upper="2.0" effort="28.0" velocity="1.0"/>
+  </joint>
+  <joint name="chain2_joint_3" type="revolute">
+    <parent link="chain2_link_2"/>
+    <child link="chain2_link_3"/>
+    <origin xyz="0.0 0.17 0.0" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.6" upper="2.6" effort="25.0" velocity="1.0"/>
+  </joint>
+  <joint name="chain2_joint_4" type="revolute">
+    <parent link="chain2_link_3"/>
+    <child link="chain2_link_4"/>
+    <origin xyz="0.0 0.0 0.16" rpy="1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.4" upper="2.4" effort="20.0" velocity="1.0"/>
+  </joint>
+
+  <!-- Chain 3 joints -->
+  <joint name="chain3_joint_1" type="revolute">
+    <parent link="base_link"/>
+    <child link="chain3_link_1"/>
+    <origin xyz="-0.15 -0.26 0.0" rpy="0.0 0.0 -2.0944"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.8" upper="2.8" effort="30.0" velocity="1.0"/>
+  </joint>
+  <joint name="chain3_joint_2" type="revolute">
+    <parent link="chain3_link_1"/>
+    <child link="chain3_link_2"/>
+    <origin xyz="0.0 0.0 0.18" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.0" upper="2.0" effort="28.0" velocity="1.0"/>
+  </joint>
+  <joint name="chain3_joint_3" type="revolute">
+    <parent link="chain3_link_2"/>
+    <child link="chain3_link_3"/>
+    <origin xyz="0.0 0.17 0.0" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.6" upper="2.6" effort="25.0" velocity="1.0"/>
+  </joint>
+  <joint name="chain3_joint_4" type="revolute">
+    <parent link="chain3_link_3"/>
+    <child link="chain3_link_4"/>
+    <origin xyz="0.0 0.0 0.16" rpy="1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.4" upper="2.4" effort="20.0" velocity="1.0"/>
+  </joint>
+</robot>

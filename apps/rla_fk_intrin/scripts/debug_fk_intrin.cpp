@@ -22,7 +22,7 @@ int main(int argc, char ** argv)
   program.add_argument("--robot")
       .required()
       .help("robot name")
-      .choices("iiwa");
+      .choices("iiwa", "synth_12");
 
   try {
       program.parse_args(argc, argv);
@@ -48,6 +48,42 @@ int main(int argc, char ** argv)
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
   std::cout << "model name: " << model.name << std::endl;
+
+  // Determine ndof and FK function based on robot name
+  size_t ndof;
+  std::function<void(const float*, Eigen::MatrixXd&)> rla_fk_func;
+
+  if (robot_name == "iiwa") {
+    ndof = 7;
+    rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<iiwaTraits>();
+  } else if (robot_name == "synth_12") {
+    ndof = 12;
+
+    // Extract URDF base filename to determine which synth_12 robot
+    size_t last_slash = urdf_filename.find_last_of("/\\");
+    size_t last_dot = urdf_filename.find_last_of(".");
+    std::string base_filename = urdf_filename.substr(last_slash + 1, last_dot - last_slash - 1);
+
+    std::cout << "Detected synth_12 robot: " << base_filename << "\n";
+
+    if (base_filename == "serial_12dof") {
+      rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<Serial12dofTraits>();
+    } else if (base_filename == "dual_6dof") {
+      rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<Dual6dofTraits>();
+    } else if (base_filename == "triple_4dof") {
+      rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<Triple4dofTraits>();
+    } else if (base_filename == "quad_3dof") {
+      rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<Quad3dofTraits>();
+    } else if (base_filename == "tree_2_5_5") {
+      rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<Tree255Traits>();
+    } else {
+      std::cerr << "Unknown synth_12 robot: " << base_filename << "\n";
+      return 1;
+    }
+  } else {
+    std::cerr << "Unknown robot: " << robot_name << "\n";
+    return 1;
+  }
 
   // Use π/4 for all joints instead of random configuration
   Eigen::VectorXd q = Eigen::VectorXd::Constant(model.nq, M_PI / 4.0);
@@ -127,15 +163,13 @@ int main(int argc, char ** argv)
   // ============================================
   std::cout << "---RLA INTRINSIC FK DEBUG---\n";
 
-  auto rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<iiwaTraits>();
-
   // Prepare batched input as float array with different values per batch
-  // Layout: [ndof * 8] = [7 * 8] floats
+  // Layout: [ndof * 8] floats
   // Each joint's values for all 8 batch lanes are stored contiguously
   // joint 0: [batch0, batch1, ..., batch7], joint 1: [batch0, batch1, ..., batch7], ...
   // Batch 0 uses q, other batches use zeros for simplicity
-  std::vector<float> q_batched_data(7 * 8, 0.0f);
-  for (size_t joint = 0; joint < 7; ++joint) {
+  std::vector<float> q_batched_data(ndof * 8, 0.0f);
+  for (size_t joint = 0; joint < ndof; ++joint) {
     q_batched_data[joint * 8 + 0] = static_cast<float>(q[joint]);  // Only batch 0 has non-zero values
   }
 

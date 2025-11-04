@@ -70,10 +70,12 @@ namespace robots {
 constexpr char iiwa_name[] = "ctup_runtime::robots::iiwa";
 constexpr char hyq_name[] = "ctup_runtime::robots::hyq";
 constexpr char baxter_name[] = "ctup_runtime::robots::baxter";
+constexpr char synth_12_name[] = "ctup_runtime::robots::synth_12";
 
 using iiwa = typename builder::name<iiwa_name>;
 using hyq = typename builder::name<hyq_name>;
 using baxter = typename builder::name<baxter_name>;
+using synth_12 = typename builder::name<synth_12_name>;
 }
 
 constexpr char configuration_block_robot_name[] = "ctup_runtime::ConfigurationBlockRobot";
@@ -222,7 +224,7 @@ int main(int argc, char* argv[]) {
 
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string header_filename = program.get<std::string>("--output");
-  const std::string robot_name = program.get<std::string>("--robot");
+  std::string robot_name = program.get<std::string>("--robot");
 
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Output header: " << header_filename << "\n";
@@ -235,7 +237,16 @@ int main(int argc, char* argv[]) {
   block::c_code_generator codegen(of);
 
   // Generate unique namespace per robot
-  std::string namespace_name = "ctup_gen_" + robot_name;
+  // For synth_12, extract namespace from URDF filename
+  std::string namespace_name;
+  if (robot_name == "synth_12") {
+    size_t last_slash = urdf_filename.find_last_of("/\\");
+    size_t last_dot = urdf_filename.find_last_of(".");
+    std::string base_filename = urdf_filename.substr(last_slash + 1, last_dot - last_slash - 1);
+    namespace_name = "ctup_gen_" + base_filename;
+  } else {
+    namespace_name = "ctup_gen_" + robot_name;
+  }
 
   of << "// clang-format off\n\n";
   of << "#include \"Eigen/Dense\"\n";
@@ -260,6 +271,10 @@ int main(int argc, char* argv[]) {
     block::c_code_generator::generate_code(ast, of, 0);
   } else if (robot_name == "baxter") {
     auto ast = context.extract_function_ast(batched_fk<runtime::robots::baxter>, "batched_fk", model);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  } else if (robot_name == "synth_12") {
+    auto ast = context.extract_function_ast(batched_fk<runtime::robots::synth_12>, "batched_fk", model);
     of << "static ";
     block::c_code_generator::generate_code(ast, of, 0);
   } else {

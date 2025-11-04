@@ -19,7 +19,7 @@ int main(int argc, char ** argv)
   program.add_argument("--robot")
       .required()
       .help("robot name")
-      .choices("iiwa", "hyq", "baxter");
+      .choices("iiwa", "hyq", "baxter", "synth_12");
 
   try {
       program.parse_args(argc, argv);
@@ -36,9 +36,18 @@ int main(int argc, char ** argv)
 
   // Get command-line arguments
   const std::string urdf_filename = program.get<std::string>("urdf");
-  const std::string robot_name = program.get<std::string>("--robot");
+  std::string robot_name = program.get<std::string>("--robot");
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Robot: " << robot_name << "\n";
+
+  // For synth_12, extract URDF base filename to determine which variant
+  if (robot_name == "synth_12") {
+    size_t last_slash = urdf_filename.find_last_of("/\\");
+    size_t last_dot = urdf_filename.find_last_of(".");
+    robot_name = urdf_filename.substr(last_slash + 1, last_dot - last_slash - 1);
+
+    std::cout << "Detected synth_12 robot: " << robot_name << "\n";
+  }
 
   // Get FK function from dispatcher
   auto fk_func = FkDispatcher::get_fk_scalar_function(robot_name);

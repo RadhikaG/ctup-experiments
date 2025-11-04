@@ -24,10 +24,20 @@ int main(int argc, char ** argv)
   program.add_argument("--robot")
       .required()
       .help("robot name")
-      .choices("iiwa");
+      .choices("iiwa", "synth_12");
 
   program.add_argument("--rla-only")
-      .help("only run RLA FK benchmarks, skip Pinocchio codegen")
+      .help("only run RLA FK benchmarks, skip Pinocchio")
+      .default_value(false)
+      .implicit_value(true);
+
+  program.add_argument("--pin-vanilla-only")
+      .help("only run vanilla Pinocchio FK benchmarks")
+      .default_value(false)
+      .implicit_value(true);
+
+  program.add_argument("--pin-cg-only")
+      .help("only run Pinocchio codegen FK benchmarks")
       .default_value(false)
       .implicit_value(true);
 
@@ -49,18 +59,66 @@ int main(int argc, char ** argv)
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string robot_name = program.get<std::string>("--robot");
   const bool rla_only = program.get<bool>("--rla-only");
+  const bool pin_vanilla_only = program.get<bool>("--pin-vanilla-only");
+  const bool pin_cg_only = program.get<bool>("--pin-cg-only");
+
+  // Validate flags
+  int exclusive_count = rla_only + pin_vanilla_only + pin_cg_only;
+  if (exclusive_count > 1) {
+    std::cerr << "Error: Only one of --rla-only, --pin-vanilla-only, or --pin-cg-only can be specified\n";
+    return 1;
+  }
 
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Robot: " << robot_name << "\n";
-  std::cout << "RLA only mode: " << (rla_only ? "true" : "false") << "\n\n";
+  if (rla_only) std::cout << "Mode: RLA only\n\n";
+  else if (pin_vanilla_only) std::cout << "Mode: Vanilla Pinocchio only\n\n";
+  else if (pin_cg_only) std::cout << "Mode: Pinocchio codegen only\n\n";
+  else std::cout << "Mode: All benchmarks\n\n";
 
   // Load the urdf model
   Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
   std::cout << "model name: " << model.name << std::endl;
 
+  // Determine ndof and FK function based on robot name
+  size_t ndof;
+  std::function<void(const float*, Eigen::MatrixXd&)> rla_fk_func;
+
+  if (robot_name == "iiwa") {
+    ndof = 7;
+    rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<iiwaTraits>();
+  } else if (robot_name == "synth_12") {
+    ndof = 12;
+
+    // Extract URDF base filename to determine which synth_12 robot
+    size_t last_slash = urdf_filename.find_last_of("/\\");
+    size_t last_dot = urdf_filename.find_last_of(".");
+    std::string base_filename = urdf_filename.substr(last_slash + 1, last_dot - last_slash - 1);
+
+    std::cout << "Detected synth_12 robot: " << base_filename << "\n\n";
+
+    if (base_filename == "serial_12dof") {
+      rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<Serial12dofTraits>();
+    } else if (base_filename == "dual_6dof") {
+      rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<Dual6dofTraits>();
+    } else if (base_filename == "triple_4dof") {
+      rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<Triple4dofTraits>();
+    } else if (base_filename == "quad_3dof") {
+      rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<Quad3dofTraits>();
+    } else if (base_filename == "tree_2_5_5") {
+      rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<Tree255Traits>();
+    } else {
+      std::cerr << "Unknown synth_12 robot: " << base_filename << "\n";
+      return 1;
+    }
+  } else {
+    std::cerr << "Unknown robot: " << robot_name << "\n";
+    return 1;
+  }
+
   PinocchioTicToc timer(PinocchioTicToc::NS);
-  const int N_IT = 10000;
+  const int N_IT = 100000;
   const size_t BATCH_SIZE = 8;
 
   // Sample random configurations
@@ -73,21 +131,28 @@ int main(int argc, char ** argv)
   // Only batch 0 is populated with actual values, batches 1-7 are zeros
   std::vector<std::vector<float>> qs_batched(N_IT);
   for (size_t i = 0; i < N_IT; ++i) {
-    qs_batched[i].resize(7 * BATCH_SIZE, 0.0f);  // Initialize all to zero
-    for (size_t joint = 0; joint < 7; ++joint) {
+    qs_batched[i].resize(ndof * BATCH_SIZE, 0.0f);  // Initialize all to zero
+    for (size_t joint = 0; joint < ndof; ++joint) {
       qs_batched[i][joint * BATCH_SIZE + 0] = static_cast<float>(qs[i][joint]);  // Only batch 0
     }
   }
 
   // Result matrices
   EigenSpatialXform rla_intrin_res;
+  EigenSpatialXform pin_vanilla_res;
   EigenSpatialXform pin_codegen_res;
 
-  // Pinocchio codegen setup (only if not in rla-only mode)
+  // Pinocchio vanilla data (for all modes except rla-only and pin-cg-only)
+  std::unique_ptr<Data> pin_data;
+  if (!rla_only && !pin_cg_only) {
+    pin_data = std::make_unique<Data>(model);
+  }
+
+  // Pinocchio codegen setup (only if not in rla-only or pin-vanilla-only mode)
   std::unique_ptr<GenericModel<double>> g_model;
   std::unique_ptr<LlvmModelLibrary<double>> llvmModelLib;  // Keep library alive
 
-  if (!rla_only) {
+  if (!rla_only && !pin_vanilla_only) {
     std::cout << "Initializing Pinocchio JIT codegen...\n";
 
     // Using symbolic scalar for source code gen
@@ -131,35 +196,51 @@ int main(int argc, char ** argv)
 
   std::cout << "\n=== Running Performance Evaluation ===\n\n";
 
-  // Get RLA FK function
-  auto rla_fk_func = FkIntrinDispatcher::get_fk_intrin_function<iiwaTraits>();
+  // ============================================
+  // Benchmark Vanilla Pinocchio FK (8 consecutive calls)
+  // ============================================
+  if (!rla_only && !pin_cg_only) {
+    std::cout << "Benchmarking vanilla Pinocchio FK (" << BATCH_SIZE << " consecutive calls)...\n";
+
+    timer.tic();
+    SMOOTH(N_IT)
+    {
+      for (size_t w = 0; w < BATCH_SIZE; w++) {
+        forwardKinematics(model, *pin_data, qs[_smooth]);
+      }
+    }
+    std::cout << "Vanilla Pinocchio (" << BATCH_SIZE << " consecutive calls) avg time (ns): \t";
+    timer.toc(std::cout, N_IT);
+
+    // Extract final result for comparison
+    pin_vanilla_res = pin_data->oMi[model.njoints-1];
+  }
 
   // ============================================
   // Benchmark RLA Intrinsic FK (single batched call)
   // ============================================
-  std::cout << "Benchmarking RLA batched FK (batch size " << BATCH_SIZE << ")...\n";
+  if (!pin_vanilla_only && !pin_cg_only) {
+    std::cout << "Benchmarking RLA batched FK (batch size " << BATCH_SIZE << ")...\n";
 
-  Eigen::MatrixXd rla_result = Eigen::MatrixXd::Zero(BATCH_SIZE, 36);
+    Eigen::MatrixXd rla_result(BATCH_SIZE, 36);
 
-  // Warmup call to verify FK works correctly before benchmarking
-  rla_fk_func(qs_batched[0].data(), rla_result);
+    timer.tic();
+    SMOOTH(N_IT)
+    {
+      rla_fk_func(qs_batched[_smooth].data(), rla_result);
+    }
+    std::cout << "RLA batched FK (single call) avg time (ns):                             \t";
+    timer.toc(std::cout, N_IT);
 
-  timer.tic();
-  SMOOTH(N_IT)
-  {
-    rla_fk_func(qs_batched[_smooth].data(), rla_result);
+    // Extract first batch for final result comparison
+    Eigen::VectorXd batch0_flat = rla_result.row(0);
+    rla_intrin_res = Eigen::Map<const Eigen::MatrixXd>(batch0_flat.data(), 6, 6);
   }
-  std::cout << "RLA batched FK (single call) avg time (ns):             \t";
-  timer.toc(std::cout, N_IT);
-
-  // Extract first batch for final result comparison
-  Eigen::VectorXd batch0_flat = rla_result.row(0);
-  rla_intrin_res = Eigen::Map<const Eigen::MatrixXd>(batch0_flat.data(), 6, 6);
 
   // ============================================
   // Benchmark Pinocchio Codegen FK (8 consecutive calls)
   // ============================================
-  if (!rla_only) {
+  if (!rla_only && !pin_vanilla_only) {
     std::cout << "Benchmarking Pinocchio codegen FK (" << BATCH_SIZE << " consecutive calls)...\n";
 
     Eigen::VectorXd y;
@@ -171,18 +252,20 @@ int main(int argc, char ** argv)
         y = g_model->ForwardZero(qs[_smooth]);
       }
     }
-    std::cout << "Pinocchio codegen (" << BATCH_SIZE << " consecutive calls) avg time (ns): \t";
+    std::cout << "Pinocchio codegen (" << BATCH_SIZE << " consecutive calls) avg time (ns):  \t";
     timer.toc(std::cout, N_IT);
 
     // Extract final result for comparison
     pin_codegen_res = Eigen::Map<const Eigen::MatrixXd>(y.data(), 6, 6);
+  }
 
-    // ============================================
-    // Comparison
-    // ============================================
+  // ============================================
+  // Comparison (only for all benchmarks mode)
+  // ============================================
+  if (!rla_only && !pin_vanilla_only && !pin_cg_only) {
     std::cout << "\n=== Final Results (Last Configuration) ===\n\n";
     std::cout << "RLA batched FK result (first batch):\n" << rla_intrin_res << "\n\n";
-    std::cout << "Pinocchio JIT codegen result:\n" << pin_codegen_res << "\n\n";
+    std::cout << "Pinocchio codegen result:\n" << pin_codegen_res << "\n\n";
 
     double error = (rla_intrin_res - pin_codegen_res).norm();
     std::cout << "Error between RLA and Pinocchio codegen: " << error << "\n";
@@ -193,9 +276,6 @@ int main(int argc, char ** argv)
     } else {
       std::cout << "WARNING: Large error between results!\n";
     }
-  } else {
-    std::cout << "\n=== Final Result (RLA only mode) ===\n\n";
-    std::cout << "RLA batched FK result (first batch):\n" << rla_intrin_res << "\n\n";
   }
 
   return 0;

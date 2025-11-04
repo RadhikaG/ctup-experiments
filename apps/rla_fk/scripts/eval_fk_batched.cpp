@@ -150,8 +150,8 @@ void run_batched_evaluation(const std::string& urdf_filename,
 
   std::cout << "\n=== Final Results (Last Configuration) ===\n\n";
   std::cout << "RLA batched FK result (first batch):\n" << rla_res << "\n\n";
-  std::cout << "Pinocchio JIT codegen result:\n" << pin_cg_res << "\n\n";
-  std::cout << "Pinocchio vanilla result:\n" << pin_res << "\n\n";
+  //std::cout << "Pinocchio JIT codegen result:\n" << pin_cg_res << "\n\n";
+  //std::cout << "Pinocchio vanilla result:\n" << pin_res << "\n\n";
 
   // Compare RLA with transpose of Pinocchio outputs
   std::cout << "\n=== Transpose Comparison ===\n\n";
@@ -180,6 +180,16 @@ void dispatch_robot(const std::string& robot_name, const std::string& urdf_filen
     run_batched_evaluation<HyqTraits, Scalar, BatchSize>(urdf_filename, robot_name, model);
   } else if (robot_name == "baxter") {
     run_batched_evaluation<BaxterTraits, Scalar, BatchSize>(urdf_filename, robot_name, model);
+  } else if (robot_name == "serial_12dof") {
+    run_batched_evaluation<Serial12dofTraits, Scalar, BatchSize>(urdf_filename, robot_name, model);
+  } else if (robot_name == "dual_6dof") {
+    run_batched_evaluation<Dual6dofTraits, Scalar, BatchSize>(urdf_filename, robot_name, model);
+  } else if (robot_name == "triple_4dof") {
+    run_batched_evaluation<Triple4dofTraits, Scalar, BatchSize>(urdf_filename, robot_name, model);
+  } else if (robot_name == "quad_3dof") {
+    run_batched_evaluation<Quad3dofTraits, Scalar, BatchSize>(urdf_filename, robot_name, model);
+  } else if (robot_name == "tree_2_5_5") {
+    run_batched_evaluation<Tree255Traits, Scalar, BatchSize>(urdf_filename, robot_name, model);
   } else {
     throw std::runtime_error("Unknown robot: " + robot_name);
   }
@@ -216,7 +226,7 @@ int main(int argc, char ** argv)
   program.add_argument("--robot")
       .required()
       .help("robot name")
-      .choices("iiwa", "hyq", "baxter");
+      .choices("iiwa", "hyq", "baxter", "synth_12");
 
   program.add_argument("--dtype")
       .default_value(std::string("double"))
@@ -239,12 +249,22 @@ int main(int argc, char ** argv)
   }
 
   const std::string urdf_filename = program.get<std::string>("urdf");
-  const std::string robot_name = program.get<std::string>("--robot");
+  std::string robot_name = program.get<std::string>("--robot");
   const std::string dtype = program.get<std::string>("--dtype");
   const int batch_size = program.get<int>("--batch-size");
 
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Robot: " << robot_name << "\n";
+
+  // For synth_12, extract URDF base filename to determine which variant
+  if (robot_name == "synth_12") {
+    size_t last_slash = urdf_filename.find_last_of("/\\");
+    size_t last_dot = urdf_filename.find_last_of(".");
+    robot_name = urdf_filename.substr(last_slash + 1, last_dot - last_slash - 1);
+
+    std::cout << "Detected synth_12 robot: " << robot_name << "\n";
+  }
+
   std::cout << "Dtype: " << dtype << "\n";
   std::cout << "Batch size: " << batch_size << "\n\n";
 

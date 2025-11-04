@@ -76,6 +76,9 @@ struct HyQ {
 struct Baxter {
   static const size_t dof = 14;
 };
+struct Synth12 {
+  static const size_t dof = 12;
+};
 }
 
 template <typename RobotT>
@@ -206,7 +209,7 @@ int main(int argc, char* argv[]) {
 
   program.add_argument("-r", "--robot")
       .required()
-      .help("robot name (iiwa, hyq, baxter)");
+      .help("robot name (iiwa, hyq, baxter, synth_12)");
 
   try {
       program.parse_args(argc, argv);
@@ -232,7 +235,16 @@ int main(int argc, char* argv[]) {
   block::c_code_generator codegen(of);
 
   // Generate unique namespace per robot
-  std::string namespace_name = "ctup_gen_" + robot_name;
+  std::string namespace_name;
+  if (robot_name == "synth_12") {
+    // Extract filename without path and extension for synth_12 robots
+    size_t last_slash = urdf_filename.find_last_of("/\\");
+    size_t last_dot = urdf_filename.find_last_of(".");
+    std::string base_filename = urdf_filename.substr(last_slash + 1, last_dot - last_slash - 1);
+    namespace_name = "ctup_gen_" + base_filename;
+  } else {
+    namespace_name = "ctup_gen_" + robot_name;
+  }
 
   of << "// clang-format off\n\n";
   of << "#include \"rla_fk_intrin/runtime/utils.h\"\n\n";
@@ -246,17 +258,22 @@ int main(int argc, char* argv[]) {
     auto ast = context.extract_function_ast(batched_fk_vamp<runtime::robots::iiwa>, "batched_fk_vamp", model);
     of << "static ";
     block::c_code_generator::generate_code(ast, of, 0);
-  } 
+  }
   else if (robot_name == "hyq") {
     auto ast = context.extract_function_ast(batched_fk_vamp<runtime::robots::HyQ>, "batched_fk_vamp", model);
     of << "static ";
     block::c_code_generator::generate_code(ast, of, 0);
-  } 
+  }
   else if (robot_name == "baxter") {
     auto ast = context.extract_function_ast(batched_fk_vamp<runtime::robots::Baxter>, "batched_fk_vamp", model);
     of << "static ";
     block::c_code_generator::generate_code(ast, of, 0);
-  } 
+  }
+  else if (robot_name == "synth_12") {
+    auto ast = context.extract_function_ast(batched_fk_vamp<runtime::robots::Synth12>, "batched_fk_vamp", model);
+    of << "static ";
+    block::c_code_generator::generate_code(ast, of, 0);
+  }
   else {
     std::cerr << "Unknown robot: " << robot_name << "\n";
     return 1;

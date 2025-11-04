@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="serial_12dof">
+  <link name="world"/>
+  <link name="link_1">
+    <inertial>
+      <origin xyz="0.0 -0.03 0.12" rpy="0.0 0.0 0.0"/>
+      <mass value="4.0"/>
+      <inertia ixx="0.1" ixy="0.0" ixz="0.0" iyy="0.09" iyz="0.0" izz="0.02"/>
+    </inertial>
+  </link>
+  <link name="link_2">
+    <inertial>
+      <origin xyz="0.0003 0.059 0.042" rpy="0.0 0.0 0.0"/>
+      <mass value="4.0"/>
+      <inertia ixx="0.05" ixy="0.0" ixz="0.0" iyy="0.018" iyz="0.0" izz="0.044"/>
+    </inertial>
+  </link>
+  <link name="link_3">
+    <inertial>
+      <origin xyz="0.0 0.03 0.13" rpy="0.0 0.0 0.0"/>
+      <mass value="3.0"/>
+      <inertia ixx="0.08" ixy="0.0" ixz="0.0" iyy="0.075" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+  <link name="link_4">
+    <inertial>
+      <origin xyz="0.0 0.067 0.034" rpy="0.0 0.0 0.0"/>
+      <mass value="2.7"/>
+      <inertia ixx="0.03" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.029"/>
+    </inertial>
+  </link>
+  <link name="link_5">
+    <inertial>
+      <origin xyz="0.0001 0.021 0.076" rpy="0.0 0.0 0.0"/>
+      <mass value="1.7"/>
+      <inertia ixx="0.02" ixy="0.0" ixz="0.0" iyy="0.018" iyz="0.0" izz="0.005"/>
+    </inertial>
+  </link>
+  <link name="link_6">
+    <inertial>
+      <origin xyz="0.0 0.0006 0.0004" rpy="0.0 0.0 0.0"/>
+      <mass value="1.8"/>
+      <inertia ixx="0.005" ixy="0.0" ixz="0.0" iyy="0.0036" iyz="0.0" izz="0.0047"/>
+    </inertial>
+  </link>
+  <link name="link_7">
+    <inertial>
+      <origin xyz="0.0 0.0 0.02" rpy="0.0 0.0 0.0"/>
+      <mass value="1.5"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.008"/>
+    </inertial>
+  </link>
+  <link name="link_8">
+    <inertial>
+      <origin xyz="0.0 0.025 0.035" rpy="0.0 0.0 0.0"/>
+      <mass value="1.4"/>
+      <inertia ixx="0.012" ixy="0.0" ixz="0.0" iyy="0.011" iyz="0.0" izz="0.006"/>
+    </inertial>
+  </link>
+  <link name="link_9">
+    <inertial>
+      <origin xyz="0.0 0.0 0.04" rpy="0.0 0.0 0.0"/>
+      <mass value="1.2"/>
+      <inertia ixx="0.009" ixy="0.0" ixz="0.0" iyy="0.009" iyz="0.0" izz="0.005"/>
+    </inertial>
+  </link>
+  <link name="link_10">
+    <inertial>
+      <origin xyz="0.0 0.015 0.03" rpy="0.0 0.0 0.0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.007" ixy="0.0" ixz="0.0" iyy="0.007" iyz="0.0" izz="0.004"/>
+    </inertial>
+  </link>
+  <link name="link_11">
+    <inertial>
+      <origin xyz="0.0 0.0 0.025" rpy="0.0 0.0 0.0"/>
+      <mass value="0.8"/>
+      <inertia ixx="0.005" ixy="0.0" ixz="0.0" iyy="0.005" iyz="0.0" izz="0.003"/>
+    </inertial>
+  </link>
+  <link name="link_12">
+    <inertial>
+      <origin xyz="0.0 0.0 0.02" rpy="0.0 0.0 0.0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.002" ixy="0.0" ixz="0.0" iyy="0.002" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="joint_1" type="revolute">
+    <parent link="world"/>
+    <child link="link_1"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.967" upper="2.967" effort="30.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_2" type="revolute">
+    <parent link="link_1"/>
+    <child link="link_2"/>
+    <origin xyz="0.0 0.0 0.2" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.094" upper="2.094" effort="30.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_3" type="revolute">
+    <parent link="link_2"/>
+    <child link="link_3"/>
+    <origin xyz="0.0 0.2 0.0" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.967" upper="2.967" effort="30.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_4" type="revolute">
+    <parent link="link_3"/>
+    <child link="link_4"/>
+    <origin xyz="0.0 0.0 0.2" rpy="1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.094" upper="2.094" effort="30.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_5" type="revolute">
+    <parent link="link_4"/>
+    <child link="link_5"/>
+    <origin xyz="0.0 0.18 0.0" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.967" upper="2.967" effort="30.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_6" type="revolute">
+    <parent link="link_5"/>
+    <child link="link_6"/>
+    <origin xyz="0.0 0.0 0.2" rpy="1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.094" upper="2.094" effort="30.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_7" type="revolute">
+    <parent link="link_6"/>
+    <child link="link_7"/>
+    <origin xyz="0.0 0.08 0.0" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-3.054" upper="3.054" effort="30.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_8" type="revolute">
+    <parent link="link_7"/>
+    <child link="link_8"/>
+    <origin xyz="0.0 0.0 0.15" rpy="1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.5" upper="2.5" effort="25.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_9" type="revolute">
+    <parent link="link_8"/>
+    <child link="link_9"/>
+    <origin xyz="0.0 0.12 0.0" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.8" upper="2.8" effort="20.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_10" type="revolute">
+    <parent link="link_9"/>
+    <child link="link_10"/>
+    <origin xyz="0.0 0.0 0.12" rpy="1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.6" upper="2.6" effort="18.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_11" type="revolute">
+    <parent link="link_10"/>
+    <child link="link_11"/>
+    <origin xyz="0.0 0.1 0.0" rpy="1.5708 0.0 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.9" upper="2.9" effort="15.0" velocity="1.0"/>
+  </joint>
+  <joint name="joint_12" type="revolute">
+    <parent link="link_11"/>
+    <child link="link_12"/>
+    <origin xyz="0.0 0.0 0.1" rpy="1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-3.0" upper="3.0" effort="10.0" velocity="1.0"/>
+  </joint>
+</robot>

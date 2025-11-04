@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="quad_3dof">
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <mass value="50.0"/>
+      <inertia ixx="1.4" ixy="0.0" ixz="0.0" iyy="7.5" iyz="0.0" izz="8.0"/>
+    </inertial>
+  </link>
+
+  <!-- Left Front leg - 3 DOF -->
+  <link name="lf_hip">
+    <inertial>
+      <origin xyz="0.04 0.0 0.15" rpy="0.0 0.0 0.0"/>
+      <mass value="2.5"/>
+      <inertia ixx="0.045" ixy="0.0" ixz="0.0" iyy="0.048" iyz="0.0" izz="0.005"/>
+    </inertial>
+  </link>
+  <link name="lf_upper">
+    <inertial>
+      <origin xyz="0.14 -0.024 0.0" rpy="0.0 0.0 0.0"/>
+      <mass value="2.2"/>
+      <inertia ixx="0.0032" ixy="-0.0026" ixz="0.0" iyy="0.024" iyz="0.0" izz="0.025"/>
+    </inertial>
+  </link>
+  <link name="lf_lower">
+    <inertial>
+      <origin xyz="0.11 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <mass value="0.75"/>
+      <inertia ixx="0.0004" ixy="0.0" ixz="0.0" iyy="0.011" iyz="0.0" izz="0.011"/>
+    </inertial>
+  </link>
+
+  <!-- Left Hind leg - 3 DOF -->
+  <link name="lh_hip">
+    <inertial>
+      <origin xyz="0.04 0.0 -0.15" rpy="0.0 0.0 0.0"/>
+      <mass value="2.5"/>
+      <inertia ixx="0.045" ixy="0.0" ixz="0.0" iyy="0.048" iyz="0.0" izz="0.005"/>
+    </inertial>
+  </link>
+  <link name="lh_upper">
+    <inertial>
+      <origin xyz="0.14 0.024 0.0" rpy="0.0 0.0 0.0"/>
+      <mass value="2.2"/>
+      <inertia ixx="0.0032" ixy="0.0026" ixz="0.0" iyy="0.024" iyz="0.0" izz="0.025"/>
+    </inertial>
+  </link>
+  <link name="lh_lower">
+    <inertial>
+      <origin xyz="0.11 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <mass value="0.75"/>
+      <inertia ixx="0.0004" ixy="0.0" ixz="0.0" iyy="0.011" iyz="0.0" izz="0.011"/>
+    </inertial>
+  </link>
+
+  <!-- Right Front leg - 3 DOF -->
+  <link name="rf_hip">
+    <inertial>
+      <origin xyz="0.04 0.0 -0.15" rpy="0.0 0.0 0.0"/>
+      <mass value="2.5"/>
+      <inertia ixx="0.045" ixy="0.0" ixz="0.0" iyy="0.048" iyz="0.0" izz="0.005"/>
+    </inertial>
+  </link>
+  <link name="rf_upper">
+    <inertial>
+      <origin xyz="0.14 -0.024 0.0" rpy="0.0 0.0 0.0"/>
+      <mass value="2.2"/>
+      <inertia ixx="0.0032" ixy="-0.0026" ixz="0.0" iyy="0.024" iyz="0.0" izz="0.025"/>
+    </inertial>
+  </link>
+  <link name="rf_lower">
+    <inertial>
+      <origin xyz="0.11 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <mass value="0.75"/>
+      <inertia ixx="0.0004" ixy="0.0" ixz="0.0" iyy="0.011" iyz="0.0" izz="0.011"/>
+    </inertial>
+  </link>
+
+  <!-- Right Hind leg - 3 DOF -->
+  <link name="rh_hip">
+    <inertial>
+      <origin xyz="0.04 0.0 0.15" rpy="0.0 0.0 0.0"/>
+      <mass value="2.5"/>
+      <inertia ixx="0.045" ixy="0.0" ixz="0.0" iyy="0.048" iyz="0.0" izz="0.005"/>
+    </inertial>
+  </link>
+  <link name="rh_upper">
+    <inertial>
+      <origin xyz="0.14 0.024 0.0" rpy="0.0 0.0 0.0"/>
+      <mass value="2.2"/>
+      <inertia ixx="0.0032" ixy="0.0026" ixz="0.0" iyy="0.024" iyz="0.0" izz="0.025"/>
+    </inertial>
+  </link>
+  <link name="rh_lower">
+    <inertial>
+      <origin xyz="0.11 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <mass value="0.75"/>
+      <inertia ixx="0.0004" ixy="0.0" ixz="0.0" iyy="0.011" iyz="0.0" izz="0.011"/>
+    </inertial>
+  </link>
+
+  <!-- Left Front leg joints -->
+  <joint name="lf_haa_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="lf_hip"/>
+    <origin xyz="0.35 0.19 0.0" rpy="0.0 1.5708 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-1.22" upper="0.44" effort="150.0" velocity="12.0"/>
+  </joint>
+  <joint name="lf_hfe_joint" type="revolute">
+    <parent link="lf_hip"/>
+    <child link="lf_upper"/>
+    <origin xyz="0.075 0.0 0.0" rpy="1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-0.87" upper="1.22" effort="150.0" velocity="12.0"/>
+  </joint>
+  <joint name="lf_kfe_joint" type="revolute">
+    <parent link="lf_upper"/>
+    <child link="lf_lower"/>
+    <origin xyz="0.32 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.44" upper="-0.35" effort="150.0" velocity="12.0"/>
+  </joint>
+
+  <!-- Left Hind leg joints -->
+  <joint name="lh_haa_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="lh_hip"/>
+    <origin xyz="-0.35 0.19 0.0" rpy="0.0 1.5708 3.1416"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-1.22" upper="0.44" effort="150.0" velocity="12.0"/>
+  </joint>
+  <joint name="lh_hfe_joint" type="revolute">
+    <parent link="lh_hip"/>
+    <child link="lh_upper"/>
+    <origin xyz="0.075 0.0 0.0" rpy="1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-1.22" upper="0.87" effort="150.0" velocity="12.0"/>
+  </joint>
+  <joint name="lh_kfe_joint" type="revolute">
+    <parent link="lh_upper"/>
+    <child link="lh_lower"/>
+    <origin xyz="0.32 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="0.35" upper="2.44" effort="150.0" velocity="12.0"/>
+  </joint>
+
+  <!-- Right Front leg joints -->
+  <joint name="rf_haa_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="rf_hip"/>
+    <origin xyz="0.35 -0.19 0.0" rpy="0.0 1.5708 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-1.22" upper="0.44" effort="150.0" velocity="12.0"/>
+  </joint>
+  <joint name="rf_hfe_joint" type="revolute">
+    <parent link="rf_hip"/>
+    <child link="rf_upper"/>
+    <origin xyz="0.075 0.0 0.0" rpy="-1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-0.87" upper="1.22" effort="150.0" velocity="12.0"/>
+  </joint>
+  <joint name="rf_kfe_joint" type="revolute">
+    <parent link="rf_upper"/>
+    <child link="rf_lower"/>
+    <origin xyz="0.32 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.44" upper="-0.35" effort="150.0" velocity="12.0"/>
+  </joint>
+
+  <!-- Right Hind leg joints -->
+  <joint name="rh_haa_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="rh_hip"/>
+    <origin xyz="-0.35 -0.19 0.0" rpy="0.0 1.5708 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-1.22" upper="0.44" effort="150.0" velocity="12.0"/>
+  </joint>
+  <joint name="rh_hfe_joint" type="revolute">
+    <parent link="rh_hip"/>
+    <child link="rh_upper"/>
+    <origin xyz="0.075 0.0 0.0" rpy="-1.5708 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-1.22" upper="0.87" effort="150.0" velocity="12.0"/>
+  </joint>
+  <joint name="rh_kfe_joint" type="revolute">
+    <parent link="rh_upper"/>
+    <child link="rh_lower"/>
+    <origin xyz="0.32 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="0.35" upper="2.44" effort="150.0" velocity="12.0"/>
+  </joint>
+</robot>

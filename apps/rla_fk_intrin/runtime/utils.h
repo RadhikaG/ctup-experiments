@@ -24,6 +24,10 @@ struct Panda {
     static constexpr int ndof = 7;
 };
 
+struct Synth12 {
+    static constexpr int ndof = 12;
+};
+
 } // namespace robots
 
 // Type alias for VAMP float vectors

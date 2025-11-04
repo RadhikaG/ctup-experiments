@@ -36,6 +36,10 @@ struct hyq {
 struct baxter {
   static constexpr size_t ndof = 19;
 };
+
+struct synth_12 {
+  static constexpr size_t ndof = 12;
+};
 }
 
 // Generic configuration block parameterized by Robot, Scalar type, and batch size

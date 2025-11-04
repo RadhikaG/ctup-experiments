@@ -21,6 +21,16 @@ struct FkDispatcher {
             return HyqTraits::fk_scalar;
         } else if (robot == "iiwa") {
             return iiwaTraits::fk_scalar;
+        } else if (robot == "serial_12dof") {
+            return Serial12dofTraits::fk_scalar;
+        } else if (robot == "dual_6dof") {
+            return Dual6dofTraits::fk_scalar;
+        } else if (robot == "triple_4dof") {
+            return Triple4dofTraits::fk_scalar;
+        } else if (robot == "quad_3dof") {
+            return Quad3dofTraits::fk_scalar;
+        } else if (robot == "tree_2_5_5") {
+            return Tree255Traits::fk_scalar;
         } else {
             throw std::runtime_error("Unknown robot: " + robot);
         }
@@ -33,6 +43,16 @@ struct FkDispatcher {
             return HyqTraits::fk_eigenmatrix;
         } else if (robot == "iiwa") {
             return iiwaTraits::fk_eigenmatrix;
+        } else if (robot == "serial_12dof") {
+            return Serial12dofTraits::fk_eigenmatrix;
+        } else if (robot == "dual_6dof") {
+            return Dual6dofTraits::fk_eigenmatrix;
+        } else if (robot == "triple_4dof") {
+            return Triple4dofTraits::fk_eigenmatrix;
+        } else if (robot == "quad_3dof") {
+            return Quad3dofTraits::fk_eigenmatrix;
+        } else if (robot == "tree_2_5_5") {
+            return Tree255Traits::fk_eigenmatrix;
         } else {
             throw std::runtime_error("Unknown robot: " + robot);
         }

@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
 
   const std::string urdf_filename = program.get<std::string>("urdf");
   const std::string header_filename = program.get<std::string>("--output");
-  const std::string robot_name = program.get<std::string>("--robot");
+  std::string robot_name = program.get<std::string>("--robot");
 
   std::cout << "URDF file: " << urdf_filename << "\n";
   std::cout << "Output header: " << header_filename << "\n";
@@ -208,7 +208,16 @@ int main(int argc, char* argv[]) {
   block::c_code_generator codegen(of);
 
   // Generate unique namespace per robot
-  std::string namespace_name = "ctup_gen_" + robot_name;
+  // For synth_12, extract namespace from URDF filename
+  std::string namespace_name;
+  if (robot_name == "synth_12") {
+    size_t last_slash = urdf_filename.find_last_of("/\\");
+    size_t last_dot = urdf_filename.find_last_of(".");
+    std::string base_filename = urdf_filename.substr(last_slash + 1, last_dot - last_slash - 1);
+    namespace_name = "ctup_gen_" + base_filename;
+  } else {
+    namespace_name = "ctup_gen_" + robot_name;
+  }
 
   of << "#include \"Eigen/Dense\"\n";
   of << "#include \"rla_fk/runtime/utils.h\"\n\n";
