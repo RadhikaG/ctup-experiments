@@ -83,13 +83,15 @@ set(SAMPLES_SOURCES
     samples/scalar_rla_fk.cpp
     samples/scalar_rla_rnea.cpp
     samples/batched_rla_fk.cpp
-    samples/batched_fk_sweep.cpp
-    samples/batched_rla_fk_no_tt_sparsity.cpp
+    samples/batched_fk_intrin.cpp
     samples/batched_fkcc_early_exit.cpp
     samples/franken_batched_fkcc_early_exit.cpp
     samples/scalar_spatial_jacobian.cpp
     samples/batched_grad_self_collision.cpp
     samples/batched_spatial_jacobian.cpp
+    samples/rla_fk_batch_size_sweep.cpp
+    samples/batched_self_collision_sd.cpp
+    samples/batched_rla_fk_ct_tt_study.cpp
 )
 
 
@@ -177,6 +179,8 @@ option(BUILD_APPS "Build the apps/ subdirectories" ON)
 
 if(BUILD_APPS)
     add_subdirectory(apps/rla_fk)
+    add_subdirectory(apps/rla_fk_batch_size_sweep)
+    add_subdirectory(apps/rla_fk_ct_tt_study)
     add_subdirectory(apps/rla_rnea)
     add_subdirectory(apps/rla_spatial_jacobian)
 
