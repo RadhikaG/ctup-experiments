@@ -58,6 +58,37 @@ static blaze::StaticMatrix<Scalar, 3, 3> hat(const blaze::StaticVector<Scalar, 3
   return skew_mat;
 }
 
+static void compute_sph_sph_cp_sd(
+    size_t cp_it,
+    const avx256f &sph_x1, const avx256f &sph_y1, const avx256f &sph_z1,
+    float sph_radius1,
+    const avx256f &sph_x2, const avx256f &sph_y2, const avx256f &sph_z2,
+    float sph_radius2,
+    // these are modified in-place
+    Eigen::MatrixXd &signed_distances) // shape: (batch_dim, n_collision_pairs)
+{
+
+  blaze::StaticVector<avx256f, 3> delta;
+  delta[0] = sph_x1 - sph_x2;
+  delta[1] = sph_y1 - sph_y2;
+  delta[2] = sph_z1 - sph_z2;
+
+  avx256f dist = blaze::sqrt(delta[0]*delta[0] + delta[1]*delta[1] + delta[2]*delta[2]);
+
+  // signed distance
+  avx256f signed_distance = dist - (sph_radius1 + sph_radius2);
+
+  // signed_distances need to be populated in
+  // a particular order for batched outputs
+  // signed_distances is of shape: (batch_dim, n_collision_pairs)
+
+  const size_t SIMD_WIDTH = 8;
+  // todo: find a more efficient way to do this
+  for (size_t i = 0; i < SIMD_WIDTH; i++) {
+    signed_distances(i, cp_it) = (double)signed_distance[i];
+  }
+}
+
 template <size_t NV>
 static void compute_sph_sph_cp_sd_grad(
     size_t cp_it,

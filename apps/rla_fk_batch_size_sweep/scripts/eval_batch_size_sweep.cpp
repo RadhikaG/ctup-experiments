@@ -10,6 +10,21 @@
 #include <chrono>
 
 // Include all generated headers
+#include "rla_fk_batch_size_sweep/gen/f4/fk_gen_iiwa.h"
+#include "rla_fk_batch_size_sweep/gen/f8/fk_gen_iiwa.h"
+#include "rla_fk_batch_size_sweep/gen/f16/fk_gen_iiwa.h"
+#include "rla_fk_batch_size_sweep/gen/f32/fk_gen_iiwa.h"
+
+#include "rla_fk_batch_size_sweep/gen/f4/fk_gen_hyq.h"
+#include "rla_fk_batch_size_sweep/gen/f8/fk_gen_hyq.h"
+#include "rla_fk_batch_size_sweep/gen/f16/fk_gen_hyq.h"
+#include "rla_fk_batch_size_sweep/gen/f32/fk_gen_hyq.h"
+
+#include "rla_fk_batch_size_sweep/gen/f4/fk_gen_baxter.h"
+#include "rla_fk_batch_size_sweep/gen/f8/fk_gen_baxter.h"
+#include "rla_fk_batch_size_sweep/gen/f16/fk_gen_baxter.h"
+#include "rla_fk_batch_size_sweep/gen/f32/fk_gen_baxter.h"
+
 #include "rla_fk_batch_size_sweep/gen/f4/fk_gen_serial_12dof.h"
 #include "rla_fk_batch_size_sweep/gen/f8/fk_gen_serial_12dof.h"
 #include "rla_fk_batch_size_sweep/gen/f16/fk_gen_serial_12dof.h"
@@ -39,21 +54,21 @@
 
 using namespace ctup_runtime;
 
-// Template helper to run benchmark for a specific batch size
-template<size_t BatchSize>
+// Template helper to run benchmark for a specific batch size and robot
+template<typename Robot, size_t BatchSize>
 double benchmark_batch_size(const std::vector<std::vector<float>>& qs,
                              int n_iterations,
                              int ndof,
-                             void (*fk_func)(const ConfigurationBlock<robots::synth_12, blaze::StaticVector<float, BatchSize>>&, Eigen::MatrixXd&)) {
+                             void (*fk_func)(const ConfigurationBlock<Robot, blaze::StaticVector<float, BatchSize>>&, Eigen::MatrixXd&)) {
   using Prim = blaze::StaticVector<float, BatchSize>;
 
   // Pre-allocate batched inputs and outputs (outside timing loop)
-  std::vector<ConfigurationBlock<robots::synth_12, Prim>> q_batches;
+  std::vector<ConfigurationBlock<Robot, Prim>> q_batches;
   q_batches.reserve(n_iterations);
 
   // Pre-populate all batch configurations
   for (int i = 0; i < n_iterations; ++i) {
-    ConfigurationBlock<robots::synth_12, Prim> q_batch;
+    ConfigurationBlock<Robot, Prim> q_batch;
     for (int dof_idx = 0; dof_idx < ndof; ++dof_idx) {
       for (size_t b = 0; b < BatchSize; ++b) {
         int config_idx = (i * BatchSize + b) % qs.size();
@@ -83,7 +98,7 @@ int main(int argc, char ** argv)
 
   program.add_argument("--robot")
       .required()
-      .help("robot name (serial_12dof, dual_6dof, triple_4dof, quad_3dof, tree_2_5_5)");
+      .help("robot name (iiwa, hyq, baxter, serial_12dof, dual_6dof, triple_4dof, quad_3dof, tree_2_5_5)");
 
   program.add_argument("--batch_size")
       .default_value(0)
@@ -103,8 +118,18 @@ int main(int argc, char ** argv)
   int batch_size = program.get<int>("--batch_size");
   const int n_iterations = 1000000;
 
-  // All synth_12 robots have 12 DOF
-  const int ndof = 12;
+  // Determine ndof based on robot
+  int ndof;
+  if (robot == "iiwa") {
+    ndof = 7;
+  } else if (robot == "hyq") {
+    ndof = 12;
+  } else if (robot == "baxter") {
+    ndof = 19;
+  } else {
+    // All synth_12 robots have 12 DOF
+    ndof = 12;
+  }
 
   // Set all configurations to pi/3
   const float pi_over_3 = 3.14159265f / 3.0f;
@@ -117,22 +142,91 @@ int main(int argc, char ** argv)
   }
 
   // Dispatch to the correct robot and batch size
+  if (robot == "iiwa") {
+    if (batch_size == 0) {
+      std::cout << robot;
+      std::cout << "," << benchmark_batch_size<robots::iiwa, 4>(qs, n_iterations, ndof, ctup_gen_iiwa::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::iiwa, 8>(qs, n_iterations, ndof, ctup_gen_iiwa::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::iiwa, 16>(qs, n_iterations, ndof, ctup_gen_iiwa::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::iiwa, 32>(qs, n_iterations, ndof, ctup_gen_iiwa::batched_fk);
+      std::cout << "\n";
+    } else if (batch_size == 4) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::iiwa, 4>(qs, n_iterations, ndof, ctup_gen_iiwa::batched_fk) << "\n";
+    } else if (batch_size == 8) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::iiwa, 8>(qs, n_iterations, ndof, ctup_gen_iiwa::batched_fk) << "\n";
+    } else if (batch_size == 16) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::iiwa, 16>(qs, n_iterations, ndof, ctup_gen_iiwa::batched_fk) << "\n";
+    } else if (batch_size == 32) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::iiwa, 32>(qs, n_iterations, ndof, ctup_gen_iiwa::batched_fk) << "\n";
+    } else {
+      std::cerr << "Invalid batch size: " << batch_size << ". Must be 4, 8, 16, or 32\n";
+      return 1;
+    }
+    return 0;
+  }
+
+  if (robot == "hyq") {
+    if (batch_size == 0) {
+      std::cout << robot;
+      std::cout << "," << benchmark_batch_size<robots::hyq, 4>(qs, n_iterations, ndof, ctup_gen_hyq::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::hyq, 8>(qs, n_iterations, ndof, ctup_gen_hyq::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::hyq, 16>(qs, n_iterations, ndof, ctup_gen_hyq::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::hyq, 32>(qs, n_iterations, ndof, ctup_gen_hyq::batched_fk);
+      std::cout << "\n";
+    } else if (batch_size == 4) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::hyq, 4>(qs, n_iterations, ndof, ctup_gen_hyq::batched_fk) << "\n";
+    } else if (batch_size == 8) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::hyq, 8>(qs, n_iterations, ndof, ctup_gen_hyq::batched_fk) << "\n";
+    } else if (batch_size == 16) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::hyq, 16>(qs, n_iterations, ndof, ctup_gen_hyq::batched_fk) << "\n";
+    } else if (batch_size == 32) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::hyq, 32>(qs, n_iterations, ndof, ctup_gen_hyq::batched_fk) << "\n";
+    } else {
+      std::cerr << "Invalid batch size: " << batch_size << ". Must be 4, 8, 16, or 32\n";
+      return 1;
+    }
+    return 0;
+  }
+
+  if (robot == "baxter") {
+    if (batch_size == 0) {
+      std::cout << robot;
+      std::cout << "," << benchmark_batch_size<robots::baxter, 4>(qs, n_iterations, ndof, ctup_gen_baxter::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::baxter, 8>(qs, n_iterations, ndof, ctup_gen_baxter::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::baxter, 16>(qs, n_iterations, ndof, ctup_gen_baxter::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::baxter, 32>(qs, n_iterations, ndof, ctup_gen_baxter::batched_fk);
+      std::cout << "\n";
+    } else if (batch_size == 4) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::baxter, 4>(qs, n_iterations, ndof, ctup_gen_baxter::batched_fk) << "\n";
+    } else if (batch_size == 8) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::baxter, 8>(qs, n_iterations, ndof, ctup_gen_baxter::batched_fk) << "\n";
+    } else if (batch_size == 16) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::baxter, 16>(qs, n_iterations, ndof, ctup_gen_baxter::batched_fk) << "\n";
+    } else if (batch_size == 32) {
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::baxter, 32>(qs, n_iterations, ndof, ctup_gen_baxter::batched_fk) << "\n";
+    } else {
+      std::cerr << "Invalid batch size: " << batch_size << ". Must be 4, 8, 16, or 32\n";
+      return 1;
+    }
+    return 0;
+  }
+
   if (robot == "serial_12dof") {
     if (batch_size == 0) {
       std::cout << robot;
-      std::cout << "," << benchmark_batch_size<4>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<8>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<16>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<32>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 4>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 8>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 16>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 32>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk);
       std::cout << "\n";
     } else if (batch_size == 4) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<4>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 4>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk) << "\n";
     } else if (batch_size == 8) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<8>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 8>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk) << "\n";
     } else if (batch_size == 16) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<16>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 16>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk) << "\n";
     } else if (batch_size == 32) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<32>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 32>(qs, n_iterations, ndof, ctup_gen_serial_12dof::batched_fk) << "\n";
     } else {
       std::cerr << "Invalid batch size: " << batch_size << ". Must be 4, 8, 16, or 32\n";
       return 1;
@@ -143,19 +237,19 @@ int main(int argc, char ** argv)
   if (robot == "dual_6dof") {
     if (batch_size == 0) {
       std::cout << robot;
-      std::cout << "," << benchmark_batch_size<4>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<8>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<16>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<32>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 4>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 8>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 16>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 32>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk);
       std::cout << "\n";
     } else if (batch_size == 4) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<4>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 4>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk) << "\n";
     } else if (batch_size == 8) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<8>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 8>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk) << "\n";
     } else if (batch_size == 16) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<16>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 16>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk) << "\n";
     } else if (batch_size == 32) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<32>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 32>(qs, n_iterations, ndof, ctup_gen_dual_6dof::batched_fk) << "\n";
     } else {
       std::cerr << "Invalid batch size: " << batch_size << ". Must be 4, 8, 16, or 32\n";
       return 1;
@@ -166,19 +260,19 @@ int main(int argc, char ** argv)
   if (robot == "triple_4dof") {
     if (batch_size == 0) {
       std::cout << robot;
-      std::cout << "," << benchmark_batch_size<4>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<8>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<16>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<32>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 4>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 8>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 16>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 32>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk);
       std::cout << "\n";
     } else if (batch_size == 4) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<4>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 4>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk) << "\n";
     } else if (batch_size == 8) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<8>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 8>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk) << "\n";
     } else if (batch_size == 16) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<16>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 16>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk) << "\n";
     } else if (batch_size == 32) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<32>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 32>(qs, n_iterations, ndof, ctup_gen_triple_4dof::batched_fk) << "\n";
     } else {
       std::cerr << "Invalid batch size: " << batch_size << ". Must be 4, 8, 16, or 32\n";
       return 1;
@@ -189,19 +283,19 @@ int main(int argc, char ** argv)
   if (robot == "quad_3dof") {
     if (batch_size == 0) {
       std::cout << robot;
-      std::cout << "," << benchmark_batch_size<4>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<8>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<16>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk);
-      std::cout << "," << benchmark_batch_size<32>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 4>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 8>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 16>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 32>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk);
       std::cout << "\n";
     } else if (batch_size == 4) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<4>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 4>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk) << "\n";
     } else if (batch_size == 8) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<8>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 8>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk) << "\n";
     } else if (batch_size == 16) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<16>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 16>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk) << "\n";
     } else if (batch_size == 32) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<32>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 32>(qs, n_iterations, ndof, ctup_gen_quad_3dof::batched_fk) << "\n";
     } else {
       std::cerr << "Invalid batch size: " << batch_size << ". Must be 4, 8, 16, or 32\n";
       return 1;
@@ -212,19 +306,19 @@ int main(int argc, char ** argv)
   if (robot == "tree_2_5_5") {
     if (batch_size == 0) {
       std::cout << robot;
-      std::cout << "," << benchmark_batch_size<4>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk);
-      std::cout << "," << benchmark_batch_size<8>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk);
-      std::cout << "," << benchmark_batch_size<16>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk);
-      std::cout << "," << benchmark_batch_size<32>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 4>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 8>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 16>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk);
+      std::cout << "," << benchmark_batch_size<robots::synth_12, 32>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk);
       std::cout << "\n";
     } else if (batch_size == 4) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<4>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 4>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk) << "\n";
     } else if (batch_size == 8) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<8>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 8>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk) << "\n";
     } else if (batch_size == 16) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<16>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 16>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk) << "\n";
     } else if (batch_size == 32) {
-      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<32>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk) << "\n";
+      std::cout << robot << "," << batch_size << "," << benchmark_batch_size<robots::synth_12, 32>(qs, n_iterations, ndof, ctup_gen_tree_2_5_5::batched_fk) << "\n";
     } else {
       std::cerr << "Invalid batch size: " << batch_size << ". Must be 4, 8, 16, or 32\n";
       return 1;

@@ -213,7 +213,7 @@ int main(int argc, char* argv[]) {
 
   program.add_argument("-r", "--robot")
       .required()
-      .help("robot name (iiwa, hyq, baxter)");
+      .help("robot name (iiwa, hyq, baxter, synth_12)");
 
   program.add_argument("-b", "--batch_size")
       .default_value(8)

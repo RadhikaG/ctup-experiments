@@ -56,3 +56,21 @@ foreach(SCRIPT_SOURCE ${RLA_GRAD_SELF_COLLISION_SCRIPT_SOURCES})
         ${CFLAGS_PEDANTIC}
     )
 endforeach()
+
+# Separate target for fkcc_np_tmp_panda with AVX2 flags
+add_executable(fkcc_np_tmp_panda scripts/fkcc_np_tmp_panda.cpp)
+
+target_include_directories(fkcc_np_tmp_panda PUBLIC
+    ${CMAKE_SOURCE_DIR}/apps
+    ${BLAZE_INCLUDE_DIR}
+    ${EIGEN3_INCLUDE_DIR}
+    ${CTUP_RUNTIME_INCLUDES}
+)
+
+target_compile_options(fkcc_np_tmp_panda PRIVATE
+    -O3 -g -DNDEBUG
+    -ffast-math
+    -mavx2
+    -march=native
+    ${CFLAGS_PEDANTIC}
+)
